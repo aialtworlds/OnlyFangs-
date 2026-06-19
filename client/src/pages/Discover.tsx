@@ -87,7 +87,7 @@ function DiscoverCard({ item }: { item: ContentItem }) {
               <span style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.1em', color: 'oklch(0.55 0.03 60)', textTransform: 'uppercase' }}>{creator.alias}</span>
             </div>
           )}
-          <span style={{ fontFamily: "'Cinzel', serif", fontSize: '10px', color: 'oklch(0.35 0.02 60)' }}>♥ {item.likes.toLocaleString('pt-BR')}</span>
+          <span style={{ fontFamily: "'Cinzel', serif", fontSize: '10px', color: 'oklch(0.35 0.02 60)' }}>♥ {item.likes.toLocaleString('en-US')}</span>
         </div>
       </div>
     </div>

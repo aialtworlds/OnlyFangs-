@@ -64,12 +64,12 @@ function CreatorCard({ creator }: { creator: Creator }) {
         <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.55 0.03 60)', marginBottom: '10px' }}>{creator.category}</div>
         <div style={{ display: 'flex', gap: '16px', borderTop: '1px solid oklch(1 0 0 / 6%)', paddingTop: '10px' }}>
           <div>
-            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.72 0.09 75)', fontWeight: 700 }}>{creator.subscribers.toLocaleString('pt-BR')}</div>
-            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>Subscribers</div>
+            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.72 0.09 75)', fontWeight: 700 }}>{creator.subscribers.toLocaleString('en-US')}</div>
+            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.15em', color: 'oklch(0.45 0.02 60)', textTransform: 'uppercase' }}>Subscribers</div>
           </div>
           <div>
             <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.72 0.09 75)', fontWeight: 700 }}>{creator.totalPosts}</div>
-            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>Releases</div>
+            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.15em', color: 'oklch(0.45 0.02 60)', textTransform: 'uppercase' }}>Releases</div>
           </div>
         </div>
       </div>
@@ -84,10 +84,10 @@ export default function Creators() {
 
   const typeFilters = [
     { id: 'all', label: 'All' },
-    { id: 'image', label: '🖼️ Imagens' },
-    { id: 'photo', label: '📷 Fotos' },
+    { id: 'image', label: '🖼️ Images' },
+    { id: 'photo', label: '📷 Photos' },
     { id: 'music', label: '🎵 Music' },
-    { id: 'book', label: '📖 Livros' },
+    { id: 'book', label: '📖 Books' },
   ];
 
   const filtered = CREATORS

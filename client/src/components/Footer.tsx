@@ -24,7 +24,7 @@ export default function Footer() {
         <div
           style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+          gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr',
           gap: '40px',
           marginBottom: '64px',
           }}

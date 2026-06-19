@@ -441,7 +441,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
             >
               <div>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: '22px', fontWeight: 700, color: 'oklch(0.72 0.09 75)' }}>
-                  {creator.subscribers.toLocaleString('pt-BR')}
+                  {creator.subscribers.toLocaleString('en-US')}
                 </div>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>
                   Subscribers
