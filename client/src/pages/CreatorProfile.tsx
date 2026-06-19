@@ -1,0 +1,638 @@
+// ═══════════════════════════════════════════════════════════
+// ONLY FANGS — Creator Profile Page
+// ═══════════════════════════════════════════════════════════
+
+import { useState } from 'react';
+import { Lock, Play, BookOpen, Image, Music, Camera, Heart, MessageCircle, Share2, ChevronLeft } from 'lucide-react';
+import { CREATORS, CONTENT_ITEMS, TIERS, getCreatorById, getContentByCreator } from '@/lib/data';
+import type { ContentItem } from '@/lib/data';
+import { toast } from 'sonner';
+
+interface CreatorProfileProps {
+  creatorId: string;
+  onNavigate: (page: string, params?: Record<string, string>) => void;
+}
+
+function ContentIcon({ type }: { type: string }) {
+  const icons: Record<string, React.ReactNode> = {
+    image: <Image size={14} />,
+    photo: <Camera size={14} />,
+    music: <Music size={14} />,
+    book: <BookOpen size={14} />,
+  };
+  return <>{icons[type] || <Image size={14} />}</>;
+}
+
+const tierLabels: Record<string, string> = {
+  mortal: 'Mortal',
+  initiate: 'Iniciado',
+  acolyte: 'Acólito',
+  immortal: 'Imortal',
+};
+
+function ContentCard({ item }: { item: ContentItem }) {
+  const [hovered, setHovered] = useState(false);
+  const [liked, setLiked] = useState(false);
+
+  return (
+    <div
+      className="card-dark"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
+        <img
+          src={item.thumbnail}
+          alt={item.title}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            transition: 'transform 0.6s ease',
+            transform: hovered ? 'scale(1.05)' : 'scale(1)',
+            filter: item.locked ? 'brightness(0.3) blur(2px)' : 'brightness(0.85)',
+          }}
+        />
+
+        {item.locked && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+            }}
+          >
+            <Lock size={28} style={{ color: 'oklch(0.72 0.09 75)' }} />
+            <div
+              style={{
+                fontFamily: "'Cinzel', serif",
+                fontSize: '9px',
+                letterSpacing: '0.3em',
+                textTransform: 'uppercase',
+                color: 'oklch(0.72 0.09 75)',
+              }}
+            >
+              Tier {tierLabels[item.tier]}
+            </div>
+            <button
+              onClick={() => toast('Assine para desbloquear este conteúdo', { description: `Requer tier ${tierLabels[item.tier]} ou superior.` })}
+              style={{
+                fontFamily: "'Cinzel', serif",
+                fontSize: '8px',
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                background: 'oklch(0.72 0.09 75)',
+                color: 'oklch(0.04 0.008 285)',
+                border: 'none',
+                padding: '8px 16px',
+                cursor: 'pointer',
+                marginTop: '4px',
+              }}
+            >
+              Desbloquear
+            </button>
+          </div>
+        )}
+
+        {item.type === 'music' && !item.locked && (
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '12px',
+              right: '12px',
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              background: 'oklch(0.72 0.09 75)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              opacity: hovered ? 1 : 0,
+              transition: 'opacity 0.3s',
+            }}
+            onClick={() => toast('Reproduzindo: ' + item.title)}
+          >
+            <Play size={16} fill="oklch(0.04 0.008 285)" style={{ color: 'oklch(0.04 0.008 285)', marginLeft: '2px' }} />
+          </div>
+        )}
+
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '10px',
+            left: '10px',
+            background: 'oklch(0.04 0.008 285 / 80%)',
+            backdropFilter: 'blur(4px)',
+            border: '1px solid oklch(1 0 0 / 10%)',
+            padding: '4px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            color: 'oklch(0.82 0.03 75)',
+            fontSize: '11px',
+            fontFamily: "'Cinzel', serif",
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+          }}
+        >
+          <ContentIcon type={item.type} />
+          {item.type === 'music' && item.duration && <span>{item.duration}</span>}
+          {item.type === 'book' && item.pages && <span>{item.pages}p</span>}
+        </div>
+      </div>
+
+      <div style={{ padding: '16px 18px 18px' }}>
+        <div
+          style={{
+            fontFamily: "'Cinzel', serif",
+            fontSize: '14px',
+            color: 'oklch(0.93 0.02 80)',
+            letterSpacing: '0.04em',
+            marginBottom: '6px',
+          }}
+        >
+          {item.title}
+        </div>
+        <div
+          style={{
+            fontFamily: "'IM Fell English', serif",
+            fontStyle: 'italic',
+            fontSize: '13px',
+            color: 'oklch(0.55 0.03 60)',
+            marginBottom: '14px',
+            lineHeight: 1.6,
+          }}
+        >
+          {item.description}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', gap: '14px' }}>
+            <button
+              onClick={() => { setLiked(!liked); }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'none',
+                border: 'none',
+                color: liked ? 'oklch(0.42 0.16 20)' : 'oklch(0.35 0.02 60)',
+                cursor: 'pointer',
+                fontFamily: "'Cinzel', serif",
+                fontSize: '11px',
+                transition: 'color 0.3s',
+              }}
+            >
+              <Heart size={13} fill={liked ? 'oklch(0.42 0.16 20)' : 'none'} />
+              {item.likes + (liked ? 1 : 0)}
+            </button>
+            <button
+              onClick={() => toast('Comentários em breve')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'none',
+                border: 'none',
+                color: 'oklch(0.35 0.02 60)',
+                cursor: 'pointer',
+                fontFamily: "'Cinzel', serif",
+                fontSize: '11px',
+              }}
+            >
+              <MessageCircle size={13} />
+              {item.comments}
+            </button>
+          </div>
+          <button
+            onClick={() => toast('Link copiado para a área de transferência')}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: 'none',
+              border: 'none',
+              color: 'oklch(0.35 0.02 60)',
+              cursor: 'pointer',
+              fontSize: '11px',
+            }}
+          >
+            <Share2 size={13} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfileProps) {
+  const creator = getCreatorById(creatorId) || CREATORS[0];
+  const content = getContentByCreator(creator.id);
+  const [activeTab, setActiveTab] = useState<'all' | 'image' | 'photo' | 'music' | 'book'>('all');
+  const [selectedTier, setSelectedTier] = useState<string | null>(null);
+
+  const filteredContent = activeTab === 'all' ? content : content.filter(c => c.type === activeTab);
+
+  const tabs = [
+    { id: 'all', label: 'Tudo', count: content.length },
+    ...creator.contentTypes.map(type => ({
+      id: type,
+      label: { image: 'Imagens', photo: 'Fotos', music: 'Música', book: 'Livros' }[type] || type,
+      count: content.filter(c => c.type === type).length,
+    })),
+  ];
+
+  return (
+    <div style={{ background: 'oklch(0.04 0.008 285)', minHeight: '100vh' }}>
+      {/* Back button */}
+      <div
+        style={{
+          position: 'fixed',
+          top: '120px',
+          left: '24px',
+          zIndex: 100,
+        }}
+      >
+        <button
+          onClick={() => onNavigate('creators')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'oklch(0.085 0.015 330 / 90%)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid oklch(1 0 0 / 10%)',
+            color: 'oklch(0.55 0.03 60)',
+            fontFamily: "'Cinzel', serif",
+            fontSize: '9px',
+            letterSpacing: '0.2em',
+            textTransform: 'uppercase',
+            padding: '8px 14px',
+            cursor: 'pointer',
+            transition: 'all 0.3s',
+          }}
+          onMouseEnter={(e) => {
+            const el = e.currentTarget;
+            el.style.color = 'oklch(0.72 0.09 75)';
+            el.style.borderColor = 'oklch(0.72 0.09 75 / 30%)';
+          }}
+          onMouseLeave={(e) => {
+            const el = e.currentTarget;
+            el.style.color = 'oklch(0.55 0.03 60)';
+            el.style.borderColor = 'oklch(1 0 0 / 10%)';
+          }}
+        >
+          <ChevronLeft size={14} />
+          Voltar
+        </button>
+      </div>
+
+      {/* Cover Image */}
+      <div style={{ position: 'relative', height: '380px', overflow: 'hidden' }}>
+        <img
+          src={creator.coverImage}
+          alt={creator.alias}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.5)' }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(180deg, transparent 40%, oklch(0.04 0.008 285) 100%)',
+          }}
+        />
+      </div>
+
+      {/* Profile Header */}
+      <div className="container">
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '32px',
+            marginTop: '-80px',
+            position: 'relative',
+            zIndex: 10,
+            marginBottom: '48px',
+            alignItems: 'flex-end',
+          }}
+        >
+          {/* Avatar */}
+          <div>
+            <img
+              src={creator.avatar}
+              alt={creator.alias}
+              style={{
+                width: '120px',
+                height: '120px',
+                borderRadius: '50%',
+                border: '3px solid oklch(0.72 0.09 75 / 40%)',
+                objectFit: 'cover',
+                background: 'oklch(0.085 0.015 330)',
+              }}
+            />
+          </div>
+
+          {/* Info */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
+              <h1
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: 'clamp(24px, 3vw, 36px)',
+                  color: 'oklch(0.93 0.02 80)',
+                  letterSpacing: '0.06em',
+                }}
+              >
+                {creator.alias}
+              </h1>
+              {creator.verified && (
+                <span
+                  style={{
+                    background: 'oklch(0.72 0.09 75)',
+                    color: 'oklch(0.04 0.008 285)',
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: '7px',
+                    letterSpacing: '0.3em',
+                    padding: '4px 10px',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  Verificado
+                </span>
+              )}
+            </div>
+            <div
+              style={{
+                fontFamily: "'IM Fell English', serif",
+                fontStyle: 'italic',
+                fontSize: '15px',
+                color: 'oklch(0.55 0.03 60)',
+                marginBottom: '12px',
+              }}
+            >
+              {creator.category} · {creator.name}
+            </div>
+            <p
+              style={{
+                fontFamily: "'Cormorant Garamond', serif",
+                fontSize: '16px',
+                color: 'oklch(0.82 0.03 75)',
+                lineHeight: 1.7,
+                maxWidth: '500px',
+              }}
+            >
+              {creator.bio}
+            </p>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
+              {creator.tags.map(tag => (
+                <span
+                  key={tag}
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: '8px',
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    color: 'oklch(0.55 0.03 60)',
+                    border: '1px solid oklch(1 0 0 / 10%)',
+                    padding: '4px 10px',
+                  }}
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div
+            style={{
+              background: 'oklch(0.085 0.015 330)',
+              border: '1px solid oklch(1 0 0 / 8%)',
+              padding: '24px',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '20px',
+                marginBottom: '20px',
+              }}
+            >
+              <div>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: '22px', fontWeight: 700, color: 'oklch(0.72 0.09 75)' }}>
+                  {creator.subscribers.toLocaleString('pt-BR')}
+                </div>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>
+                  Assinantes
+                </div>
+              </div>
+              <div>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: '22px', fontWeight: 700, color: 'oklch(0.72 0.09 75)' }}>
+                  {creator.totalPosts}
+                </div>
+                <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>
+                  Obras
+                </div>
+              </div>
+            </div>
+            <button
+              className="btn-gold"
+              style={{ width: '100%', textAlign: 'center' }}
+              onClick={() => setSelectedTier('initiate')}
+            >
+              Assinar o Pacto
+            </button>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) 300px',
+            gap: '32px',
+            paddingBottom: '80px',
+          }}
+        >
+          {/* Content Feed */}
+          <div>
+            {/* Tabs */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '2px',
+                marginBottom: '32px',
+                borderBottom: '1px solid oklch(1 0 0 / 8%)',
+              }}
+            >
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: '10px',
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    padding: '12px 20px',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: `2px solid ${activeTab === tab.id ? 'oklch(0.72 0.09 75)' : 'transparent'}`,
+                    color: activeTab === tab.id ? 'oklch(0.72 0.09 75)' : 'oklch(0.55 0.03 60)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s',
+                    marginBottom: '-1px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  {tab.label}
+                  <span
+                    style={{
+                      background: 'oklch(0.12 0.02 330)',
+                      padding: '2px 6px',
+                      fontSize: '8px',
+                      color: 'oklch(0.35 0.02 60)',
+                    }}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                gap: '2px',
+              }}
+            >
+              {filteredContent.map(item => (
+                <ContentCard key={item.id} item={item} />
+              ))}
+              {filteredContent.length === 0 && (
+                <div
+                  style={{
+                    gridColumn: '1/-1',
+                    textAlign: 'center',
+                    padding: '60px 20px',
+                    color: 'oklch(0.35 0.02 60)',
+                    fontFamily: "'IM Fell English', serif",
+                    fontStyle: 'italic',
+                    fontSize: '18px',
+                  }}
+                >
+                  Nenhum conteúdo nesta categoria ainda.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sidebar — Tiers */}
+          <div>
+            <div
+              style={{
+                fontFamily: "'Cinzel', serif",
+                fontSize: '11px',
+                letterSpacing: '0.3em',
+                textTransform: 'uppercase',
+                color: 'oklch(0.72 0.09 75)',
+                marginBottom: '20px',
+                borderBottom: '1px solid oklch(0.72 0.09 75 / 15%)',
+                paddingBottom: '12px',
+              }}
+            >
+              Tiers de Assinatura
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              {TIERS.filter(t => t.price > 0).map(tier => (
+                <div
+                  key={tier.id}
+                  style={{
+                    background: selectedTier === tier.id
+                      ? 'linear-gradient(160deg, oklch(0.1 0.025 330) 0%, oklch(0.08 0.03 20) 100%)'
+                      : 'oklch(0.085 0.015 330)',
+                    border: `1px solid ${selectedTier === tier.id ? 'oklch(0.72 0.09 75 / 30%)' : 'oklch(1 0 0 / 8%)'}`,
+                    padding: '20px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s',
+                  }}
+                  onClick={() => setSelectedTier(tier.id)}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <div>
+                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.05em' }}>
+                        {tier.icon} {tier.name}
+                      </div>
+                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.55 0.03 60)' }}>
+                        {tier.latinName}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: '18px', fontWeight: 700, color: 'oklch(0.72 0.09 75)' }}>
+                        R${tier.price.toFixed(2).replace('.', ',')}
+                      </div>
+                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', color: 'oklch(0.35 0.02 60)', letterSpacing: '0.15em' }}>
+                        /mês
+                      </div>
+                    </div>
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                    {tier.perks.slice(0, 3).map(perk => (
+                      <li key={perk} style={{ fontSize: '12px', color: 'oklch(0.55 0.03 60)', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                        <span style={{ color: 'oklch(0.72 0.09 75)', fontSize: '7px', flexShrink: 0, marginTop: '4px' }}>✦</span>
+                        {perk}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toast(`Assinando tier ${tier.name}`, { description: 'Funcionalidade de pagamento em breve.' });
+                    }}
+                    style={{
+                      width: '100%',
+                      fontFamily: "'Cinzel', serif",
+                      fontSize: '9px',
+                      letterSpacing: '0.2em',
+                      textTransform: 'uppercase',
+                      padding: '10px',
+                      background: selectedTier === tier.id ? 'oklch(0.72 0.09 75)' : 'transparent',
+                      color: selectedTier === tier.id ? 'oklch(0.04 0.008 285)' : 'oklch(0.72 0.09 75)',
+                      border: '1px solid oklch(0.72 0.09 75 / 40%)',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                    }}
+                  >
+                    {selectedTier === tier.id ? 'Selecionado' : 'Selecionar'}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {selectedTier && (
+              <button
+                className="btn-crimson"
+                style={{ width: '100%', marginTop: '12px', textAlign: 'center' }}
+                onClick={() => toast('Processando assinatura...', { description: 'Sistema de pagamento em breve.' })}
+              >
+                Confirmar Assinatura
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
