@@ -621,7 +621,7 @@ export default function Home() {
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden',
-          padding: '160px 40px 100px',
+          padding: 'clamp(120px, 15vw, 160px) clamp(16px, 5vw, 40px) 100px',
         }}
       >
         {/* Background Image */}

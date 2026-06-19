@@ -468,6 +468,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
 
         {/* Main Content Area */}
         <div
+          className="creator-main-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'minmax(0, 1fr) 300px',
@@ -570,7 +571,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              {TIERS.filter(t => t.price > 0).map(tier => (
+              {TIERS.filter(t => t.id !== 'mortal').map(tier => (
                 <div
                   key={tier.id}
                   style={{
@@ -594,11 +595,8 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: '18px', fontWeight: 700, color: 'oklch(0.72 0.09 75)' }}>
-                        {tier.price === 0 ? 'Free' : `$${tier.price.toFixed(2)}`}
-                      </div>
-                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', color: 'oklch(0.35 0.02 60)', letterSpacing: '0.15em' }}>
-                        /month
+                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.45 0.02 60)', letterSpacing: '0.04em' }}>
+                        Price set by creator
                       </div>
                     </div>
                   </div>
@@ -613,7 +611,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      toast(`Assinando tier ${tier.name}`, { description: 'Funcionalidade de pagamento em breve.' });
+                      toast(`Subscribing to ${tier.name}`, { description: 'Payment integration coming soon.' });
                     }}
                     style={{
                       width: '100%',
@@ -639,7 +637,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
               <button
                 className="btn-crimson"
                 style={{ width: '100%', marginTop: '12px', textAlign: 'center' }}
-                onClick={() => toast('Processando assinatura...', { description: 'Sistema de pagamento em breve.' })}
+                onClick={() => toast('Processing subscription...', { description: 'Payment integration coming soon.' })}
               >
                 Confirm Subscription
               </button>

@@ -380,18 +380,36 @@
 .animate-marquee { animation: marquee 40s linear infinite; }
 
 /* ── Responsive Utilities ── */
-@media (max-width: 768px) {
+/* Mobile: hide desktop-only elements */
+@media (max-width: 767px) {
   .hide-mobile { display: none !important; }
+  .md\:hidden { display: flex !important; }
+  .md\:flex { display: none !important; }
+  .md\:block { display: none !important; }
+  .sm\:hidden { display: none !important; }
+  .sm\:inline { display: none !important; }
+  .hidden.sm\:inline { display: none !important; }
+}
+/* sm breakpoint (640px+) */
+@media (min-width: 640px) {
+  .sm\:hidden { display: none !important; }
+  .hidden.sm\:inline { display: inline !important; }
+}
+/* Desktop (768px+): show desktop-only, hide mobile-only */
+@media (min-width: 768px) {
   .md\:hidden { display: none !important; }
   .md\:flex { display: flex !important; }
   .md\:block { display: block !important; }
 }
 
-@media (min-width: 768px) {
-  .hidden { display: none; }
-  .md\:hidden { display: none !important; }
-  .md\:flex { display: flex !important; }
-  .md\:block { display: block !important; }
+/* ── Creator Profile Responsive ── */
+@media (max-width: 767px) {
+  .creator-main-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .creator-main-grid > div:last-child {
+    order: -1;
+  }
 }
 
 /* ── Music Player ── */

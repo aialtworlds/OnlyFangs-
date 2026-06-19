@@ -33,3 +33,7 @@
 - [x] Fixed price display (R$ → $)
 - [x] Translated all Portuguese text to English
 - [x] Footer copyright and tagline translated
+
+## Mobile & UX Fixes
+- [x] Fix Navbar mobile overlap — add hamburger menu for small screens
+- [x] Remove hardcoded tier prices from Creator Profile and data.ts (prices are set by each creator)

@@ -70,14 +70,14 @@ export default function Apply() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '40px',
+          padding: 'clamp(16px, 5vw, 40px)',
         }}
       >
         <div
           style={{
             background: 'oklch(0.085 0.015 330)',
             border: '1px solid oklch(0.72 0.09 75 / 20%)',
-            padding: '60px 48px',
+            padding: 'clamp(32px, 6vw, 60px) clamp(20px, 6vw, 48px)',
             textAlign: 'center',
             maxWidth: '560px',
             position: 'relative',
