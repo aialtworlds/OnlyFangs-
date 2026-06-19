@@ -309,6 +309,29 @@ export async function createRelease(data: {
   }
 }
 
+export async function updateUserProfile(
+  userId: number,
+  data: Partial<{
+    displayName: string;
+    avatarUrl: string;
+  }>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set(data).where(eq(users.id, userId));
+}
+
+export async function getUserById(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
 export async function createTier(data: {
   creatorId: number;
   name: string;

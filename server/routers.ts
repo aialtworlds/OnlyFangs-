@@ -17,6 +17,8 @@ import {
   updateCreatorProfile,
   createRelease,
   createTier,
+  updateUserProfile,
+  getUserById,
 } from "./db";
 
 export const appRouter = router({
@@ -52,6 +54,18 @@ export const appRouter = router({
       .input(z.object({ limit: z.number().min(1).max(20).optional() }).optional())
       .query(async ({ input }) => {
         return getDiscoverCreators(input?.limit ?? 6);
+      }),
+    profile: protectedProcedure.query(async ({ ctx }) => {
+      return getUserById(ctx.user.id);
+    }),
+    updateProfile: protectedProcedure
+      .input(z.object({
+        displayName: z.string().min(1).max(100).optional(),
+        avatarUrl: z.string().url().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await updateUserProfile(ctx.user.id, input);
+        return { success: true };
       }),
   }),
 

@@ -37,3 +37,10 @@
 ## Mobile & UX Fixes
 - [x] Fix Navbar mobile overlap — add hamburger menu for small screens
 - [x] Remove hardcoded tier prices from Creator Profile and data.ts (prices are set by each creator)
+
+## Patron Auth Flow
+- [ ] DB: user profile table (displayName, bio, avatarUrl, patronSince, role)
+- [ ] tRPC: patron.me, patron.updateProfile procedures
+- [ ] Navbar: avatar + dropdown menu when logged in, "Join the Coven" when logged out
+- [ ] Page: /profile — Patron profile page (avatar, bio, joined date, subscriptions)
+- [ ] Content unlock: free tier (Mortal) content unlocked for logged-in users
