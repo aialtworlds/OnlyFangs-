@@ -3,14 +3,14 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { Lock, Play, BookOpen, Image, Music, Camera, Search } from 'lucide-react';
 import { CONTENT_ITEMS, CREATORS, CATEGORIES } from '@/lib/data';
 import type { ContentItem } from '@/lib/data';
 import { toast } from 'sonner';
+import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 
-interface DiscoverProps {
-  onNavigate: (page: string, params?: Record<string, string>) => void;
-}
+
 
 function ContentIcon({ type }: { type: string }) {
   const icons: Record<string, React.ReactNode> = {
@@ -24,12 +24,14 @@ function ContentIcon({ type }: { type: string }) {
 
 const tierLabels: Record<string, string> = {
   mortal: 'Mortal',
-  initiate: 'Iniciado',
-  acolyte: 'Acólito',
-  immortal: 'Imortal',
+  initiate: 'Initiate',
+  acolyte: 'Acolyte',
+  immortal: 'Immortal',
 };
 
-function DiscoverCard({ item, onNavigate }: { item: ContentItem; onNavigate: (page: string, params?: Record<string, string>) => void }) {
+function DiscoverCard({ item }: { item: ContentItem }) {
+  const [, setLocation] = useLocation();
+  const { playTrack } = useMusicPlayer();
   const [hovered, setHovered] = useState(false);
   const creator = CREATORS.find(c => c.id === item.creatorId);
 
@@ -39,7 +41,7 @@ function DiscoverCard({ item, onNavigate }: { item: ContentItem; onNavigate: (pa
       style={{ cursor: 'pointer' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onNavigate('creator', { id: item.creatorId })}
+      onClick={() => setLocation('/creator/' + item.creatorId )}
     >
       <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
         <img
@@ -65,7 +67,7 @@ function DiscoverCard({ item, onNavigate }: { item: ContentItem; onNavigate: (pa
         {item.type === 'music' && !item.locked && hovered && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'oklch(0.04 0.008 285 / 40%)' }}>
             <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'oklch(0.72 0.09 75)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              onClick={(e) => { e.stopPropagation(); toast('Reproduzindo: ' + item.title); }}>
+              onClick={(e) => { e.stopPropagation(); playTrack({ id: item.id, title: item.title, artist: creator?.alias || '', duration: item.duration || '0:00', thumbnail: item.thumbnail, tier: item.tier }); }}>
               <Play size={18} fill="oklch(0.04 0.008 285)" style={{ color: 'oklch(0.04 0.008 285)', marginLeft: '2px' }} />
             </div>
           </div>
@@ -92,7 +94,8 @@ function DiscoverCard({ item, onNavigate }: { item: ContentItem; onNavigate: (pa
   );
 }
 
-export default function Discover({ onNavigate }: DiscoverProps) {
+export default function Discover() {
+  const [, setLocation] = useLocation();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'popular'>('recent');
@@ -114,9 +117,9 @@ export default function Discover({ onNavigate }: DiscoverProps) {
       >
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <span className="tag-label">Explorar</span>
+            <span className="tag-label">Explore</span>
             <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: 'clamp(28px, 4vw, 48px)', marginTop: '18px', color: 'oklch(0.93 0.02 80)' }}>
-              Descobrir Conteúdo
+              Discover Content
             </h1>
             <div className="ornament" style={{ margin: '18px auto' }}>
               <span style={{ color: 'oklch(0.72 0.09 75)' }}>✦</span>
@@ -128,7 +131,7 @@ export default function Discover({ onNavigate }: DiscoverProps) {
             <Search size={16} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'oklch(0.35 0.02 60)' }} />
             <input
               className="input-dark"
-              placeholder="Buscar obras, criadores, categorias..."
+              placeholder="Search works, creators, categories..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               style={{ paddingLeft: '44px' }}
@@ -165,7 +168,7 @@ export default function Discover({ onNavigate }: DiscoverProps) {
 
           {/* Sort */}
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-            {[{ id: 'recent', label: 'Mais Recentes' }, { id: 'popular', label: 'Mais Populares' }].map(s => (
+            {[{ id: 'recent', label: 'Most Recent' }, { id: 'popular', label: 'Most Popular' }].map(s => (
               <button
                 key={s.id}
                 onClick={() => setSortBy(s.id as typeof sortBy)}
@@ -194,12 +197,12 @@ export default function Discover({ onNavigate }: DiscoverProps) {
         {filtered.length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2px' }}>
             {filtered.map(item => (
-              <DiscoverCard key={item.id} item={item} onNavigate={onNavigate} />
+              <DiscoverCard key={item.id} item={item} />
             ))}
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '80px 20px', color: 'oklch(0.35 0.02 60)', fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '20px' }}>
-            Nenhum conteúdo encontrado nas trevas...
+            No content found in the darkness...
           </div>
         )}
       </div>

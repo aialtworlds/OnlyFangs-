@@ -2,52 +2,54 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { useState } from "react";
+import { Route, Switch } from "wouter";
+
+// Layout
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import MusicPlayer from "./components/MusicPlayer";
+import { MusicPlayerProvider, useMusicPlayer } from "./contexts/MusicPlayerContext";
+// Pages
 import Home from "./pages/Home";
-import CreatorProfile from "./pages/CreatorProfile";
-import Discover from "./pages/Discover";
+import CreatorDashboard from "./pages/CreatorDashboard";
+import PatronDashboard from "./pages/PatronDashboard";
 import Apply from "./pages/Apply";
+import Discover from "./pages/Discover";
 import Creators from "./pages/Creators";
+import CreatorProfile from "./pages/CreatorProfile";
+import NotFound from "./pages/NotFound";
 
-export type PageId = 'home' | 'discover' | 'creators' | 'creator' | 'categories' | 'pricing' | 'apply';
+function AppLayout() {
+  const { currentTrack, closePlayer } = useMusicPlayer();
+  return (
+    <>
+      <Navbar />
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/creator-dashboard" component={CreatorDashboard} />
+        <Route path="/patron-dashboard" component={PatronDashboard} />
+        <Route path="/apply" component={Apply} />
+        <Route path="/discover" component={Discover} />
+        <Route path="/creators" component={Creators} />
+        <Route path="/creator/:id">{(params) => <CreatorProfile creatorId={params.id || ''} />}</Route>
+        <Route path="/404" component={NotFound} />
+        <Route component={NotFound} />
+      </Switch>
+      <Footer />
+      <MusicPlayer track={currentTrack} onClose={closePlayer} />
+    </>
+  );
+}
 
-export interface NavParams {
-  id?: string;
+function Router() {
+  return (
+    <MusicPlayerProvider>
+      <AppLayout />
+    </MusicPlayerProvider>
+  );
 }
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<PageId>('home');
-  const [navParams, setNavParams] = useState<NavParams>({});
-
-  const handleNavigate = (page: string, params?: Record<string, string>) => {
-    setCurrentPage(page as PageId);
-    setNavParams(params || {});
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'home':
-        return <Home onNavigate={handleNavigate} />;
-      case 'discover':
-        return <Discover onNavigate={handleNavigate} />;
-      case 'creators':
-        return <Creators onNavigate={handleNavigate} />;
-      case 'creator':
-        return <CreatorProfile creatorId={navParams.id || 'lady-nocturna'} onNavigate={handleNavigate} />;
-      case 'categories':
-        return <Discover onNavigate={handleNavigate} />;
-      case 'pricing':
-        return <Home onNavigate={handleNavigate} />;
-      case 'apply':
-        return <Apply onNavigate={handleNavigate} />;
-      default:
-        return <Home onNavigate={handleNavigate} />;
-    }
-  };
-
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="dark">
@@ -55,20 +57,15 @@ function App() {
           <Toaster
             toastOptions={{
               style: {
-                background: 'oklch(0.085 0.015 330)',
-                border: '1px solid oklch(0.72 0.09 75 / 20%)',
-                color: 'oklch(0.93 0.02 80)',
+                background: "oklch(0.085 0.015 330)",
+                border: "1px solid oklch(0.72 0.09 75 / 20%)",
+                color: "oklch(0.93 0.02 80)",
                 fontFamily: "'Cormorant Garamond', serif",
               },
             }}
           />
-          {/* Grain texture overlay */}
           <div className="grain-overlay" />
-          <Navbar currentPage={currentPage} onNavigate={handleNavigate} />
-          <main style={{ paddingTop: currentPage === 'home' ? '0' : '102px' }}>
-            {renderPage()}
-          </main>
-          <Footer />
+          <Router />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

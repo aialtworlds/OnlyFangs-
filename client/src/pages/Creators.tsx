@@ -3,13 +3,12 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { Image, Music, BookOpen, Camera, Search } from 'lucide-react';
 import { CREATORS } from '@/lib/data';
 import type { Creator } from '@/lib/data';
 
-interface CreatorsProps {
-  onNavigate: (page: string, params?: Record<string, string>) => void;
-}
+
 
 function ContentTypeIcon({ type }: { type: string }) {
   const icons: Record<string, React.ReactNode> = {
@@ -21,8 +20,9 @@ function ContentTypeIcon({ type }: { type: string }) {
   return <>{icons[type] || null}</>;
 }
 
-function CreatorCard({ creator, onNavigate }: { creator: Creator; onNavigate: (page: string, params?: Record<string, string>) => void }) {
+function CreatorCard({ creator }: { creator: Creator }) {
   const [hovered, setHovered] = useState(false);
+  const [, setLocation] = useLocation();
 
   return (
     <div
@@ -30,7 +30,7 @@ function CreatorCard({ creator, onNavigate }: { creator: Creator; onNavigate: (p
       style={{ cursor: 'pointer' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onNavigate('creator', { id: creator.id })}
+      onClick={() => setLocation('/creator/' + creator.id )}
     >
       <div style={{ position: 'relative', height: '160px', overflow: 'hidden' }}>
         <img
@@ -41,7 +41,7 @@ function CreatorCard({ creator, onNavigate }: { creator: Creator; onNavigate: (p
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 30%, oklch(0.085 0.015 330) 100%)' }} />
         {creator.verified && (
           <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'oklch(0.72 0.09 75)', color: 'oklch(0.04 0.008 285)', fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.3em', padding: '3px 8px', textTransform: 'uppercase' }}>
-            Verificado
+            Verified
           </div>
         )}
       </div>
@@ -65,11 +65,11 @@ function CreatorCard({ creator, onNavigate }: { creator: Creator; onNavigate: (p
         <div style={{ display: 'flex', gap: '16px', borderTop: '1px solid oklch(1 0 0 / 6%)', paddingTop: '10px' }}>
           <div>
             <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.72 0.09 75)', fontWeight: 700 }}>{creator.subscribers.toLocaleString('pt-BR')}</div>
-            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>Assinantes</div>
+            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>Subscribers</div>
           </div>
           <div>
             <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.72 0.09 75)', fontWeight: 700 }}>{creator.totalPosts}</div>
-            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>Obras</div>
+            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>Releases</div>
           </div>
         </div>
       </div>
@@ -77,15 +77,16 @@ function CreatorCard({ creator, onNavigate }: { creator: Creator; onNavigate: (p
   );
 }
 
-export default function Creators({ onNavigate }: CreatorsProps) {
+export default function Creators() {
+  const [, setLocation] = useLocation();
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
 
   const typeFilters = [
-    { id: 'all', label: 'Todos' },
+    { id: 'all', label: 'All' },
     { id: 'image', label: '🖼️ Imagens' },
     { id: 'photo', label: '📷 Fotos' },
-    { id: 'music', label: '🎵 Música' },
+    { id: 'music', label: '🎵 Music' },
     { id: 'book', label: '📖 Livros' },
   ];
 
@@ -99,9 +100,9 @@ export default function Creators({ onNavigate }: CreatorsProps) {
       <div style={{ background: 'oklch(0.06 0.01 285)', borderBottom: '1px solid oklch(0.72 0.09 75 / 8%)', padding: '60px 0 40px' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <span className="tag-label">O Coven</span>
+            <span className="tag-label">The Coven</span>
             <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: 'clamp(28px, 4vw, 48px)', marginTop: '18px', color: 'oklch(0.93 0.02 80)' }}>
-              Criadores da Escuridão
+              Creatures of the Night
             </h1>
             <div className="ornament" style={{ margin: '18px auto' }}>
               <span style={{ color: 'oklch(0.72 0.09 75)' }}>✦</span>
@@ -112,7 +113,7 @@ export default function Creators({ onNavigate }: CreatorsProps) {
             <Search size={16} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'oklch(0.35 0.02 60)' }} />
             <input
               className="input-dark"
-              placeholder="Buscar criadores..."
+              placeholder="Search creators..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{ paddingLeft: '44px' }}
@@ -148,12 +149,12 @@ export default function Creators({ onNavigate }: CreatorsProps) {
       <div className="container" style={{ paddingTop: '48px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '2px' }}>
           {filtered.map(creator => (
-            <CreatorCard key={creator.id} creator={creator} onNavigate={onNavigate} />
+            <CreatorCard key={creator.id} creator={creator} />
           ))}
         </div>
         {filtered.length === 0 && (
           <div style={{ textAlign: 'center', padding: '80px 20px', color: 'oklch(0.35 0.02 60)', fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '20px' }}>
-            Nenhum criador encontrado nas trevas...
+            No creators found in the darkness...
           </div>
         )}
       </div>

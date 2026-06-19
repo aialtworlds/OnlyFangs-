@@ -6,9 +6,10 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   const links = {
-    Plataforma: ['Descobrir', 'Criadores', 'Categorias', 'Planos'],
-    Criadores: ['Aplicar', 'Como Funciona', 'Taxas & Pagamentos', 'Recursos'],
-    Suporte: ['Central de Ajuda', 'Diretrizes', 'Privacidade', 'Termos'],
+    Platform: ['Discover', 'Creators', 'Categories', 'Plans'],
+    Creators: ['Apply', 'How It Works', 'Fees & Payments', 'Resources'],
+    Support: ['Help Center', 'Guidelines', 'Privacy', 'Terms'],
+    Legal: ['Cookies', 'DMCA', 'Accessibility'],
   };
 
   return (
@@ -62,7 +63,7 @@ export default function Footer() {
                 marginBottom: '24px',
               }}
             >
-              A plataforma para criadores da escuridão. Onde o conteúdo exclusivo é um ritual, não uma transação.
+              The platform for creatures of darkness. Where exclusive content is a ritual, not a transaction.
             </p>
             <div style={{ display: 'flex', gap: '12px' }}>
               {['Instagram', 'Twitter', 'Discord'].map((social) => (
@@ -165,7 +166,7 @@ export default function Footer() {
               color: 'oklch(0.35 0.02 60)',
             }}
           >
-            © {year} Only Fangs · Todos os direitos reservados
+            © {year} Only Fangs · All rights reserved
           </p>
           <p
             style={{
@@ -176,7 +177,7 @@ export default function Footer() {
             }}
           >
             <span style={{ color: 'oklch(0.72 0.09 75 / 60%)' }}>✦</span>{' '}
-            Onde a imortalidade encontra a exclusividade{' '}
+            Where immortality meets exclusivity{' '}
             <span style={{ color: 'oklch(0.72 0.09 75 / 60%)' }}>✦</span>
           </p>
         </div>

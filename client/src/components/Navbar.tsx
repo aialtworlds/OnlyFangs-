@@ -4,15 +4,12 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useState, useEffect } from 'react';
-import { Search, Menu, X, Bell, User } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { Search, Menu, X, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 
-interface NavbarProps {
-  currentPage: string;
-  onNavigate: (page: string) => void;
-}
-
-export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
+export default function Navbar() {
+  const [location, setLocation] = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -24,11 +21,13 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
   }, []);
 
   const navLinks = [
-    { id: 'discover', label: 'Descobrir' },
-    { id: 'creators', label: 'Criadores' },
-    { id: 'categories', label: 'Categorias' },
-    { id: 'pricing', label: 'Planos' },
+    { id: 'discover', label: 'Discover', path: '/discover' },
+    { id: 'creators', label: 'Creators', path: '/creators' },
+    { id: 'categories', label: 'Categories', path: '/discover' },
+    { id: 'pricing', label: 'Plans', path: '/#pricing' },
   ];
+
+  const currentPage = location.replace('/', '') || 'home';
 
   return (
     <>
@@ -47,9 +46,9 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
       >
         ✦ &nbsp;{' '}
         <span style={{ color: 'oklch(0.82 0.1 78)' }}>
-          Fundadores
+          Founders
         </span>{' '}
-        — Aplicações abertas para criadores fundadores &nbsp; ✦
+        — Applications open for founding creators &nbsp; ✦
       </div>
 
       {/* Main Nav */}
@@ -74,7 +73,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
       >
         {/* Logo */}
         <button
-          onClick={() => onNavigate('home')}
+          onClick={() => setLocation('/')}
           style={{
             fontFamily: "'Cinzel', serif",
             fontSize: '20px',
@@ -115,7 +114,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
           {navLinks.map((link) => (
             <li key={link.id}>
               <button
-                onClick={() => onNavigate(link.id)}
+                onClick={() => setLocation(link.path)}
                 style={{
                   fontFamily: "'Cinzel', serif",
                   fontSize: '10px',
@@ -173,7 +172,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
 
           {/* Notifications */}
           <button
-            onClick={() => toast('Nenhuma notificação nova', { description: 'O silêncio é um ritual.' })}
+            onClick={() => toast('No new notifications', { description: 'The silence is a ritual.' })}
             style={{
               background: 'none',
               border: 'none',
@@ -189,9 +188,9 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
             <Bell size={16} />
           </button>
 
-          {/* Profile / Login */}
+          {/* Join the Coven CTA */}
           <button
-            onClick={() => onNavigate('apply')}
+            onClick={() => setLocation('/apply')}
             style={{
               fontFamily: "'Cinzel', serif",
               fontSize: '10px',
@@ -219,7 +218,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
             }}
             className="hidden md:block"
           >
-            Entrar no Coven
+            Join the Coven
           </button>
 
           {/* Mobile Menu */}
@@ -258,7 +257,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
         >
           <input
             autoFocus
-            placeholder="Buscar criadores, obras, rituais..."
+            placeholder="Search creators, works, rituals..."
             className="input-dark"
             style={{ maxWidth: '600px' }}
             onKeyDown={(e) => {
@@ -290,7 +289,7 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
             <button
               key={link.id}
               onClick={() => {
-                onNavigate(link.id);
+                setLocation(link.path);
                 setMobileOpen(false);
               }}
               style={{
@@ -313,13 +312,13 @@ export default function Navbar({ currentPage, onNavigate }: NavbarProps) {
           ))}
           <button
             onClick={() => {
-              onNavigate('apply');
+              setLocation('/apply');
               setMobileOpen(false);
             }}
             className="btn-gold"
             style={{ marginTop: '24px', textAlign: 'center' }}
           >
-            Entrar no Coven
+            Join the Coven
           </button>
         </div>
       )}

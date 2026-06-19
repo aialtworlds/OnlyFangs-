@@ -4,13 +4,12 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useEffect, useRef, useState } from 'react';
+import { useLocation } from 'wouter';
 import { ArrowRight, Lock, Play, BookOpen, Image, Music, Camera, Star, ChevronRight } from 'lucide-react';
 import { CREATORS, CONTENT_ITEMS, STATS, TIERS, CATEGORIES, getFeaturedCreators } from '@/lib/data';
 import type { ContentItem, Creator } from '@/lib/data';
 
-interface HomeProps {
-  onNavigate: (page: string, params?: Record<string, string>) => void;
-}
+interface HomeProps {}
 
 // ── Floating Particles ──────────────────────────────────────
 function Particles() {
@@ -54,7 +53,8 @@ function ContentIcon({ type }: { type: string }) {
 }
 
 // ── Creator Card ─────────────────────────────────────────────
-function CreatorCard({ creator, onNavigate }: { creator: Creator; onNavigate: (page: string, params?: Record<string, string>) => void }) {
+function CreatorCard({ creator }: { creator: Creator }) {
+  const [, setLocation] = useLocation();
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -63,7 +63,7 @@ function CreatorCard({ creator, onNavigate }: { creator: Creator; onNavigate: (p
       style={{ cursor: 'pointer', overflow: 'hidden' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onNavigate('creator', { id: creator.id })}
+      onClick={() => setLocation(`/creator/${creator.id}`)}
     >
       {/* Cover Image */}
       <div style={{ position: 'relative', height: '180px', overflow: 'hidden' }}>
@@ -100,7 +100,7 @@ function CreatorCard({ creator, onNavigate }: { creator: Creator; onNavigate: (p
               textTransform: 'uppercase',
             }}
           >
-            Verificado
+            Verified
           </div>
         )}
       </div>
@@ -189,10 +189,10 @@ function CreatorCard({ creator, onNavigate }: { creator: Creator; onNavigate: (p
                 fontWeight: 700,
               }}
             >
-              {creator.subscribers.toLocaleString('pt-BR')}
+              {creator.subscribers.toLocaleString('en-US')}
             </div>
             <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>
-              Assinantes
+              Subscribers
             </div>
           </div>
           <div>
@@ -207,7 +207,7 @@ function CreatorCard({ creator, onNavigate }: { creator: Creator; onNavigate: (p
               {creator.totalPosts}
             </div>
             <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>
-              Obras
+              Releases
             </div>
           </div>
         </div>
@@ -217,7 +217,8 @@ function CreatorCard({ creator, onNavigate }: { creator: Creator; onNavigate: (p
 }
 
 // ── Content Card ─────────────────────────────────────────────
-function ContentCard({ item, onNavigate }: { item: ContentItem; onNavigate: (page: string, params?: Record<string, string>) => void }) {
+function ContentCard({ item }: { item: ContentItem }) {
+  const [, setLocation] = useLocation();
   const [hovered, setHovered] = useState(false);
   const creator = CREATORS.find((c) => c.id === item.creatorId);
 
@@ -230,9 +231,9 @@ function ContentCard({ item, onNavigate }: { item: ContentItem; onNavigate: (pag
 
   const tierLabels: Record<string, string> = {
     mortal: 'Mortal',
-    initiate: 'Iniciado',
-    acolyte: 'Acólito',
-    immortal: 'Imortal',
+    initiate: 'Initiate',
+    acolyte: 'Acolyte',
+    immortal: 'Immortal',
   };
 
   return (
@@ -241,7 +242,7 @@ function ContentCard({ item, onNavigate }: { item: ContentItem; onNavigate: (pag
       style={{ cursor: 'pointer' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => onNavigate('creator', { id: item.creatorId })}
+      onClick={() => setLocation(`/creator/${item.creatorId}`)}
     >
       {/* Thumbnail */}
       <div style={{ position: 'relative', height: '200px', overflow: 'hidden' }}>
@@ -404,7 +405,7 @@ function ContentCard({ item, onNavigate }: { item: ContentItem; onNavigate: (pag
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <span style={{ fontFamily: "'Cinzel', serif", fontSize: '10px', color: 'oklch(0.35 0.02 60)' }}>
-              ♥ {item.likes.toLocaleString('pt-BR')}
+              ♥ {item.likes.toLocaleString('en-US')}
             </span>
           </div>
         </div>
@@ -414,7 +415,8 @@ function ContentCard({ item, onNavigate }: { item: ContentItem; onNavigate: (pag
 }
 
 // ── Tier Card ─────────────────────────────────────────────────
-function TierCard({ tier, onNavigate }: { tier: typeof TIERS[0]; onNavigate: (page: string) => void }) {
+function TierCard({ tier }: { tier: typeof TIERS[0] }) {
+  const [, setLocation] = useLocation();
   return (
     <div
       style={{
@@ -452,7 +454,7 @@ function TierCard({ tier, onNavigate }: { tier: typeof TIERS[0]; onNavigate: (pa
             textTransform: 'uppercase',
           }}
         >
-          Mais Popular
+          Most Popular
         </div>
       )}
 
@@ -488,10 +490,10 @@ function TierCard({ tier, onNavigate }: { tier: typeof TIERS[0]; onNavigate: (pa
           marginBottom: '4px',
         }}
       >
-        {tier.price === 0 ? 'Grátis' : `R$${tier.price.toFixed(2).replace('.', ',')}`}
+        {tier.price === 0 ? 'Free' : `$${tier.price.toFixed(2)}`}
       </div>
       <div style={{ fontSize: '13px', color: 'oklch(0.55 0.03 60)', marginBottom: '14px' }}>
-        {tier.price > 0 ? '/mês' : 'para sempre'}
+        {tier.price > 0 ? '/month' : 'forever'}
       </div>
       <div
         style={{
@@ -523,7 +525,7 @@ function TierCard({ tier, onNavigate }: { tier: typeof TIERS[0]; onNavigate: (pa
         ))}
       </ul>
       <button
-        onClick={() => onNavigate('apply')}
+        onClick={() => setLocation('/apply')}
         style={{
           display: 'block',
           width: '100%',
@@ -551,18 +553,24 @@ function TierCard({ tier, onNavigate }: { tier: typeof TIERS[0]; onNavigate: (pa
           el.style.background = tier.featured ? 'oklch(0.72 0.09 75 / 10%)' : 'transparent';
         }}
       >
-        {tier.price === 0 ? 'Começar Gratuitamente' : 'Assinar o Pacto'}
+        {tier.price === 0 ? 'Begin for Free' : 'Sign the Pact'}
       </button>
     </div>
   );
 }
 
 // ── Main Home Component ───────────────────────────────────────
-export default function Home({ onNavigate }: HomeProps) {
+export default function Home() {
+  const [, setLocation] = useLocation();
   const featuredCreators = getFeaturedCreators();
   const [activeCategory, setActiveCategory] = useState('all');
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+  
+  const navigate = (page: string, params?: Record<string, string>) => {
+    // For now, just log. Will implement proper routing later
+    console.log('Navigate to:', page, params);
+  };
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -588,13 +596,13 @@ export default function Home({ onNavigate }: HomeProps) {
     : CONTENT_ITEMS.filter((c) => c.type === activeCategory);
 
   const marqueeItems = [
-    '🖼️ Imagens Exclusivas',
-    '📷 Fotografia Dark',
-    '🎵 Música Sombria',
-    '📖 Literatura Gótica',
-    '🦇 Criadores Verificados',
-    '🩸 Conteúdo Premium',
-    '👑 Acesso Vitalício',
+    '🖼️ Exclusive Images',
+    '📷 Dark Photography',
+    '🎵 Dark Music',
+    '📖 Gothic Literature',
+    '🦇 Verified Creators',
+    '🩸 Premium Content',
+    '👑 Lifetime Access',
     '✦ Only Fangs',
   ];
 
@@ -675,7 +683,7 @@ export default function Home({ onNavigate }: HomeProps) {
         {/* Content */}
         <div style={{ position: 'relative', zIndex: 2 }}>
           <div className="animate-fade-up" style={{ marginBottom: '36px' }}>
-            <span className="tag-label">Plataforma de Criadores Dark</span>
+            <span className="tag-label">Dark Creators Platform</span>
           </div>
 
           <h1
@@ -699,7 +707,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 marginBottom: '8px',
               }}
             >
-              Bem-vindo ao
+              Welcome to
             </span>
             <span
               style={{
@@ -723,11 +731,11 @@ export default function Home({ onNavigate }: HomeProps) {
               lineHeight: 1.8,
             }}
           >
-            A plataforma exclusiva onde{' '}
+            The exclusive platform where{' '}
             <strong style={{ color: 'oklch(0.82 0.03 75)', fontStyle: 'normal', fontWeight: 400 }}>
-              criadores da escuridão
+              creatures of the night
             </strong>{' '}
-            compartilham imagens, fotos, livros e música com seus iniciados.
+            share images, photos, books and music with their initiates.
           </p>
 
           {/* CTA Cards */}
@@ -753,7 +761,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 position: 'relative',
                 overflow: 'hidden',
               }}
-              onClick={() => onNavigate('discover')}
+              onClick={() => setLocation('/discover')}
               onMouseEnter={(e) => {
                 const el = e.currentTarget;
                 el.style.borderColor = 'oklch(0.72 0.09 75 / 40%)';
@@ -777,7 +785,7 @@ export default function Home({ onNavigate }: HomeProps) {
                   marginBottom: '8px',
                 }}
               >
-                Sou Patrono
+                I am a Patron
               </span>
               <span
                 style={{
@@ -790,7 +798,7 @@ export default function Home({ onNavigate }: HomeProps) {
                   lineHeight: 1.6,
                 }}
               >
-                Descubra e apoie criadores da escuridão
+                Discover and support creatures of the night
               </span>
               <button
                 style={{
@@ -808,7 +816,7 @@ export default function Home({ onNavigate }: HomeProps) {
                   transition: 'all 0.3s',
                 }}
               >
-                Explorar
+                Explore
               </button>
             </div>
 
@@ -825,7 +833,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 position: 'relative',
                 overflow: 'hidden',
               }}
-              onClick={() => onNavigate('apply')}
+              onClick={() => setLocation('/apply')}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
               }}
@@ -845,7 +853,7 @@ export default function Home({ onNavigate }: HomeProps) {
                   marginBottom: '8px',
                 }}
               >
-                Sou Criador
+                I am a Creator
               </span>
               <span
                 style={{
@@ -858,7 +866,7 @@ export default function Home({ onNavigate }: HomeProps) {
                   lineHeight: 1.6,
                 }}
               >
-                Monetize seu conteúdo dark exclusivo
+                Monetize your exclusive dark content
               </span>
               <button
                 style={{
@@ -876,7 +884,7 @@ export default function Home({ onNavigate }: HomeProps) {
                   transition: 'all 0.3s',
                 }}
               >
-                Aplicar
+                Apply
               </button>
             </div>
           </div>
@@ -1021,7 +1029,7 @@ export default function Home({ onNavigate }: HomeProps) {
       >
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '52px' }}>
-            <span className="tag-label">Criadores em Destaque</span>
+            <span className="tag-label">Featured Creators</span>
             <h2
               style={{
                 fontFamily: "'Cinzel', serif",
@@ -1030,7 +1038,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 color: 'oklch(0.93 0.02 80)',
               }}
             >
-              O Coven dos Escolhidos
+              The Chosen Coven
             </h2>
             <div className="ornament" style={{ margin: '18px auto' }}>
               <span style={{ color: 'oklch(0.72 0.09 75)' }}>✦</span>
@@ -1039,7 +1047,7 @@ export default function Home({ onNavigate }: HomeProps) {
               className="font-fell"
               style={{ color: 'oklch(0.55 0.03 60)', maxWidth: '480px', margin: '0 auto' }}
             >
-              Criadores verificados que definem os padrões da escuridão.
+              Verified creators who define the standards of darkness.
             </p>
           </div>
 
@@ -1051,17 +1059,17 @@ export default function Home({ onNavigate }: HomeProps) {
             }}
           >
             {featuredCreators.map((creator) => (
-              <CreatorCard key={creator.id} creator={creator} onNavigate={onNavigate} />
+              <CreatorCard key={creator.id} creator={creator} />
             ))}
           </div>
 
           <div style={{ textAlign: 'center', marginTop: '48px' }}>
             <button
               className="btn-outline"
-              onClick={() => onNavigate('creators')}
+              onClick={() => setLocation('/creators')}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
-              Ver Todos os Criadores
+              View All Creators
               <ChevronRight size={14} />
             </button>
           </div>
@@ -1082,7 +1090,7 @@ export default function Home({ onNavigate }: HomeProps) {
       >
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <span className="tag-label">Conteúdo Recente</span>
+            <span className="tag-label">Recent Content</span>
             <h2
               style={{
                 fontFamily: "'Cinzel', serif",
@@ -1091,7 +1099,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 color: 'oklch(0.93 0.02 80)',
               }}
             >
-              O Grimório Aberto
+              The Open Grimoire
             </h2>
             <div className="ornament" style={{ margin: '18px auto' }}>
               <span style={{ color: 'oklch(0.72 0.09 75)' }}>✦</span>
@@ -1153,17 +1161,17 @@ export default function Home({ onNavigate }: HomeProps) {
             }}
           >
             {filteredContent.map((item) => (
-              <ContentCard key={item.id} item={item} onNavigate={onNavigate} />
+              <ContentCard key={item.id} item={item} />
             ))}
           </div>
 
           <div style={{ textAlign: 'center', marginTop: '48px' }}>
             <button
               className="btn-gold"
-              onClick={() => onNavigate('discover')}
+              onClick={() => setLocation('/discover')}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
-              Explorar Todo o Conteúdo
+              Explore All Content
               <ArrowRight size={14} />
             </button>
           </div>
@@ -1193,7 +1201,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 color: 'oklch(0.93 0.02 80)',
               }}
             >
-              O Ritual de Iniciação
+              The Initiation Ritual
             </h2>
             <div className="ornament" style={{ margin: '18px auto' }}>
               <span style={{ color: 'oklch(0.72 0.09 75)' }}>✦</span>
@@ -1221,13 +1229,13 @@ export default function Home({ onNavigate }: HomeProps) {
                   paddingBottom: '16px',
                 }}
               >
-                Para Patronos
+                For Patrons
               </div>
               {[
-                { n: '01', title: 'Descubra Criadores', desc: 'Explore o catálogo de criadores dark verificados. Filtre por tipo de conteúdo, categoria ou tier.' },
-                { n: '02', title: 'Escolha seu Tier', desc: 'Selecione o nível de acesso que deseja. De Mortal (gratuito) a Imortal (acesso total).' },
-                { n: '03', title: 'Acesse o Conteúdo', desc: 'Desbloqueie imagens, fotos, livros e música exclusivos. Seu grimório pessoal.' },
-                { n: '04', title: 'Apoie a Escuridão', desc: 'Cada assinatura vai diretamente para o criador. Você sustenta a arte que ama.' },
+                { n: '01', title: 'Discover Creators', desc: 'Explore the catalog of verified dark creators. Filter by content type, category or tier.' },
+                { n: '02', title: 'Choose Your Tier', desc: 'Select the access level you desire. From Mortal (free) to Immortal (full access).' },
+                { n: '03', title: 'Access the Content', desc: 'Unlock exclusive images, photos, books and music. Your personal grimoire.' },
+                { n: '04', title: 'Support the Darkness', desc: 'Each subscription goes directly to the creator. You sustain the art you love.' },
               ].map((step) => (
                 <div
                   key={step.n}
@@ -1293,13 +1301,13 @@ export default function Home({ onNavigate }: HomeProps) {
                   paddingBottom: '16px',
                 }}
               >
-                Para Criadores
+                For Creators
               </div>
               {[
-                { n: '01', title: 'Aplique ao Coven', desc: 'Submeta sua candidatura. Revisamos cada aplicação para garantir a qualidade e autenticidade da estética dark.' },
-                { n: '02', title: 'Configure seus Tiers', desc: 'Defina seus níveis de acesso e preços. Você controla o que cada tier pode ver.' },
-                { n: '03', title: 'Publique seu Conteúdo', desc: 'Imagens, fotos, livros, músicas. Tudo em um único lugar, com seu público cativo.' },
-                { n: '04', title: 'Receba seus Ganhos', desc: 'Pagamentos mensais diretos. Transparência total. Você fica com 85% de cada assinatura.' },
+                { n: '01', title: 'Apply to the Coven', desc: 'Submit your application. We review each application to ensure quality and authenticity of the dark aesthetic.' },
+                { n: '02', title: 'Configure Your Tiers', desc: 'Define your access levels and prices. You control what each tier can see.' },
+                { n: '03', title: 'Publish Your Content', desc: 'Images, photos, books, music. All in one place, with your captive audience.' },
+                { n: '04', title: 'Receive Your Earnings', desc: 'Direct monthly payments. Full transparency. You keep 85% of each subscription.' },
               ].map((step) => (
                 <div
                   key={step.n}
@@ -1368,7 +1376,7 @@ export default function Home({ onNavigate }: HomeProps) {
       >
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '52px' }}>
-            <span className="tag-label">Planos de Assinatura</span>
+            <span className="tag-label">Membership Plans</span>
             <h2
               style={{
                 fontFamily: "'Cinzel', serif",
@@ -1377,7 +1385,7 @@ export default function Home({ onNavigate }: HomeProps) {
                 color: 'oklch(0.93 0.02 80)',
               }}
             >
-              Escolha seu Nível de Iniciação
+              Choose Your Initiation Level
             </h2>
             <div className="ornament" style={{ margin: '18px auto' }}>
               <span style={{ color: 'oklch(0.72 0.09 75)' }}>✦</span>
@@ -1386,7 +1394,7 @@ export default function Home({ onNavigate }: HomeProps) {
               className="font-fell"
               style={{ color: 'oklch(0.55 0.03 60)', maxWidth: '480px', margin: '0 auto' }}
             >
-              Cada criador define seus próprios tiers. Os preços abaixo são exemplos típicos da plataforma.
+              Each creator defines their own tiers. The prices below are typical examples from the platform.
             </p>
           </div>
 
@@ -1399,7 +1407,7 @@ export default function Home({ onNavigate }: HomeProps) {
             }}
           >
             {TIERS.map((tier) => (
-              <TierCard key={tier.id} tier={tier} onNavigate={onNavigate} />
+              <TierCard key={tier.id} tier={tier} />
             ))}
           </div>
         </div>
@@ -1439,7 +1447,7 @@ export default function Home({ onNavigate }: HomeProps) {
               marginBottom: '20px',
             }}
           >
-            A Escuridão Chama
+            The Darkness Calls
           </span>
           <h2
             style={{
@@ -1449,7 +1457,7 @@ export default function Home({ onNavigate }: HomeProps) {
               marginBottom: '14px',
             }}
           >
-            Pronto para Entrar no Coven?
+            Ready to Enter the Coven?
           </h2>
           <p
             className="font-fell"
@@ -1461,14 +1469,14 @@ export default function Home({ onNavigate }: HomeProps) {
               margin: '0 auto 40px',
             }}
           >
-            Junte-se a 4.200+ criadores e 89.000+ patronos que já habitam a escuridão.
+            Join thousands of creators and patrons who already dwell in the darkness.
           </p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn-gold" onClick={() => onNavigate('apply')}>
-              Aplicar como Criador
+            <button className="btn-gold" onClick={() => setLocation('/apply')}>
+              Apply as a Creator
             </button>
-            <button className="btn-outline" onClick={() => onNavigate('discover')}>
-              Explorar como Patrono
+            <button className="btn-outline" onClick={() => setLocation('/discover')}>
+              Explore as a Patron
             </button>
           </div>
         </div>

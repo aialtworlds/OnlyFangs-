@@ -3,14 +3,15 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useState } from 'react';
+import { useLocation } from 'wouter';
 import { Lock, Play, BookOpen, Image, Music, Camera, Heart, MessageCircle, Share2, ChevronLeft } from 'lucide-react';
 import { CREATORS, CONTENT_ITEMS, TIERS, getCreatorById, getContentByCreator } from '@/lib/data';
 import type { ContentItem } from '@/lib/data';
 import { toast } from 'sonner';
+import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 
 interface CreatorProfileProps {
   creatorId: string;
-  onNavigate: (page: string, params?: Record<string, string>) => void;
 }
 
 function ContentIcon({ type }: { type: string }) {
@@ -25,12 +26,12 @@ function ContentIcon({ type }: { type: string }) {
 
 const tierLabels: Record<string, string> = {
   mortal: 'Mortal',
-  initiate: 'Iniciado',
-  acolyte: 'Acólito',
-  immortal: 'Imortal',
+  initiate: 'Initiate',
+  acolyte: 'Acolyte',
+  immortal: 'Immortal',
 };
 
-function ContentCard({ item }: { item: ContentItem }) {
+function ContentCard({ item, onPlayMusic }: { item: ContentItem; onPlayMusic: (item: ContentItem) => void }) {
   const [hovered, setHovered] = useState(false);
   const [liked, setLiked] = useState(false);
 
@@ -79,7 +80,7 @@ function ContentCard({ item }: { item: ContentItem }) {
               Tier {tierLabels[item.tier]}
             </div>
             <button
-              onClick={() => toast('Assine para desbloquear este conteúdo', { description: `Requer tier ${tierLabels[item.tier]} ou superior.` })}
+              onClick={() => toast('Subscribe to unlock this content', { description: `Requires ${tierLabels[item.tier]} tier or higher.` })}
               style={{
                 fontFamily: "'Cinzel', serif",
                 fontSize: '8px',
@@ -93,7 +94,7 @@ function ContentCard({ item }: { item: ContentItem }) {
                 marginTop: '4px',
               }}
             >
-              Desbloquear
+              Unlock
             </button>
           </div>
         )}
@@ -115,7 +116,7 @@ function ContentCard({ item }: { item: ContentItem }) {
               opacity: hovered ? 1 : 0,
               transition: 'opacity 0.3s',
             }}
-            onClick={() => toast('Reproduzindo: ' + item.title)}
+            onClick={() => onPlayMusic(item)}
           >
             <Play size={16} fill="oklch(0.04 0.008 285)" style={{ color: 'oklch(0.04 0.008 285)', marginLeft: '2px' }} />
           </div>
@@ -191,7 +192,7 @@ function ContentCard({ item }: { item: ContentItem }) {
               {item.likes + (liked ? 1 : 0)}
             </button>
             <button
-              onClick={() => toast('Comentários em breve')}
+              onClick={() => toast('Comments coming soon')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -209,7 +210,7 @@ function ContentCard({ item }: { item: ContentItem }) {
             </button>
           </div>
           <button
-            onClick={() => toast('Link copiado para a área de transferência')}
+            onClick={() => toast('Link copied to clipboard')}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -229,19 +230,32 @@ function ContentCard({ item }: { item: ContentItem }) {
   );
 }
 
-export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfileProps) {
+export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
+  const [, setLocation] = useLocation();
+  const { playTrack } = useMusicPlayer();
   const creator = getCreatorById(creatorId) || CREATORS[0];
   const content = getContentByCreator(creator.id);
   const [activeTab, setActiveTab] = useState<'all' | 'image' | 'photo' | 'music' | 'book'>('all');
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
 
+  const handlePlayMusic = (item: ContentItem) => {
+    playTrack({
+      id: item.id,
+      title: item.title,
+      artist: creator.alias,
+      duration: item.duration || '0:00',
+      thumbnail: item.thumbnail,
+      tier: item.tier,
+    });
+  };
+
   const filteredContent = activeTab === 'all' ? content : content.filter(c => c.type === activeTab);
 
   const tabs = [
-    { id: 'all', label: 'Tudo', count: content.length },
+    { id: 'all', label: 'All', count: content.length },
     ...creator.contentTypes.map(type => ({
       id: type,
-      label: { image: 'Imagens', photo: 'Fotos', music: 'Música', book: 'Livros' }[type] || type,
+      label: { image: 'Images', photo: 'Photos', music: 'Music', book: 'Books' }[type] || type,
       count: content.filter(c => c.type === type).length,
     })),
   ];
@@ -258,7 +272,7 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
         }}
       >
         <button
-          onClick={() => onNavigate('creators')}
+          onClick={() => setLocation('/creators')}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -287,7 +301,7 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
           }}
         >
           <ChevronLeft size={14} />
-          Voltar
+          Back
         </button>
       </div>
 
@@ -362,7 +376,7 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
                     textTransform: 'uppercase',
                   }}
                 >
-                  Verificado
+                  Verified
                 </span>
               )}
             </div>
@@ -430,7 +444,7 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
                   {creator.subscribers.toLocaleString('pt-BR')}
                 </div>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>
-                  Assinantes
+                  Subscribers
                 </div>
               </div>
               <div>
@@ -438,7 +452,7 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
                   {creator.totalPosts}
                 </div>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>
-                  Obras
+                  Releases
                 </div>
               </div>
             </div>
@@ -447,7 +461,7 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
               style={{ width: '100%', textAlign: 'center' }}
               onClick={() => setSelectedTier('initiate')}
             >
-              Assinar o Pacto
+              Join the Coven
             </button>
           </div>
         </div>
@@ -518,7 +532,7 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
               }}
             >
               {filteredContent.map(item => (
-                <ContentCard key={item.id} item={item} />
+                <ContentCard key={item.id} item={item} onPlayMusic={handlePlayMusic} />
               ))}
               {filteredContent.length === 0 && (
                 <div
@@ -532,7 +546,7 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
                     fontSize: '18px',
                   }}
                 >
-                  Nenhum conteúdo nesta categoria ainda.
+                  No content in this category yet.
                 </div>
               )}
             </div>
@@ -552,7 +566,7 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
                 paddingBottom: '12px',
               }}
             >
-              Tiers de Assinatura
+              Membership Tiers
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -581,10 +595,10 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontFamily: "'Cinzel', serif", fontSize: '18px', fontWeight: 700, color: 'oklch(0.72 0.09 75)' }}>
-                        R${tier.price.toFixed(2).replace('.', ',')}
+                        {tier.price === 0 ? 'Free' : `$${tier.price.toFixed(2)}`}
                       </div>
                       <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', color: 'oklch(0.35 0.02 60)', letterSpacing: '0.15em' }}>
-                        /mês
+                        /month
                       </div>
                     </div>
                   </div>
@@ -615,7 +629,7 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
                       transition: 'all 0.3s',
                     }}
                   >
-                    {selectedTier === tier.id ? 'Selecionado' : 'Selecionar'}
+                    {selectedTier === tier.id ? 'Selected' : 'Select'}
                   </button>
                 </div>
               ))}
@@ -627,7 +641,7 @@ export default function CreatorProfile({ creatorId, onNavigate }: CreatorProfile
                 style={{ width: '100%', marginTop: '12px', textAlign: 'center' }}
                 onClick={() => toast('Processando assinatura...', { description: 'Sistema de pagamento em breve.' })}
               >
-                Confirmar Assinatura
+                Confirm Subscription
               </button>
             )}
           </div>
