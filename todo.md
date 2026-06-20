@@ -70,5 +70,5 @@
 - [ ] Verify subscription appears in /profile after payment
 - [ ] Confirm webhook events in Stripe Dashboard
 - [ ] Test subscription cancellation flow
-- [ ] Verify all TypeScript types are correct (pnpm check)
-- [ ] Run all tests (pnpm test) and confirm passing
+- [x] Verify all TypeScript types are correct (pnpm check) — 0 errors
+- [x] Run all tests (pnpm test) and confirm passing — 20 tests passing
