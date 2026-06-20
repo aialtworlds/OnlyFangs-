@@ -8,7 +8,7 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { getLoginUrl } from '@/const';
-import { Edit2, Check, X, BookOpen, Image, Music, Camera, Star } from 'lucide-react';
+import { Edit2, Check, X, BookOpen, Image, Music, Camera, Star, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 function StatBox({ value, label }: { value: number | string; label: string }) {
@@ -70,6 +70,22 @@ export default function PatronProfile() {
   const subsQuery = trpc.patron.subscriptions.useQuery(undefined, { enabled: isAuthenticated });
   const activityQuery = trpc.patron.activity.useQuery(undefined, { enabled: isAuthenticated });
   const utils = trpc.useUtils();
+
+  const cancelSubMutation = trpc.stripe.cancelSubscription.useMutation({
+    onSuccess: () => {
+      toast('Subscription cancelled', { description: 'Your subscription has been cancelled.' });
+      utils.patron.subscriptions.invalidate();
+      utils.patron.stats.invalidate();
+    },
+    onError: (err) => toast.error('Failed to cancel', { description: err.message }),
+  });
+
+  const billingPortalMutation = trpc.stripe.getBillingPortalUrl.useMutation({
+    onSuccess: (data) => {
+      window.open(data.url, '_blank');
+    },
+    onError: (err) => toast.error('Failed to open billing portal', { description: err.message }),
+  });
 
   const updateProfileMutation = trpc.patron.updateProfile.useMutation({
     onSuccess: () => {
@@ -396,6 +412,36 @@ export default function PatronProfile() {
               </button>
             </div>
           ) : (
+            <>
+<div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => billingPortalMutation.mutate({ origin: window.location.origin })}
+                  disabled={billingPortalMutation.isPending}
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: '8px',
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    background: 'transparent',
+                    color: 'oklch(0.72 0.09 75)',
+                    border: '1px solid oklch(0.72 0.09 75 / 30%)',
+                    padding: '8px 16px',
+                    cursor: billingPortalMutation.isPending ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: billingPortalMutation.isPending ? 0.7 : 1,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {billingPortalMutation.isPending ? (
+                    <Loader2 size={10} style={{ animation: 'spin 1s linear infinite' }} />
+                  ) : (
+                    <ExternalLink size={10} />
+                  )}
+                  Manage Billing
+                </button>
+              </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '2px' }}>
               {subscriptions.map((sub) => (
                 <div
@@ -405,68 +451,103 @@ export default function PatronProfile() {
                     border: '1px solid oklch(1 0 0 / 8%)',
                     padding: '18px',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '14px',
-                    cursor: 'pointer',
+                    flexDirection: 'column',
+                    gap: '12px',
                     transition: 'border-color 0.2s',
                   }}
-                  onClick={() => setLocation(`/creator/${sub.creatorHandle}`)}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'oklch(0.72 0.09 75 / 25%)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'oklch(1 0 0 / 8%)'; }}
                 >
-                  {sub.creatorAvatarUrl ? (
-                    <img
-                      src={sub.creatorAvatarUrl}
-                      alt={sub.creatorAlias}
-                      style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                    />
-                  ) : (
+                  <div
+                    style={{ display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer' }}
+                    onClick={() => setLocation(`/creator/${sub.creatorHandle}`)}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.85'; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+                  >
+                    {sub.creatorAvatarUrl ? (
+                      <img
+                        src={sub.creatorAvatarUrl}
+                        alt={sub.creatorAlias}
+                        style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '44px',
+                          height: '44px',
+                          borderRadius: '50%',
+                          background: 'oklch(0.28 0.1 20)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontFamily: "'Cinzel', serif",
+                          fontSize: '16px',
+                          color: 'oklch(0.93 0.02 80)',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {sub.creatorAlias.charAt(0)}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: '12px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.04em', marginBottom: '2px' }}>
+                        {sub.creatorAlias}
+                        {sub.creatorVerified && (
+                          <span style={{ marginLeft: '6px', color: 'oklch(0.72 0.09 75)', fontSize: '9px' }}>✦</span>
+                        )}
+                      </div>
+                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.45 0.02 60)' }}>
+                        {sub.creatorCategory || 'Dark Creator'}
+                      </div>
+                    </div>
                     <div
                       style={{
-                        width: '44px',
-                        height: '44px',
-                        borderRadius: '50%',
-                        background: 'oklch(0.28 0.1 20)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
                         fontFamily: "'Cinzel', serif",
-                        fontSize: '16px',
-                        color: 'oklch(0.93 0.02 80)',
+                        fontSize: '8px',
+                        letterSpacing: '0.15em',
+                        textTransform: 'uppercase',
+                        color: sub.status === 'active' ? 'oklch(0.65 0.12 145)' : 'oklch(0.55 0.04 20)',
+                        border: `1px solid ${sub.status === 'active' ? 'oklch(0.65 0.12 145 / 30%)' : 'oklch(0.55 0.04 20 / 30%)'}`,
+                        padding: '3px 8px',
                         flexShrink: 0,
                       }}
                     >
-                      {sub.creatorAlias.charAt(0)}
+                      {sub.status}
                     </div>
+                  </div>
+                  {sub.status === 'active' && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Cancel subscription to ${sub.creatorAlias}?`)) {
+                          cancelSubMutation.mutate({ subscriptionId: sub.subId });
+                        }
+                      }}
+                      disabled={cancelSubMutation.isPending && cancelSubMutation.variables?.subscriptionId === sub.subId}
+                      style={{
+                        fontFamily: "'Cinzel', serif",
+                        fontSize: '8px',
+                        letterSpacing: '0.15em',
+                        textTransform: 'uppercase',
+                        background: 'transparent',
+                        color: 'oklch(0.55 0.04 20)',
+                        border: '1px solid oklch(0.55 0.04 20 / 30%)',
+                        padding: '6px 12px',
+                        cursor: 'pointer',
+                        alignSelf: 'flex-start',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {cancelSubMutation.isPending && cancelSubMutation.variables?.subscriptionId === sub.subId ? (
+                        <Loader2 size={9} style={{ animation: 'spin 1s linear infinite' }} />
+                      ) : null}
+                      Cancel Subscription
+                    </button>
                   )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: '12px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.04em', marginBottom: '2px' }}>
-                      {sub.creatorAlias}
-                      {sub.creatorVerified && (
-                        <span style={{ marginLeft: '6px', color: 'oklch(0.72 0.09 75)', fontSize: '9px' }}>✦</span>
-                      )}
-                    </div>
-                    <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.45 0.02 60)' }}>
-                      {sub.creatorCategory || 'Dark Creator'}
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "'Cinzel', serif",
-                      fontSize: '8px',
-                      letterSpacing: '0.15em',
-                      textTransform: 'uppercase',
-                      color: sub.status === 'active' ? 'oklch(0.65 0.12 145)' : 'oklch(0.55 0.04 20)',
-                      border: `1px solid ${sub.status === 'active' ? 'oklch(0.65 0.12 145 / 30%)' : 'oklch(0.55 0.04 20 / 30%)'}`,
-                      padding: '3px 8px',
-                      flexShrink: 0,
-                    }}
-                  >
-                    {sub.status}
-                  </div>
                 </div>
               ))}
             </div>
+            </>
           )}
         </section>
 

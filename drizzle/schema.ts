@@ -21,6 +21,7 @@ export const users = mysqlTable("users", {
   displayName: varchar("displayName", { length: 100 }),
   avatarUrl: text("avatarUrl"),
   loyaltyPoints: int("loyaltyPoints").default(0).notNull(),
+  stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -88,6 +89,8 @@ export const subscriptions = mysqlTable("subscriptions", {
   renewsAt: timestamp("renewsAt"),
   startedAt: timestamp("startedAt").defaultNow().notNull(),
   cancelledAt: timestamp("cancelledAt"),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
+  stripePriceId: varchar("stripePriceId", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

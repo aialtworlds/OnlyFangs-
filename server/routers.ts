@@ -3,6 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { createCheckoutSession, createBillingPortalSession, cancelSubscription } from "./stripe";
 import {
   getPatronStats,
   getPatronSubscriptions,
@@ -11,6 +12,8 @@ import {
   getUnreadNotificationCount,
   getDiscoverCreators,
   getCreatorByUserId,
+  getCreatorByHandle,
+  getPublicCreatorTiers,
   getCreatorReleases,
   getCreatorTiers,
   createCreatorProfile,
@@ -66,6 +69,46 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         await updateUserProfile(ctx.user.id, input);
         return { success: true };
+      }),
+  }),
+
+  public: router({
+    creatorByHandle: publicProcedure
+      .input(z.object({ handle: z.string() }))
+      .query(async ({ input }) => {
+        return getCreatorByHandle(input.handle);
+      }),
+    creatorTiers: publicProcedure
+      .input(z.object({ creatorId: z.number() }))
+      .query(async ({ input }) => {
+        return getPublicCreatorTiers(input.creatorId);
+      }),
+  }),
+
+  stripe: router({
+    createCheckoutSession: protectedProcedure
+      .input(z.object({ tierId: z.number(), origin: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const url = await createCheckoutSession({
+          userId: ctx.user.id,
+          userEmail: ctx.user.email || "",
+          userName: ctx.user.name || undefined,
+          tierId: input.tierId,
+          origin: input.origin,
+        });
+        return { url };
+      }),
+    cancelSubscription: protectedProcedure
+      .input(z.object({ subscriptionId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await cancelSubscription(ctx.user.id, input.subscriptionId);
+        return { success: true };
+      }),
+    getBillingPortalUrl: protectedProcedure
+      .input(z.object({ origin: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const url = await createBillingPortalSession(ctx.user.id, input.origin);
+        return { url };
       }),
   }),
 

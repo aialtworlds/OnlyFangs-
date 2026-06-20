@@ -8,6 +8,13 @@
       "when": 1781896090533,
       "tag": "0000_gifted_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1781907113633,
+      "tag": "0001_deep_bullseye",
+      "breakpoints": true
     }
   ]
 }

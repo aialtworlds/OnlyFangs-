@@ -235,6 +235,27 @@ export async function getCreatorTiers(creatorId: number) {
     .orderBy(tiers.sortOrder);
 }
 
+export async function getCreatorByHandle(handle: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(creators)
+    .where(eq(creators.handle, handle))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getPublicCreatorTiers(creatorId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(tiers)
+    .where(eq(tiers.creatorId, creatorId))
+    .orderBy(tiers.sortOrder);
+}
+
 export async function createCreatorProfile(data: {
   userId: number;
   alias: string;
