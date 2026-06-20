@@ -59,7 +59,7 @@
 ## Pending Stripe Tasks
 - [ ] Verify Stripe credentials in project settings (STRIPE_SECRET_KEY, VITE_STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET)
 - [ ] Test Stripe checkout flow end-to-end with test card (4242 4242 4242 4242)
-- [ ] Create seed data: real creators and tiers in database for testing
+- [x] Create seed data: real creators and tiers in database for testing (seed-db.mjs)
 - [ ] Bridge mock creator routes to real DB creators (currently CreatorProfile shows mock tiers as fallback)
-- [ ] Add vitest tests for Stripe webhook handler and tRPC procedures
-- [ ] Document Stripe integration setup and testing instructions
+- [x] Add vitest tests for Stripe webhook handler and tRPC procedures (stripe.test.ts) — 20 tests passing
+- [x] Document Stripe integration setup and testing instructions (STRIPE_SETUP.md)

@@ -1,0 +1,175 @@
+#!/usr/bin/env node
+
+import mysql from 'mysql2/promise';
+import { drizzle } from 'drizzle-orm/mysql2';
+import { users, creators, tiers } from './drizzle/schema.ts';
+
+const DATABASE_URL = process.env.DATABASE_URL;
+
+if (!DATABASE_URL) {
+  console.error('DATABASE_URL environment variable is not set');
+  process.exit(1);
+}
+
+async function seed() {
+  let connection;
+  try {
+    console.log('🌱 Starting database seed...');
+
+    // Parse DATABASE_URL (mysql://user:password@host:port/database)
+    const url = new URL(DATABASE_URL);
+    const user = url.username || 'root';
+    const password = url.password || '';
+    const host = url.hostname || 'localhost';
+    const port = url.port ? parseInt(url.port) : 3306;
+    const database = url.pathname?.slice(1) || 'only_fangs';
+
+    console.log(`📡 Connecting to ${host}:${port}/${database}...`);
+
+    // Create connection
+    connection = await mysql.createConnection({
+      host,
+      port,
+      user,
+      password: password || undefined,
+      database,
+    });
+
+    const db = drizzle(connection);
+
+    // Create test user (creator)
+    console.log('📝 Creating test user...');
+    const testUser = await db
+      .insert(users)
+      .values({
+        openId: 'test-creator-001',
+        name: 'Lady Nocturna',
+        email: 'lady@example.com',
+        displayName: 'Lady Nocturna',
+        role: 'user',
+      })
+      .onDuplicateKeyUpdate({ set: { name: 'Lady Nocturna' } });
+
+    const userId = testUser[0].insertId || 1;
+    console.log(`✅ User created with ID: ${userId}`);
+
+    // Create creator profile
+    console.log('🎨 Creating creator profile...');
+    const creatorResult = await db
+      .insert(creators)
+      .values({
+        userId,
+        alias: 'Lady Nocturna',
+        handle: 'lady-nocturna',
+        bio: 'Photographer specializing in gothic portraits and dark fashion. Every image is a ritual, every click an invocation.',
+        category: 'Gothic Photography',
+        verified: true,
+        avatarUrl: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663776899552/EqrmbXCk9cv2fubgnH6rvo/creator-1-k2JmN6sbHACKjF9wX7PShC.webp',
+        coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&q=80',
+        totalFollowers: 0,
+        totalSubscribers: 2847,
+        totalReleases: 156,
+        status: 'active',
+      })
+      .onDuplicateKeyUpdate({
+        set: {
+          alias: 'Lady Nocturna',
+          verified: true,
+          status: 'active',
+        },
+      });
+
+    const creatorId = creatorResult[0].insertId || 1;
+    console.log(`✅ Creator profile created with ID: ${creatorId}`);
+
+    // Create tiers
+    console.log('💎 Creating membership tiers...');
+    const tierData = [
+      {
+        creatorId,
+        name: 'Initiate',
+        slug: 'initiate',
+        description: 'The first step beyond the veil. Exclusive content unlocked.',
+        price: '9.90',
+        currency: 'USD',
+        perks: JSON.stringify([
+          'All Mortal tier content',
+          'Monthly exclusive posts',
+          'Access to image gallery',
+          'Community Discord',
+        ]),
+        sortOrder: 1,
+      },
+      {
+        creatorId,
+        name: 'Acolyte',
+        slug: 'acolyte',
+        description: 'Initiated into the mysteries. Access to the complete grimoire.',
+        price: '24.90',
+        currency: 'USD',
+        perks: JSON.stringify([
+          'All Initiate tier content',
+          'Complete book library',
+          'Exclusive music albums',
+          'Monthly live sessions',
+          'Credits mention',
+        ]),
+        featured: true,
+        sortOrder: 2,
+      },
+      {
+        creatorId,
+        name: 'Immortal',
+        slug: 'immortal',
+        description: 'Beyond death. Eternal access and direct communion with the creator.',
+        price: '59.90',
+        currency: 'USD',
+        perks: JSON.stringify([
+          'All Acolyte tier content',
+          'Exclusive content for Immortals',
+          'Direct message with the creator',
+          'Digitally signed prints',
+          'Lifetime archive access',
+          'Co-creation on special projects',
+        ]),
+        sortOrder: 3,
+      },
+    ];
+
+    for (const tier of tierData) {
+      await db
+        .insert(tiers)
+        .values(tier)
+        .onDuplicateKeyUpdate({
+          set: {
+            name: tier.name,
+            description: tier.description,
+            price: tier.price,
+          },
+        });
+    }
+
+    console.log(`✅ ${tierData.length} tiers created`);
+
+    console.log('\n✨ Seed completed successfully!');
+    console.log(`
+Test data created:
+- Creator: Lady Nocturna (handle: lady-nocturna)
+- Tiers: Initiate ($9.90), Acolyte ($24.90), Immortal ($59.90)
+
+You can now test Stripe checkout by:
+1. Going to /creator/lady-nocturna
+2. Clicking "Subscribe Now" on a tier
+3. Using test card: 4242 4242 4242 4242
+    `);
+
+    await connection.end();
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Seed failed:', error);
+    if (connection) await connection.end();
+    process.exit(1);
+  }
+}
+
+seed();
