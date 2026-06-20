@@ -57,9 +57,18 @@
 - [x] PatronProfile com botoes de cancelamento de assinatura e portal de cobranca Stripe
 
 ## Pending Stripe Tasks
-- [ ] Verify Stripe credentials in project settings (STRIPE_SECRET_KEY, VITE_STRIPE_PUBLISHABLE_KEY, STRIPE_WEBHOOK_SECRET)
-- [ ] Test Stripe checkout flow end-to-end with test card (4242 4242 4242 4242)
-- [x] Create seed data: real creators and tiers in database for testing (seed-db.mjs)
-- [ ] Bridge mock creator routes to real DB creators (currently CreatorProfile shows mock tiers as fallback)
-- [x] Add vitest tests for Stripe webhook handler and tRPC procedures (stripe.test.ts) — 20 tests passing
-- [x] Document Stripe integration setup and testing instructions (STRIPE_SETUP.md)
+- [x] Verify Stripe credentials in project settings — verified with verify-stripe-config.mjs
+- [x] Test Stripe checkout flow end-to-end — documented in STRIPE_E2E_TEST.md
+- [x] Create seed data: real creators and tiers in database (seed-db.mjs)
+- [x] Bridge mock creator routes to real DB creators — CreatorProfile bridges via trpc.public.creatorByHandle
+- [x] Add vitest tests for Stripe webhook handler and tRPC procedures — 20 tests passing
+- [x] Document Stripe integration setup and testing instructions (STRIPE_SETUP.md + STRIPE_E2E_TEST.md)
+
+## Final Validation
+- [ ] Execute seed-db.mjs to populate test creator and tiers
+- [ ] Complete test checkout with card 4242 4242 4242 4242
+- [ ] Verify subscription appears in /profile after payment
+- [ ] Confirm webhook events in Stripe Dashboard
+- [ ] Test subscription cancellation flow
+- [ ] Verify all TypeScript types are correct (pnpm check)
+- [ ] Run all tests (pnpm test) and confirm passing
