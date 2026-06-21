@@ -1,13 +1,19 @@
 #!/usr/bin/env node
 
+/**
+ * Seed Database with Test Data
+ * 
+ * This script populates the database with test creator (Lady Nocturna) and membership tiers.
+ * 
+ * Usage: node seed-db.mjs
+ */
+
 import mysql from 'mysql2/promise';
-import { drizzle } from 'drizzle-orm/mysql2';
-import { users, creators, tiers } from './drizzle/schema.ts';
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
 if (!DATABASE_URL) {
-  console.error('DATABASE_URL environment variable is not set');
+  console.error('❌ DATABASE_URL environment variable is not set');
   process.exit(1);
 }
 
@@ -33,53 +39,44 @@ async function seed() {
       user,
       password: password || undefined,
       database,
+      ssl: {},
     });
-
-    const db = drizzle(connection);
 
     // Create test user (creator)
     console.log('📝 Creating test user...');
-    const testUser = await db
-      .insert(users)
-      .values({
-        openId: 'test-creator-001',
-        name: 'Lady Nocturna',
-        email: 'lady@example.com',
-        displayName: 'Lady Nocturna',
-        role: 'user',
-      })
-      .onDuplicateKeyUpdate({ set: { name: 'Lady Nocturna' } });
+    const [userResult] = await connection.execute(
+      `INSERT INTO users (openId, name, email, displayName, role) 
+       VALUES (?, ?, ?, ?, ?) 
+       ON DUPLICATE KEY UPDATE name = VALUES(name)`,
+      ['test-creator-001', 'Lady Nocturna', 'lady@example.com', 'Lady Nocturna', 'user']
+    );
 
-    const userId = testUser[0].insertId || 1;
+    const userId = userResult.insertId || 1;
     console.log(`✅ User created with ID: ${userId}`);
 
     // Create creator profile
     console.log('🎨 Creating creator profile...');
-    const creatorResult = await db
-      .insert(creators)
-      .values({
+    const [creatorResult] = await connection.execute(
+      `INSERT INTO creators (userId, alias, handle, bio, category, verified, avatarUrl, coverUrl, totalFollowers, totalSubscribers, totalReleases, status) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+       ON DUPLICATE KEY UPDATE alias = VALUES(alias), verified = VALUES(verified), status = VALUES(status)`,
+      [
         userId,
-        alias: 'Lady Nocturna',
-        handle: 'lady-nocturna',
-        bio: 'Photographer specializing in gothic portraits and dark fashion. Every image is a ritual, every click an invocation.',
-        category: 'Gothic Photography',
-        verified: true,
-        avatarUrl: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663776899552/EqrmbXCk9cv2fubgnH6rvo/creator-1-k2JmN6sbHACKjF9wX7PShC.webp',
-        coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&q=80',
-        totalFollowers: 0,
-        totalSubscribers: 2847,
-        totalReleases: 156,
-        status: 'active',
-      })
-      .onDuplicateKeyUpdate({
-        set: {
-          alias: 'Lady Nocturna',
-          verified: true,
-          status: 'active',
-        },
-      });
+        'Lady Nocturna',
+        'lady-nocturna',
+        'Photographer specializing in gothic portraits and dark fashion. Every image is a ritual, every click an invocation.',
+        'Gothic Photography',
+        true,
+        'https://d2xsxph8kpxj0f.cloudfront.net/310519663776899552/EqrmbXCk9cv2fubgnH6rvo/creator-1-k2JmN6sbHACKjF9wX7PShC.webp',
+        'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&q=80',
+        0,
+        2847,
+        156,
+        'active'
+      ]
+    );
 
-    const creatorId = creatorResult[0].insertId || 1;
+    const creatorId = creatorResult.insertId || 1;
     console.log(`✅ Creator profile created with ID: ${creatorId}`);
 
     // Create tiers
@@ -137,16 +134,22 @@ async function seed() {
     ];
 
     for (const tier of tierData) {
-      await db
-        .insert(tiers)
-        .values(tier)
-        .onDuplicateKeyUpdate({
-          set: {
-            name: tier.name,
-            description: tier.description,
-            price: tier.price,
-          },
-        });
+      await connection.execute(
+        `INSERT INTO tiers (creatorId, name, slug, description, price, currency, perks, featured, sortOrder) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) 
+         ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), price = VALUES(price)`,
+        [
+          tier.creatorId,
+          tier.name,
+          tier.slug,
+          tier.description,
+          tier.price,
+          tier.currency,
+          tier.perks,
+          tier.featured ? 1 : 0,
+          tier.sortOrder,
+        ]
+      );
     }
 
     console.log(`✅ ${tierData.length} tiers created`);
@@ -163,11 +166,15 @@ You can now test Stripe checkout by:
 3. Using test card: 4242 4242 4242 4242
     `);
 
-    await connection.end();
+    try {
+      await connection.end();
+    } catch {}
     process.exit(0);
   } catch (error) {
-    console.error('❌ Seed failed:', error);
-    if (connection) await connection.end();
+    console.error('❌ Seed failed:', error.message || error);
+    try {
+      if (connection) await connection.end();
+    } catch {}
     process.exit(1);
   }
 }
