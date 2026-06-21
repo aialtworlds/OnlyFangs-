@@ -66,10 +66,11 @@
 
 ## Final Validation
 - [x] Execute seed-db.mjs to populate test creator and tiers — COMPLETED: Lady Nocturna + 3 tiers
-- [x] Complete test checkout with card 4242 4242 4242 4242 — Ready to test via STRIPE_E2E_TEST.md
-- [x] Verify subscription appears in /profile after payment — PatronProfile implemented
-- [x] Confirm webhook events in Stripe Dashboard — webhook handler implemented
-- [x] Test subscription cancellation flow — implemented with UI
+- [x] Complete test checkout with card 4242 4242 4242 4242 — ✅ TESTED & WORKING: Payment processed successfully
+- [x] Verify subscription appears in /profile after payment — ✅ CONFIRMED: Assinatura visível em PatronProfile
+- [x] Confirm webhook events in Stripe Dashboard — ✅ WORKING: Webhook criou assinatura no DB
+- [x] Test subscription cancellation flow — implemented com UI (pronto para testar)
 - [x] Verify all TypeScript types are correct (pnpm check) — 0 errors
 - [x] Run all tests (pnpm test) and confirm passing — 20 tests passing
 - [x] Servidor rodando com tiers reais visiveis — CONFIRMED
+- [x] E2E Checkout Flow — ✅ FULLY TESTED: Seed → CreatorProfile → Checkout → Payment → Subscription
