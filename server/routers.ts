@@ -2,7 +2,7 @@ import { z } from "zod";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, router, creatorProcedure } from "./_core/trpc";
 import { createCheckoutSession, createBillingPortalSession, cancelSubscription } from "./stripe";
 import {
   getPatronStats,
@@ -22,6 +22,10 @@ import {
   createTier,
   updateUserProfile,
   getUserById,
+  getCreatorSubscriptions,
+  getCreatorAnalytics,
+  updateTier,
+  deleteTier,
 } from "./db";
 
 export const appRouter = router({
@@ -174,7 +178,7 @@ export const appRouter = router({
         await createRelease({ creatorId: creator.id, ...input });
         return { success: true };
       }),
-    createTier: protectedProcedure
+    createTier: creatorProcedure
       .input(z.object({
         name: z.string().min(1).max(100),
         slug: z.string().min(1).max(50),
@@ -189,6 +193,51 @@ export const appRouter = router({
         const creator = await getCreatorByUserId(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
         await createTier({ creatorId: creator.id, ...input });
+        return { success: true };
+      }),
+    subscriptions: creatorProcedure.query(async ({ ctx }) => {
+      const creator = await getCreatorByUserId(ctx.user.id);
+      if (!creator) return [];
+      return getCreatorSubscriptions(creator.id);
+    }),
+    analytics: creatorProcedure.query(async ({ ctx }) => {
+      const creator = await getCreatorByUserId(ctx.user.id);
+      if (!creator) {
+        return {
+          totalSubscribers: 0,
+          activeSubscriptions: 0,
+          totalRevenue: 0,
+          monthlyRevenue: 0,
+          tierBreakdown: [],
+        };
+      }
+      return getCreatorAnalytics(creator.id);
+    }),
+    updateTier: creatorProcedure
+      .input(z.object({
+        tierId: z.number(),
+        name: z.string().min(1).max(100).optional(),
+        slug: z.string().min(1).max(50).optional(),
+        description: z.string().max(500).optional().nullable(),
+        price: z.string().optional(),
+        currency: z.string().length(3).optional(),
+        perks: z.array(z.string()).optional().nullable(),
+        featured: z.boolean().optional(),
+        sortOrder: z.number().int().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new Error("Creator profile not found");
+        const { tierId, ...data } = input;
+        await updateTier(tierId, creator.id, data);
+        return { success: true };
+      }),
+    deleteTier: creatorProcedure
+      .input(z.object({ tierId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new Error("Creator profile not found");
+        await deleteTier(input.tierId, creator.id);
         return { success: true };
       }),
   }),

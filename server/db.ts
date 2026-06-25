@@ -1,4 +1,4 @@
-import { eq, desc, and, count } from "drizzle-orm";
+import { eq, desc, and, count, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
@@ -377,4 +377,159 @@ export async function createTier(data: {
     featured: data.featured ?? false,
     sortOrder: data.sortOrder ?? 0,
   });
+}
+
+
+// ── Creator Admin Panel ────────────────────────────────────────
+
+export async function getCreatorSubscriptions(creatorId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const result = await db
+    .select({
+      id: subscriptions.id,
+      patronId: subscriptions.patronId,
+      tierId: subscriptions.tierId,
+      tierName: tiers.name,
+      status: subscriptions.status,
+      startedAt: subscriptions.startedAt,
+      renewsAt: subscriptions.renewsAt,
+      stripeSubscriptionId: subscriptions.stripeSubscriptionId,
+      createdAt: subscriptions.createdAt,
+    })
+    .from(subscriptions)
+    .innerJoin(tiers, eq(subscriptions.tierId, tiers.id))
+    .where(eq(subscriptions.creatorId, creatorId))
+    .orderBy(subscriptions.createdAt);
+
+  return result;
+}
+
+export async function getCreatorAnalytics(creatorId: number) {
+  const db = await getDb();
+  if (!db) {
+    return {
+      totalSubscribers: 0,
+      activeSubscriptions: 0,
+      totalRevenue: 0,
+      monthlyRevenue: 0,
+      tierBreakdown: [],
+    };
+  }
+
+  // Get total and active subscriptions
+  const [subStats] = await db
+    .select({
+      total: sql`COUNT(DISTINCT ${subscriptions.patronId})`.as('total'),
+      active: sql`COUNT(CASE WHEN ${subscriptions.status} = 'active' THEN 1 END)`.as('active'),
+    })
+    .from(subscriptions)
+    .innerJoin(tiers, eq(subscriptions.tierId, tiers.id))
+    .where(eq(subscriptions.creatorId, creatorId));
+
+  // Get tier breakdown
+  const tierBreakdown = await db
+    .select({
+      tierName: tiers.name,
+      tierId: tiers.id,
+      count: sql`COUNT(${subscriptions.id})`.as('count'),
+      price: tiers.price,
+    })
+    .from(subscriptions)
+    .innerJoin(tiers, eq(subscriptions.tierId, tiers.id))
+    .where(eq(subscriptions.creatorId, creatorId))
+    .groupBy(tiers.id, tiers.name, tiers.price) as any;
+
+  // Calculate revenue (simplified: price * count)
+  let totalRevenue = 0;
+  let monthlyRevenue = 0;
+  tierBreakdown.forEach((tier: any) => {
+    const count = Number(tier.count) || 0;
+    const price = parseFloat(tier.price) || 0;
+    totalRevenue += price * count;
+  });
+
+  // Estimate monthly (assuming all active subs renew)
+  monthlyRevenue = (Number(subStats?.active) || 0) * 25; // Average tier price
+
+  return {
+    totalSubscribers: Number(subStats?.total) || 0,
+    activeSubscriptions: Number(subStats?.active) || 0,
+    totalRevenue,
+    monthlyRevenue,
+    tierBreakdown: tierBreakdown.map((t: any) => ({
+      tierName: t.tierName,
+      tierId: t.tierId,
+      subscribers: Number(t.count) || 0,
+      price: t.price,
+    })),
+  };
+}
+
+export async function updateTier(tierId: number, creatorId: number, data: {
+  name?: string;
+  slug?: string;
+  description?: string | null;
+  price?: string;
+  currency?: string;
+  perks?: string[] | null;
+  featured?: boolean;
+  sortOrder?: number;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Verify tier belongs to creator
+  const tier = await db
+    .select()
+    .from(tiers)
+    .where(eq(tiers.id, tierId))
+    .limit(1);
+
+  if (!tier.length || tier[0].creatorId !== creatorId) {
+    throw new Error("Tier not found or access denied");
+  }
+
+  await db
+    .update(tiers)
+    .set({
+      name: data.name,
+      slug: data.slug,
+      description: data.description,
+      price: data.price,
+      currency: data.currency,
+      perks: data.perks,
+      featured: data.featured,
+      sortOrder: data.sortOrder,
+    })
+    .where(eq(tiers.id, tierId));
+}
+
+export async function deleteTier(tierId: number, creatorId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Verify tier belongs to creator
+  const tier = await db
+    .select()
+    .from(tiers)
+    .where(eq(tiers.id, tierId))
+    .limit(1);
+
+  if (!tier.length || tier[0].creatorId !== creatorId) {
+    throw new Error("Tier not found or access denied");
+  }
+
+  // Check if tier has active subscriptions
+  const activeSubs = await db
+    .select({ count: sql`COUNT(*)`.as('count') })
+    .from(subscriptions)
+    .where(eq(subscriptions.tierId, tierId));
+
+  if (Number(activeSubs[0]?.count) > 0) {
+    throw new Error("Cannot delete tier with active subscriptions");
+  }
+
+  await db.delete(tiers).where(eq(tiers.id, tierId));
 }

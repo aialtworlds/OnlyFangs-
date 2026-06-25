@@ -19,6 +19,7 @@ import Creators from "./pages/Creators";
 import CreatorProfile from "./pages/CreatorProfile";
 import NotFound from "./pages/NotFound";
 import PatronProfile from "./pages/PatronProfile";
+import CreatorAdmin from "./pages/CreatorAdmin";
 
 function AppLayout() {
   const { currentTrack, closePlayer } = useMusicPlayer();
@@ -28,6 +29,7 @@ function AppLayout() {
       <Switch>
         <Route path="/" component={Home} />
         <Route path="/creator-dashboard" component={CreatorDashboard} />
+        <Route path="/creator-admin" component={CreatorAdmin} />
         <Route path="/patron-dashboard" component={PatronDashboard} />
         <Route path="/apply" component={Apply} />
         <Route path="/discover" component={Discover} />

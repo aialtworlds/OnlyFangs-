@@ -43,3 +43,27 @@ export const adminProcedure = t.procedure.use(
     });
   }),
 );
+
+const CREATOR_ERR_MSG = 'You must be a creator to access this resource (10003)';
+
+export const creatorProcedure = t.procedure.use(
+  t.middleware(async opts => {
+    const { ctx, next } = opts;
+
+    if (!ctx.user) {
+      throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+    }
+
+    // Allow both creators and admins
+    if (ctx.user.role !== 'creator' && ctx.user.role !== 'admin') {
+      throw new TRPCError({ code: "FORBIDDEN", message: CREATOR_ERR_MSG });
+    }
+
+    return next({
+      ctx: {
+        ...ctx,
+        user: ctx.user,
+      },
+    });
+  }),
+);
