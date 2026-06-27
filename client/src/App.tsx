@@ -20,6 +20,7 @@ import CreatorProfile from "./pages/CreatorProfile";
 import NotFound from "./pages/NotFound";
 import PatronProfile from "./pages/PatronProfile";
 import CreatorAdmin from "./pages/CreatorAdmin";
+import CreatorContent from "./pages/CreatorContent";
 
 function AppLayout() {
   const { currentTrack, closePlayer } = useMusicPlayer();
@@ -34,6 +35,7 @@ function AppLayout() {
         <Route path="/apply" component={Apply} />
         <Route path="/discover" component={Discover} />
         <Route path="/creators" component={Creators} />
+        <Route path="/creator/:id/content" component={CreatorContent} />
         <Route path="/creator/:id">{(params) => <CreatorProfile creatorId={params.id || ''} />}</Route>
         <Route path="/profile" component={PatronProfile} />
         <Route path="/404" component={NotFound} />

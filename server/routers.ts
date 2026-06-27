@@ -26,6 +26,11 @@ import {
   getCreatorAnalytics,
   updateTier,
   deleteTier,
+  uploadContent,
+  getCreatorContent,
+  getContentById,
+  deleteContent,
+  canAccessContent,
 } from "./db";
 
 export const appRouter = router({
@@ -178,6 +183,11 @@ export const appRouter = router({
         await createRelease({ creatorId: creator.id, ...input });
         return { success: true };
       }),
+    myTiers: creatorProcedure.query(async ({ ctx }) => {
+      const creator = await getCreatorByUserId(ctx.user.id);
+      if (!creator) return [];
+      return getCreatorTiers(creator.id);
+    }),
     createTier: creatorProcedure
       .input(z.object({
         name: z.string().min(1).max(100),
@@ -239,6 +249,63 @@ export const appRouter = router({
         if (!creator) throw new Error("Creator profile not found");
         await deleteTier(input.tierId, creator.id);
         return { success: true };
+      }),
+  }),
+
+  content: router({
+    upload: creatorProcedure
+      .input(z.object({
+        tierId: z.number(),
+        title: z.string().min(1).max(255),
+        description: z.string().max(1000).optional(),
+        type: z.enum(["image", "photo", "music", "book", "video", "post"]),
+        fileUrl: z.string().url(),
+        fileKey: z.string(),
+        mimeType: z.string().optional(),
+        fileSize: z.number().optional(),
+        duration: z.string().optional(),
+        thumbnailUrl: z.string().url().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new Error("Creator profile not found");
+        const result = await uploadContent(
+          creator.id,
+          input.tierId,
+          input.title,
+          input.description,
+          input.type,
+          input.fileUrl,
+          input.fileKey,
+          input.mimeType,
+          input.fileSize,
+          input.duration,
+          input.thumbnailUrl
+        );
+        return { success: true };
+      }),
+    list: creatorProcedure.query(async ({ ctx }) => {
+      const creator = await getCreatorByUserId(ctx.user.id);
+      if (!creator) return [];
+      return getCreatorContent(creator.id);
+    }),
+    delete: creatorProcedure
+      .input(z.object({ contentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new Error("Creator profile not found");
+        await deleteContent(input.contentId, creator.id);
+        return { success: true };
+      }),
+    canAccess: protectedProcedure
+      .input(z.object({ contentId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return canAccessContent(ctx.user.id, input.contentId);
+      }),
+    getById: publicProcedure
+      .input(z.object({ contentId: z.number() }))
+      .query(async ({ input }) => {
+        return getContentById(input.contentId);
       }),
   }),
 });

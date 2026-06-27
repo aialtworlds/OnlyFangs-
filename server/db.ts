@@ -2,7 +2,7 @@ import { eq, desc, and, count, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
-  releases, savedContent, activityFeed, notifications, messages,
+  releases, savedContent, activityFeed, notifications, messages, content,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -532,4 +532,93 @@ export async function deleteTier(tierId: number, creatorId: number) {
   }
 
   await db.delete(tiers).where(eq(tiers.id, tierId));
+}
+
+// ── Content Management ────────────────────────────────────────
+
+export async function uploadContent(
+  creatorId: number,
+  tierId: number,
+  title: string,
+  description: string | undefined,
+  type: string,
+  fileUrl: string,
+  fileKey: string,
+  mimeType?: string,
+  fileSize?: number,
+  duration?: string,
+  thumbnailUrl?: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(content).values({
+    creatorId,
+    tierId,
+    title,
+    description: description ?? null,
+    type: type as any,
+    fileUrl,
+    fileKey,
+    mimeType: mimeType ?? null,
+    fileSize: fileSize ?? null,
+    duration: duration ?? null,
+    thumbnailUrl: thumbnailUrl ?? null,
+  });
+  return result;
+}
+
+export async function getCreatorContent(creatorId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(content)
+    .where(eq(content.creatorId, creatorId))
+    .orderBy(desc(content.createdAt));
+}
+
+export async function getContentById(contentId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(content)
+    .where(eq(content.id, contentId))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function deleteContent(contentId: number, creatorId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const item = await getContentById(contentId);
+  if (!item || item.creatorId !== creatorId) {
+    throw new Error("Content not found or unauthorized");
+  }
+  await db.delete(content).where(eq(content.id, contentId));
+}
+
+export async function canAccessContent(
+  patronId: number,
+  contentId: number
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const item = await getContentById(contentId);
+  if (!item) return false;
+
+  // Check if patron has active subscription to the required tier
+  const subscription = await db
+    .select()
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.patronId, patronId),
+        eq(subscriptions.tierId, item.tierId),
+        eq(subscriptions.status, "active")
+      )
+    )
+    .limit(1);
+
+  return subscription.length > 0;
 }

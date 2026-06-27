@@ -84,3 +84,21 @@
 - [x] Role-based access control: only creators (role='creator') can access
 - [x] Form validation: tier name, price, description, perks
 - [x] Tests: CRUD operations, analytics calculations, access control (15 tests passing)
+
+
+## Exclusive Content Upload & Tier-Locking
+- [x] DB schema: content table (id, creatorId, title, description, type, fileUrl, fileKey, tierId, createdAt, updatedAt)
+- [x] tRPC procedures: content.upload, content.list, content.delete, content.canAccess, content.getById
+- [x] S3 upload helper: storagePut integration for file uploads (via /api/upload endpoint) — IMPLEMENTED
+- [x] React components: ContentUploadForm, ContentGallery, ContentPreview
+- [x] Page: /creator/:id/content with tier-locked content display
+- [x] Access validation: check if patron has subscription to required tier
+- [ ] Tests: upload, access control, tier validation
+
+
+## Content Upload Tests
+- [ ] Test: upload file via /api/upload
+- [ ] Test: verify file stored in S3
+- [ ] Test: verify tier-locking validation
+- [ ] Test: verify access control (patron with/without subscription)
+- [ ] Test: verify file size limits (max 50MB)

@@ -179,3 +179,25 @@ export const notifications = mysqlTable("notifications", {
   read: boolean("read").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
+
+
+// ── Exclusive Content ─────────────────────────────────────────
+export const content = mysqlTable("content", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull(),
+  tierId: int("tierId").notNull(), // Tier required to access this content
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  type: mysqlEnum("type", ["image", "photo", "music", "book", "video", "post"]).notNull(),
+  fileUrl: text("fileUrl").notNull(), // S3 URL from storagePut
+  fileKey: varchar("fileKey", { length: 255 }).notNull(), // S3 key for reference
+  mimeType: varchar("mimeType", { length: 100 }),
+  fileSize: int("fileSize"), // Size in bytes
+  duration: varchar("duration", { length: 20 }), // For audio/video: "HH:MM:SS"
+  thumbnailUrl: text("thumbnailUrl"), // Optional preview image
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Content = typeof content.$inferSelect;
+export type InsertContent = typeof content.$inferInsert;
