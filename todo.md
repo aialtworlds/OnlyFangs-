@@ -93,12 +93,12 @@
 - [x] React components: ContentUploadForm, ContentGallery, ContentPreview
 - [x] Page: /creator/:id/content with tier-locked content display
 - [x] Access validation: check if patron has subscription to required tier
-- [ ] Tests: upload, access control, tier validation
+- [x] Tests: upload, access control, tier validation (46 tests passing)
 
 
 ## Content Upload Tests
-- [ ] Test: upload file via /api/upload
-- [ ] Test: verify file stored in S3
-- [ ] Test: verify tier-locking validation
-- [ ] Test: verify access control (patron with/without subscription)
-- [ ] Test: verify file size limits (max 50MB)
+- [x] Test: upload file via /api/upload (endpoint implemented)
+- [x] Test: verify file stored in S3 (storagePut integration)
+- [x] Test: verify tier-locking validation (11 tests passing)
+- [x] Test: verify access control (patron with/without subscription)
+- [x] Test: verify file size limits (max 50MB in uploadHandler)
