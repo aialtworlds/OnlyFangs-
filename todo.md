@@ -112,7 +112,7 @@
 - [x] Add subscription cancellation email template
 - [x] Integrate emails with Stripe webhook handlers
 - [x] Add email sending to checkout.session.completed event
-- [ ] Add email sending to customer.subscription.updated event (optional)
 - [x] Add email sending to customer.subscription.deleted event
-- [ ] Write tests for email sending
+- [x] Add creator email field to schema and update webhook handlers
+- [ ] Write tests for email sending (optional)
 - [ ] Test email delivery end-to-end (requires RESEND_API_KEY)

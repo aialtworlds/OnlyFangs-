@@ -261,9 +261,8 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
           currency
         );
 
-        // Send to creator - use user's email (creator table doesn't have email field)
-        // TODO: Add email field to creators table in production
-        const creatorEmail = user.email || "";
+        // Send to creator
+        const creatorEmail = creator.email || "";
         if (creatorEmail) {
           await sendCreatorNotificationEmail(
             creatorEmail,

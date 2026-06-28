@@ -36,6 +36,7 @@ export const creators = mysqlTable("creators", {
   userId: int("userId").notNull(),
   alias: varchar("alias", { length: 100 }).notNull(),
   handle: varchar("handle", { length: 50 }).notNull().unique(),
+  email: varchar("email", { length: 320 }),
   bio: text("bio"),
   longBio: text("longBio"),
   avatarUrl: text("avatarUrl"),
