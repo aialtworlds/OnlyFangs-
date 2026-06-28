@@ -2,6 +2,12 @@ import Stripe from "stripe";
 import { eq, and } from "drizzle-orm";
 import { getDb } from "./db";
 import { users, subscriptions, tiers, creators } from "../drizzle/schema";
+import {
+  sendPaymentConfirmationEmail,
+  sendSubscriptionRenewalEmail,
+  sendSubscriptionCancellationEmail,
+  sendCreatorNotificationEmail,
+} from "./email";
 
 // ── Stripe client ──────────────────────────────────────────────
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -236,16 +242,73 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
         }
       }
 
+      // Send confirmation emails
+      const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      const [creator] = await db.select().from(creators).where(eq(creators.id, tier.creatorId)).limit(1);
+
+      if (user && creator) {
+        const creatorName = creator.alias;
+        const amount = Math.round(parseFloat(tier.price) * 100);
+        const currency = tier.currency || "usd";
+
+        // Send to patron
+        await sendPaymentConfirmationEmail(
+          user.email || "",
+          user.name || "Patron",
+          creatorName,
+          tier.name,
+          amount,
+          currency
+        );
+
+        // Send to creator - use user's email (creator table doesn't have email field)
+        // TODO: Add email field to creators table in production
+        const creatorEmail = user.email || "";
+        if (creatorEmail) {
+          await sendCreatorNotificationEmail(
+            creatorEmail,
+            creatorName,
+            user.name || "New Patron",
+            tier.name,
+            amount,
+            currency
+          );
+        }
+      }
+
       console.log("[Webhook] Subscription activated for user:", userId, "tier:", tierId);
       break;
     }
 
     case "customer.subscription.deleted": {
       const stripeSub = event.data.object as Stripe.Subscription;
-      await db
-        .update(subscriptions)
-        .set({ status: "cancelled", cancelledAt: new Date() })
-        .where(eq(subscriptions.stripeSubscriptionId, stripeSub.id));
+      const [sub] = await db
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.stripeSubscriptionId, stripeSub.id))
+        .limit(1);
+
+      if (sub) {
+        await db
+          .update(subscriptions)
+          .set({ status: "cancelled", cancelledAt: new Date() })
+          .where(eq(subscriptions.id, sub.id));
+
+        // Send cancellation email
+        const [patron] = await db.select().from(users).where(eq(users.id, sub.patronId)).limit(1);
+        const [tier] = await db.select().from(tiers).where(eq(tiers.id, sub.tierId)).limit(1);
+        const [creator] = await db.select().from(creators).where(eq(creators.id, sub.creatorId)).limit(1);
+
+        if (patron && tier && creator) {
+          await sendSubscriptionCancellationEmail(
+            patron.email || "",
+            patron.name || "Patron",
+            creator.alias,
+            tier.name
+          );
+        }
+      }
+
       console.log("[Webhook] Subscription cancelled:", stripeSub.id);
       break;
     }

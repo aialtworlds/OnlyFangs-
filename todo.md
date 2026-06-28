@@ -102,3 +102,17 @@
 - [x] Test: verify tier-locking validation (11 tests passing)
 - [x] Test: verify access control (patron with/without subscription)
 - [x] Test: verify file size limits (max 50MB in uploadHandler)
+
+
+## Email Notifications System
+- [x] Configure email provider (Resend) with API key placeholder
+- [x] Create email service module with send functions (server/email.ts)
+- [x] Add payment confirmation email template
+- [x] Add subscription renewal email template
+- [x] Add subscription cancellation email template
+- [x] Integrate emails with Stripe webhook handlers
+- [x] Add email sending to checkout.session.completed event
+- [ ] Add email sending to customer.subscription.updated event (optional)
+- [x] Add email sending to customer.subscription.deleted event
+- [ ] Write tests for email sending
+- [ ] Test email delivery end-to-end (requires RESEND_API_KEY)
