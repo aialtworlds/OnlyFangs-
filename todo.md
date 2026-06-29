@@ -116,3 +116,14 @@
 - [x] Add creator email field to schema and update webhook handlers
 - [x] Write tests for email sending (optional - can be added later)
 - [x] Test email delivery end-to-end (requires RESEND_API_KEY - can be tested after adding key)
+
+
+## Direct Messaging System
+- [ ] DB schema: conversations table (id, creatorId, patronId, lastMessageAt, createdAt)
+- [ ] DB schema: messages table (id, conversationId, senderId, content, readAt, createdAt)
+- [ ] tRPC procedures: messages.list, messages.send, messages.markAsRead, messages.getConversations
+- [ ] WebSocket server for real-time message delivery
+- [ ] React components: ChatBox, MessageList, ConversationList
+- [ ] Page: /messages with conversation list and chat interface
+- [ ] Unread message badges and notifications
+- [ ] Tests for messaging system

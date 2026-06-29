@@ -1,8 +1,8 @@
-import { eq, desc, and, count, sql } from "drizzle-orm";
+import { eq, desc, and, count, sql, isNull, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
-  releases, savedContent, activityFeed, notifications, messages, content,
+  releases, savedContent, activityFeed, notifications, messages, content, conversations,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -176,7 +176,7 @@ export async function getUnreadMessageCount(userId: number) {
   const [row] = await db
     .select({ count: count() })
     .from(messages)
-    .where(and(eq(messages.toUserId, userId), eq(messages.read, false)));
+    .where(and(eq(messages.senderId, userId), isNull(messages.readAt)));
   return row?.count ?? 0;
 }
 
@@ -621,4 +621,76 @@ export async function canAccessContent(
     .limit(1);
 
   return subscription.length > 0;
+}
+
+
+// ── Messaging Functions ────────────────────────────────────────
+export async function getOrCreateConversation(creatorId: number, patronId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const existing = await db
+    .select()
+    .from(conversations)
+    .where(and(eq(conversations.creatorId, creatorId), eq(conversations.patronId, patronId)))
+    .limit(1);
+
+  if (existing.length > 0) return existing[0];
+
+  const [newConv] = await db
+    .insert(conversations)
+    .values({ creatorId, patronId })
+    .$returningId();
+
+  return newConv;
+}
+
+export async function getConversations(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(conversations)
+    .where((conv) => or(eq(conv.creatorId, userId), eq(conv.patronId, userId)))
+    .orderBy(desc(conversations.lastMessageAt));
+}
+
+export async function getMessages(conversationId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return await db
+    .select()
+    .from(messages)
+    .where(eq(messages.conversationId, conversationId))
+    .orderBy(desc(messages.createdAt))
+    .limit(limit);
+}
+
+export async function sendMessage(conversationId: number, senderId: number, content: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [msg] = await db
+    .insert(messages)
+    .values({ conversationId, senderId, content })
+    .$returningId();
+
+  await db
+    .update(conversations)
+    .set({ lastMessageAt: new Date() })
+    .where(eq(conversations.id, conversationId));
+
+  return msg;
+}
+
+export async function markMessageAsRead(messageId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  return await db
+    .update(messages)
+    .set({ readAt: new Date() })
+    .where(eq(messages.id, messageId));
 }

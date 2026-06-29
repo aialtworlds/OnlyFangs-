@@ -160,15 +160,7 @@ export const activityFeed = mysqlTable("activityFeed", {
 
 export type ActivityFeed = typeof activityFeed.$inferSelect;
 
-// ── Messages ──────────────────────────────────────────────────
-export const messages = mysqlTable("messages", {
-  id: int("id").autoincrement().primaryKey(),
-  fromUserId: int("fromUserId").notNull(),
-  toUserId: int("toUserId").notNull(),
-  content: text("content").notNull(),
-  read: boolean("read").default(false).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+
 
 // ── Notifications ─────────────────────────────────────────────
 export const notifications = mysqlTable("notifications", {
@@ -202,3 +194,30 @@ export const content = mysqlTable("content", {
 
 export type Content = typeof content.$inferSelect;
 export type InsertContent = typeof content.$inferInsert;
+
+
+// ── Conversations ─────────────────────────────────────────────
+export const conversations = mysqlTable("conversations", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull(),
+  patronId: int("patronId").notNull(),
+  lastMessageAt: timestamp("lastMessageAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Conversation = typeof conversations.$inferSelect;
+export type InsertConversation = typeof conversations.$inferInsert;
+
+// ── Messages ───────────────────────────────────────────────────
+export const messages = mysqlTable("messages", {
+  id: int("id").autoincrement().primaryKey(),
+  conversationId: int("conversationId").notNull(),
+  senderId: int("senderId").notNull(),
+  content: text("content").notNull(),
+  readAt: timestamp("readAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Message = typeof messages.$inferSelect;
+export type InsertMessage = typeof messages.$inferInsert;

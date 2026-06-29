@@ -29,8 +29,13 @@ import {
   uploadContent,
   getCreatorContent,
   getContentById,
-  deleteContent,
   canAccessContent,
+  deleteContent,
+  getOrCreateConversation,
+  getConversations,
+  getMessages,
+  sendMessage,
+  markMessageAsRead,
 } from "./db";
 
 export const appRouter = router({
@@ -306,6 +311,30 @@ export const appRouter = router({
       .input(z.object({ contentId: z.number() }))
       .query(async ({ input }) => {
         return getContentById(input.contentId);
+      }),
+  }),
+
+  messaging: router({
+    getConversations: protectedProcedure
+      .query(async ({ ctx }) => {
+        return getConversations(ctx.user.id);
+      }),
+    getMessages: protectedProcedure
+      .input(z.object({ conversationId: z.number() }))
+      .query(async ({ input }) => {
+        return getMessages(input.conversationId);
+      }),
+    sendMessage: protectedProcedure
+      .input(z.object({ creatorId: z.number(), content: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const conv = await getOrCreateConversation(input.creatorId, ctx.user.id);
+        if (!conv) throw new Error("Failed to create conversation");
+        return sendMessage(conv.id, ctx.user.id, input.content);
+      }),
+    markAsRead: protectedProcedure
+      .input(z.object({ messageId: z.number() }))
+      .mutation(async ({ input }) => {
+        return markMessageAsRead(input.messageId);
       }),
   }),
 });
