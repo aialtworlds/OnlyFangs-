@@ -3,6 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router, creatorProcedure } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { createCheckoutSession, createBillingPortalSession, cancelSubscription } from "./stripe";
 import {
   getPatronStats,
@@ -36,7 +37,11 @@ import {
   getMessages,
   sendMessage,
   markMessageAsRead,
+  getDb,
+  isConversationParticipant,
 } from "./db";
+import { conversations, messages } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
 
 export const appRouter = router({
   system: systemRouter,
@@ -321,19 +326,72 @@ export const appRouter = router({
       }),
     getMessages: protectedProcedure
       .input(z.object({ conversationId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        const conv = await db
+          .select()
+          .from(conversations)
+          .where(eq(conversations.id, input.conversationId))
+          .limit(1);
+
+        if (!conv.length) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Conversation not found" });
+        }
+
+        const isParticipant = await isConversationParticipant(input.conversationId, ctx.user.id);
+        if (!isParticipant) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "You are not a participant in this conversation" });
+        }
+
         return getMessages(input.conversationId);
       }),
     sendMessage: protectedProcedure
-      .input(z.object({ creatorId: z.number(), content: z.string().min(1) }))
+      .input(z.object({ creatorId: z.number(), content: z.string().min(1).max(5000) }))
       .mutation(async ({ ctx, input }) => {
-        const conv = await getOrCreateConversation(input.creatorId, ctx.user.id);
-        if (!conv) throw new Error("Failed to create conversation");
+        const creator = await getCreatorByUserId(input.creatorId);
+        if (!creator) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Creator not found" });
+        }
+
+        const conv = await getOrCreateConversation(creator.id, ctx.user.id);
+        if (!conv) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create conversation" });
+        }
         return sendMessage(conv.id, ctx.user.id, input.content);
       }),
     markAsRead: protectedProcedure
       .input(z.object({ messageId: z.number() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) return null;
+
+        const msg = await db
+          .select()
+          .from(messages)
+          .where(eq(messages.id, input.messageId))
+          .limit(1);
+
+        if (!msg.length) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
+        }
+
+        const conv = await db
+          .select()
+          .from(conversations)
+          .where(eq(conversations.id, msg[0].conversationId))
+          .limit(1);
+
+        if (!conv.length) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Conversation not found" });
+        }
+
+        const isParticipant = await isConversationParticipant(msg[0].conversationId, ctx.user.id);
+        if (!isParticipant) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "You are not a participant in this conversation" });
+        }
+
         return markMessageAsRead(input.messageId);
       }),
   }),

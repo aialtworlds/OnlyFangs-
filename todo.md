@@ -119,11 +119,14 @@
 
 
 ## Direct Messaging System
-- [ ] DB schema: conversations table (id, creatorId, patronId, lastMessageAt, createdAt)
-- [ ] DB schema: messages table (id, conversationId, senderId, content, readAt, createdAt)
-- [ ] tRPC procedures: messages.list, messages.send, messages.markAsRead, messages.getConversations
+- [x] DB schema: conversations table (id, creatorId, patronId, lastMessageAt, createdAt)
+- [x] DB schema: messages table (id, conversationId, senderId, content, readAt, createdAt)
+- [x] tRPC procedures: messaging.getConversations, messaging.getMessages, messaging.sendMessage, messaging.markAsRead
+- [x] Security: Add participant authorization to messaging.getMessages
+- [x] Security: Add participant authorization to messaging.markAsRead
+- [x] Security: Add creator validation to messaging.sendMessage
+- [x] Tests: 20 access control tests covering authorization and error handling
 - [ ] WebSocket server for real-time message delivery
 - [ ] React components: ChatBox, MessageList, ConversationList
 - [ ] Page: /messages with conversation list and chat interface
 - [ ] Unread message badges and notifications
-- [ ] Tests for messaging system

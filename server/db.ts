@@ -694,3 +694,43 @@ export async function markMessageAsRead(messageId: number) {
     .set({ readAt: new Date() })
     .where(eq(messages.id, messageId));
 }
+
+
+// ── Messaging Authorization Helpers ────────────────────────────
+/**
+ * Check if a user is a participant in a conversation.
+ * Handles both direct participants (patronId) and creators (via creator profile).
+ * 
+ * @param conversationId - The conversation to check
+ * @param userId - The authenticated user's ID
+ * @returns true if user is a participant (either as patron or creator), false otherwise
+ */
+export async function isConversationParticipant(
+  conversationId: number,
+  userId: number
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const conv = await db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+
+  if (!conv.length) return false;
+
+  // Check if user is the patron
+  if (conv[0].patronId === userId) return true;
+
+  // Check if user is the creator (via creator profile)
+  const creator = await db
+    .select()
+    .from(creators)
+    .where(eq(creators.id, conv[0].creatorId))
+    .limit(1);
+
+  if (creator.length > 0 && creator[0].userId === userId) return true;
+
+  return false;
+}
