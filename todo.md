@@ -126,7 +126,8 @@
 - [x] Security: Add participant authorization to messaging.markAsRead
 - [x] Security: Add creator validation to messaging.sendMessage
 - [x] Tests: 20 access control tests covering authorization and error handling
-- [ ] WebSocket server for real-time message delivery
-- [ ] React components: ChatBox, MessageList, ConversationList
-- [ ] Page: /messages with conversation list and chat interface
-- [ ] Unread message badges and notifications
+- [x] WebSocket server for real-time message delivery
+- [x] React components: ChatBox, MessageList, ConversationList
+- [x] Page: /messages with conversation list and chat interface
+- [x] Unread message badges and notifications
+- [x] Integration tests for messaging system

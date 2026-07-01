@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { handleStripeWebhook } from "../stripe";
 import { registerUploadRoutes } from "../uploadHandler";
+import { initWebSocketServer } from "./websocket";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -68,6 +69,9 @@ async function startServer() {
       createContext,
     })
   );
+  // Initialize WebSocket server
+  initWebSocketServer(server);
+  console.log("[WS] WebSocket server initialized");
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);

@@ -1,4 +1,4 @@
-import { eq, desc, and, count, sql, isNull, or } from "drizzle-orm";
+import { eq, desc, and, count, sql, isNull, or, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
@@ -649,11 +649,49 @@ export async function getConversations(userId: number) {
   const db = await getDb();
   if (!db) return [];
 
-  return await db
+  // Get creator profile for this user (if they are a creator)
+  const userCreator = await db
+    .select()
+    .from(creators)
+    .where(eq(creators.userId, userId))
+    .limit(1);
+
+  const creatorId = userCreator[0]?.id;
+
+  // Get conversations where user is either:
+  // 1. A creator (creatorId matches their creator profile)
+  // 2. A patron (patronId matches their user ID)
+  const convs = await db
     .select()
     .from(conversations)
-    .where((conv) => or(eq(conv.creatorId, userId), eq(conv.patronId, userId)))
+    .where((conv) => 
+      or(
+        creatorId ? eq(conv.creatorId, creatorId) : undefined,
+        eq(conv.patronId, userId)
+      )
+    )
     .orderBy(desc(conversations.lastMessageAt));
+
+  // Enrich conversations with creator info and unread count
+  const enriched = await Promise.all(
+    convs.map(async (conv) => {
+      const creator = await db
+        .select()
+        .from(creators)
+        .where(eq(creators.id, conv.creatorId))
+        .limit(1);
+
+      const unreadCount = await getUnreadMessageCountInConversation(conv.id, userId);
+
+      return {
+        ...conv,
+        creator: creator[0] || null,
+        unreadCount,
+      };
+    })
+  );
+
+  return enriched;
 }
 
 export async function getMessages(conversationId: number, limit = 50) {
@@ -733,4 +771,48 @@ export async function isConversationParticipant(
   if (creator.length > 0 && creator[0].userId === userId) return true;
 
   return false;
+}
+
+
+// ── Unread Message Helpers ────────────────────────────────────
+/**
+ * Count unread messages in a conversation for a specific user
+ * Unread = messages where readAt is null and sender is not the user
+ */
+export async function getUnreadMessageCountInConversation(conversationId: number, userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const [row] = await db
+    .select({ count: count() })
+    .from(messages)
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        isNull(messages.readAt),
+        ne(messages.senderId, userId)
+      )
+    );
+
+  return row?.count || 0;
+}
+
+/**
+ * Mark all messages in a conversation as read for a user
+ * (messages sent by other users)
+ */
+export async function markConversationAsRead(conversationId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  return await db
+    .update(messages)
+    .set({ readAt: new Date() })
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        isNull(messages.readAt),
+        ne(messages.senderId, userId)
+      )
+    );
 }
