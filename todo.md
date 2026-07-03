@@ -163,3 +163,14 @@
 - [x] Real-time preview updates as form changes
 - [x] Featured tier badge and styling
 - [x] Live preview note for user guidance
+
+
+## Tier Duplication Feature
+- [x] tRPC procedure: creator.duplicateTier to copy tier with new slug
+- [x] Add duplicateTier button to TierTable component
+- [x] Auto-generate new slug with suffix (e.g., "tier-copy", "tier-copy-2")
+- [x] Copy all fields: name, description, price, perks, currency
+- [x] Set featured=false for duplicated tier
+- [x] Show success toast with new tier name
+- [x] Loading state during duplication
+- [x] Disable other buttons while duplicating

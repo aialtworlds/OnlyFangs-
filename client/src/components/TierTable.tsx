@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Edit2, Trash2, Loader2, Star } from "lucide-react";
+import { Edit2, Trash2, Loader2, Star, Copy } from "lucide-react";
 
 interface Tier {
   id: number;
@@ -43,8 +43,24 @@ interface TierTableProps {
 export function TierTable({ tiers, isLoading = false, onEdit, onRefresh }: TierTableProps) {
   const [tierToDelete, setTierToDelete] = useState<Tier | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState<number | null>(null);
 
   const deleteTierMutation = trpc.creator.deleteTier.useMutation();
+  const duplicateTierMutation = trpc.creator.duplicateTier.useMutation();
+
+  const handleDuplicate = async (tier: Tier) => {
+    setIsDuplicating(tier.id);
+    try {
+      const result = await duplicateTierMutation.mutateAsync({ tierId: tier.id });
+      toast.success(`Tier "${result.tierName}" duplicated successfully!`);
+      onRefresh?.();
+    } catch (error) {
+      console.error("Error duplicating tier:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to duplicate tier");
+    } finally {
+      setIsDuplicating(null);
+    }
+  };
 
   const handleDelete = async () => {
     if (!tierToDelete) return;
@@ -142,9 +158,23 @@ export function TierTable({ tiers, isLoading = false, onEdit, onRefresh }: TierT
                     <Button
                       variant="ghost"
                       size="sm"
+                      onClick={() => handleDuplicate(tier)}
+                      disabled={isDeleting || isDuplicating !== null}
+                      title="Duplicate tier"
+                    >
+                      {isDuplicating === tier.id ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Copy size={16} />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={() => setTierToDelete(tier)}
-                      disabled={isDeleting}
+                      disabled={isDeleting || isDuplicating === tier.id}
                       className="text-destructive hover:text-destructive"
+                      title="Delete tier"
                     >
                       <Trash2 size={16} />
                     </Button>

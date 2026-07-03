@@ -360,12 +360,13 @@ export async function createTier(data: {
   description?: string;
   price: string;
   currency?: string;
-  perks?: string[];
+  perks?: string[] | null;
   featured?: boolean;
   sortOrder?: number;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  
   await db.insert(tiers).values({
     creatorId: data.creatorId,
     name: data.name,
@@ -377,6 +378,19 @@ export async function createTier(data: {
     featured: data.featured ?? false,
     sortOrder: data.sortOrder ?? 0,
   });
+  
+  // Query the newly created tier to get its ID
+  const createdTier = await db
+    .select({ id: tiers.id, name: tiers.name, slug: tiers.slug })
+    .from(tiers)
+    .where(eq(tiers.slug, data.slug))
+    .limit(1);
+  
+  if (!createdTier.length) {
+    throw new Error("Failed to retrieve created tier");
+  }
+  
+  return createdTier[0];
 }
 
 

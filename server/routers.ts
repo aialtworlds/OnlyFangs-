@@ -290,6 +290,43 @@ export const appRouter = router({
         await updateTier(tierId, creator.id, data);
         return { success: true };
       }),
+    duplicateTier: creatorProcedure
+      .input(z.object({
+        tierId: z.number(),
+        newName: z.string().min(2).max(100).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new Error("Creator profile not found");
+
+        // Get the tier to duplicate
+        const tiers = await getCreatorTiers(creator.id);
+        const tierToDuplicate = tiers.find((t) => t.id === input.tierId);
+        if (!tierToDuplicate) throw new Error("Tier not found");
+
+        // Generate new slug
+        let newSlug = `${tierToDuplicate.slug}-copy`;
+        let counter = 2;
+        while (tiers.some((t) => t.slug === newSlug)) {
+          newSlug = `${tierToDuplicate.slug}-copy-${counter}`;
+          counter++;
+        }
+
+        // Create new tier with duplicated data
+        const newTier = await createTier({
+          creatorId: creator.id,
+          name: input.newName || `${tierToDuplicate.name} (Copy)`,
+          slug: newSlug,
+          description: tierToDuplicate.description || undefined,
+          price: tierToDuplicate.price,
+          currency: tierToDuplicate.currency,
+          perks: tierToDuplicate.perks,
+          featured: false,
+          sortOrder: tiers.length + 1,
+        });
+
+        return { success: true, tierId: newTier.id, tierName: newTier.name };
+      }),
     deleteTier: creatorProcedure
       .input(z.object({ tierId: z.number() }))
       .mutation(async ({ ctx, input }) => {
