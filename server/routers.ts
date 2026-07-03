@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Buffer } from "buffer";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -46,6 +47,7 @@ import {
 } from "./db";
 import { conversations, messages } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { storagePut } from "./storage";
 
 export const appRouter = router({
   system: systemRouter,
@@ -158,6 +160,38 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         return createCreatorProfile({ userId: ctx.user.id, ...input });
+      }),
+    uploadAvatar: creatorProcedure
+      .input(z.object({
+        base64: z.string(),
+        mimeType: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new Error("Creator profile not found");
+
+        // Validate file size (max 5MB)
+        const buffer = Buffer.from(input.base64, "base64");
+        const fileSizeInMB = buffer.length / (1024 * 1024);
+        if (fileSizeInMB > 5) {
+          throw new Error("File size exceeds 5MB limit");
+        }
+
+        // Validate MIME type
+        const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+        if (!allowedMimes.includes(input.mimeType)) {
+          throw new Error("Invalid file type. Only JPEG, PNG, and WebP are allowed");
+        }
+
+        // Upload to storage
+        const ext = input.mimeType.split("/")[1];
+        const fileKey = `avatars/${creator.id}-${Date.now()}.${ext}`;
+        const { url } = await storagePut(fileKey, buffer, input.mimeType);
+
+        // Update creator profile with new avatar URL
+        await updateCreatorProfile(creator.id, { avatarUrl: url });
+
+        return { success: true, avatarUrl: url };
       }),
     updateProfile: protectedProcedure
       .input(z.object({

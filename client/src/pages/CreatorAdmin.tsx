@@ -8,6 +8,7 @@ import { TierForm } from "@/components/TierForm";
 import { TierTable } from "@/components/TierTable";
 import { SubscriptionsTable } from "@/components/SubscriptionsTable";
 import { AnalyticsChart } from "@/components/AnalyticsChart";
+import { CreatorSettingsForm } from "@/components/CreatorSettingsForm";
 import { toast } from "sonner";
 import { Plus, LogOut } from "lucide-react";
 import { getLoginUrl } from "@/const";
@@ -232,31 +233,18 @@ export default function CreatorAdmin() {
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Creator Profile</CardTitle>
-                <CardDescription>Your creator information</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Name</p>
-                  <p className="text-lg font-semibold">{creatorProfile.data?.alias}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Handle</p>
-                  <p className="text-lg font-semibold">@{creatorProfile.data?.handle}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Bio</p>
-                  <p className="text-base">{creatorProfile.data?.bio || "No bio set"}</p>
-                </div>
-                <Button variant="outline" asChild>
-                  <a href={`/creator/${creatorProfile.data?.handle}`}>
-                    View Public Profile
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
+            {creatorProfile.data ? (
+              <CreatorSettingsForm
+                profile={creatorProfile.data}
+                onSuccess={() => creatorProfile.refetch()}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Loading...</CardTitle>
+                </CardHeader>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

@@ -144,3 +144,13 @@
 - [x] Add navigation link in Navbar for creators to access admin panel
 - [x] Add mobile menu link for Creator Admin
 - [x] Final validation and checkpoint
+
+
+## Creator Settings (Profile Editing)
+- [x] tRPC procedure: creator.updateProfile to edit bio, avatar, social links
+- [x] CreatorSettingsForm component for editing profile
+- [x] Avatar upload with S3 storage and validation
+- [x] Social links form (Instagram, TikTok, Twitter, etc.)
+- [x] Integration into CreatorAdmin.tsx Settings tab
+- [x] File size validation (max 5MB) and MIME type validation
+- [x] Real-time preview and upload feedback
