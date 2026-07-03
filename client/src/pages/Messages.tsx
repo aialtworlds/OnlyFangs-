@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { useWebSocket } from '@/_core/hooks/useWebSocket';
@@ -16,6 +16,8 @@ export default function Messages() {
   const [, setLocation] = useLocation();
   const [selectedConversationId, setSelectedConversationId] = useState<number | null>(null);
   const [isMobileListVisible, setIsMobileListVisible] = useState(true);
+  const [isRemoteUserTyping, setIsRemoteUserTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -28,12 +30,29 @@ export default function Messages() {
   const { showMessageNotification } = useNotifications({ enabled: true });
 
   // WebSocket connection
-  const { isConnected, sendMessage: sendWSMessage, sendReadReceipt, subscribeToConversation } = useWebSocket({
+  const { isConnected, sendMessage: sendWSMessage, sendReadReceipt, sendTypingIndicator, subscribeToConversation } = useWebSocket({
     userId: user?.id || 0,
     onMessage: (message) => {
       console.log('[WS] Received message:', message);
+      
+      // Handle typing indicators
+      if (message.type === 'typing' && selectedConversationId === message.conversationId) {
+        setIsRemoteUserTyping(true);
+        
+        // Clear previous timeout
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+        
+        // Reset typing indicator after 3 seconds of inactivity
+        typingTimeoutRef.current = setTimeout(() => {
+          setIsRemoteUserTyping(false);
+        }, 3000);
+      }
+      
       // Refetch messages when new message arrives
       if (message.type === 'message' && selectedConversationId === message.conversationId) {
+        setIsRemoteUserTyping(false);
         refetchMessages();
 
         // Show notification if message is from another user
@@ -86,6 +105,12 @@ export default function Messages() {
   const handleSelectConversation = (conversationId: number) => {
     setSelectedConversationId(conversationId);
     setIsMobileListVisible(false);
+  };
+
+  const handleTyping = () => {
+    if (selectedConversationId && isConnected) {
+      sendTypingIndicator(selectedConversationId);
+    }
   };
 
   const handleSendMessage = async (content: string) => {
@@ -182,11 +207,14 @@ export default function Messages() {
               messages={messages}
               isLoading={messagesLoading}
               onMarkAsRead={handleMarkAsRead}
+              isTyping={isRemoteUserTyping}
+              typingUserName={selectedConversation?.creator?.alias}
             />
 
             {/* Chat Input */}
             <ChatBox
               onSendMessage={handleSendMessage}
+              onTyping={handleTyping}
               disabled={!isConnected}
               isLoading={sendMessageMutation.isPending}
             />

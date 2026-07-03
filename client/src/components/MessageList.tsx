@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { TypingIndicator } from './TypingIndicator';
 
 interface Message {
   id: number;
@@ -16,9 +17,11 @@ interface MessageListProps {
   messages: Message[];
   isLoading: boolean;
   onMarkAsRead?: (messageId: number) => void;
+  isTyping?: boolean;
+  typingUserName?: string;
 }
 
-export function MessageList({ messages, isLoading, onMarkAsRead }: MessageListProps) {
+export function MessageList({ messages, isLoading, onMarkAsRead, isTyping = false, typingUserName }: MessageListProps) {
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -96,6 +99,7 @@ export function MessageList({ messages, isLoading, onMarkAsRead }: MessageListPr
             );
           })
         )}
+        {isTyping && <TypingIndicator isTyping={isTyping} userName={typingUserName} />}
         <div ref={messagesEndRef} />
       </div>
     </div>

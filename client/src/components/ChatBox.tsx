@@ -1,17 +1,31 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, Loader2 } from 'lucide-react';
 
 interface ChatBoxProps {
   onSendMessage: (content: string) => Promise<void>;
+  onTyping?: () => void;
   disabled?: boolean;
   isLoading?: boolean;
 }
 
-export function ChatBox({ onSendMessage, disabled = false, isLoading = false }: ChatBoxProps) {
+export function ChatBox({ onSendMessage, onTyping, disabled = false, isLoading = false }: ChatBoxProps) {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleTyping = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+    
+    // Send typing indicator
+    onTyping?.();
+    
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+  };
 
   const handleSend = async () => {
     if (!message.trim() || isSending || disabled) return;
@@ -39,7 +53,7 @@ export function ChatBox({ onSendMessage, disabled = false, isLoading = false }: 
       <Textarea
         placeholder="Type a message... (Shift+Enter for new line)"
         value={message}
-        onChange={(e) => setMessage(e.target.value)}
+        onChange={handleTyping}
         onKeyDown={handleKeyDown}
         disabled={disabled || isSending || isLoading}
         className="resize-none min-h-[80px] max-h-[200px]"
