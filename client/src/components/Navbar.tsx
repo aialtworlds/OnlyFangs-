@@ -332,6 +332,9 @@ export default function Navbar() {
                       {/* Menu items */}
                       {[
                         { icon: <User size={13} />, label: 'My Profile', action: () => setLocation('/profile') },
+                        ...(user?.role === 'creator' || user?.role === 'admin' ? [
+                          { icon: <User size={13} />, label: 'Creator Admin', action: () => setLocation('/creator-admin') },
+                        ] : []),
                         { icon: <Bell size={13} />, label: 'Notifications', action: () => toast('No new notifications') },
                       ].map((item) => (
                         <button
@@ -594,6 +597,28 @@ export default function Navbar() {
               >
                 My Profile
               </button>
+              {(user?.role === 'creator' || user?.role === 'admin') && (
+                <button
+                  onClick={() => { setLocation('/creator-admin'); setMobileOpen(false); }}
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: '22px',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    color: 'oklch(0.93 0.02 80)',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: '1px solid oklch(1 0 0 / 6%)',
+                    cursor: 'pointer',
+                    padding: '20px 0',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'color 0.2s',
+                  }}
+                >
+                  Creator Admin
+                </button>
+              )}
               <button
                 onClick={() => { logoutMutation.mutate(); setMobileOpen(false); }}
                 style={{
