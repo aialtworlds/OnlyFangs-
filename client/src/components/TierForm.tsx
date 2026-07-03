@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Loader2, Plus, X } from "lucide-react";
+import { TierPreview } from "./TierPreview";
 
 interface TierFormProps {
   tier?: {
@@ -129,15 +130,17 @@ export function TierForm({ tier, onSuccess, onCancel }: TierFormProps) {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{tier ? "Edit Tier" : "Create New Tier"}</CardTitle>
-        <CardDescription>
-          {tier ? "Update tier details and pricing" : "Add a new membership tier"}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Form Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>{tier ? "Edit Tier" : "Create New Tier"}</CardTitle>
+          <CardDescription>
+            {tier ? "Update tier details and pricing" : "Add a new membership tier"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
           {/* Tier Name */}
           <div className="space-y-2">
             <Label htmlFor="name">Tier Name *</Label>
@@ -282,8 +285,21 @@ export function TierForm({ tier, onSuccess, onCancel }: TierFormProps) {
               {tier ? "Update Tier" : "Create Tier"}
             </Button>
           </div>
-        </form>
-      </CardContent>
-    </Card>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Preview Section */}
+      <div className="flex flex-col">
+        <TierPreview
+          name={formData.name}
+          price={formData.price}
+          currency={formData.currency}
+          description={formData.description}
+          perks={formData.perks}
+          featured={formData.featured}
+        />
+      </div>
+    </div>
   );
 }

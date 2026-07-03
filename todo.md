@@ -154,3 +154,12 @@
 - [x] Integration into CreatorAdmin.tsx Settings tab
 - [x] File size validation (max 5MB) and MIME type validation
 - [x] Real-time preview and upload feedback
+
+
+## Tier Preview Mode
+- [x] TierPreview component to display tier as it appears to patrons
+- [x] Side-by-side view: form on left, live preview on right
+- [x] Responsive design for mobile (stacked layout)
+- [x] Real-time preview updates as form changes
+- [x] Featured tier badge and styling
+- [x] Live preview note for user guidance
