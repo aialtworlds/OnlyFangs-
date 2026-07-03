@@ -37,6 +37,10 @@ import {
   getMessages,
   sendMessage,
   markMessageAsRead,
+  addMessageReaction,
+  removeMessageReaction,
+  getMessageReactions,
+  hasUserReacted,
   getDb,
   isConversationParticipant,
 } from "./db";
@@ -393,6 +397,80 @@ export const appRouter = router({
         }
 
         return markMessageAsRead(input.messageId);
+      }),
+    addReaction: protectedProcedure
+      .input(z.object({ messageId: z.number(), emoji: z.string().min(1).max(10) }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        // Verify message exists and user is participant
+        const msg = await db
+          .select()
+          .from(messages)
+          .where(eq(messages.id, input.messageId))
+          .limit(1);
+
+        if (!msg.length) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
+        }
+
+        const isParticipant = await isConversationParticipant(msg[0].conversationId, ctx.user.id);
+        if (!isParticipant) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "You are not a participant in this conversation" });
+        }
+
+        await addMessageReaction(input.messageId, ctx.user.id, input.emoji);
+        return getMessageReactions(input.messageId);
+      }),
+    removeReaction: protectedProcedure
+      .input(z.object({ messageId: z.number(), emoji: z.string().min(1).max(10) }))
+      .mutation(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+
+        // Verify message exists and user is participant
+        const msg = await db
+          .select()
+          .from(messages)
+          .where(eq(messages.id, input.messageId))
+          .limit(1);
+
+        if (!msg.length) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
+        }
+
+        const isParticipant = await isConversationParticipant(msg[0].conversationId, ctx.user.id);
+        if (!isParticipant) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "You are not a participant in this conversation" });
+        }
+
+        await removeMessageReaction(input.messageId, ctx.user.id, input.emoji);
+        return getMessageReactions(input.messageId);
+      }),
+    getReactions: protectedProcedure
+      .input(z.object({ messageId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const db = await getDb();
+        if (!db) return [];
+
+        // Verify message exists and user is participant
+        const msg = await db
+          .select()
+          .from(messages)
+          .where(eq(messages.id, input.messageId))
+          .limit(1);
+
+        if (!msg.length) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" });
+        }
+
+        const isParticipant = await isConversationParticipant(msg[0].conversationId, ctx.user.id);
+        if (!isParticipant) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "You are not a participant in this conversation" });
+        }
+
+        return getMessageReactions(input.messageId);
       }),
   }),
 });

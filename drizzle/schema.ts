@@ -8,6 +8,7 @@ import {
   boolean,
   decimal,
   json,
+  unique,
 } from "drizzle-orm/mysql-core";
 
 // ── Users ─────────────────────────────────────────────────────
@@ -221,3 +222,22 @@ export const messages = mysqlTable("messages", {
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
+
+// ── Message Reactions ────────────────────────────────────────
+export const messageReactions = mysqlTable(
+  'message_reactions',
+  {
+    id: int('id').autoincrement().primaryKey(),
+    messageId: int('messageId').notNull(),
+    userId: int('userId').notNull(),
+    emoji: varchar('emoji', { length: 10 }).notNull(),
+    createdAt: timestamp('createdAt').defaultNow().notNull(),
+  },
+  (table) => ({
+    // Unique constraint: one reaction per user per message per emoji
+    uniqueReaction: unique().on(table.messageId, table.userId, table.emoji),
+  })
+);
+
+export type MessageReaction = typeof messageReactions.$inferSelect;
+export type InsertMessageReaction = typeof messageReactions.$inferInsert;

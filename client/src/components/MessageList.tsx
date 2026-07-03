@@ -1,8 +1,15 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { TypingIndicator } from './TypingIndicator';
+import { MessageReactions } from './MessageReactions';
+
+interface Reaction {
+  emoji: string;
+  count: number;
+  userIds: number[];
+}
 
 interface Message {
   id: number;
@@ -11,6 +18,7 @@ interface Message {
   content: string;
   readAt: Date | null;
   createdAt: Date;
+  reactions?: Reaction[];
 }
 
 interface MessageListProps {
@@ -25,6 +33,7 @@ export function MessageList({ messages, isLoading, onMarkAsRead, isTyping = fals
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const [messageReactions, setMessageReactions] = useState<Record<number, Reaction[]>>({});
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -95,6 +104,17 @@ export function MessageList({ messages, isLoading, onMarkAsRead, isTyping = fals
                     {isOwn && message.readAt && ' • Read'}
                   </div>
                 </div>
+                <MessageReactions
+                  messageId={message.id}
+                  currentUserId={user?.id || 0}
+                  reactions={messageReactions[message.id] || []}
+                  onReactionsChange={(reactions) => {
+                    setMessageReactions((prev) => ({
+                      ...prev,
+                      [message.id]: reactions,
+                    }));
+                  }}
+                />
               </div>
             );
           })

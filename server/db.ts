@@ -2,7 +2,7 @@ import { eq, desc, and, count, sql, isNull, or, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
-  releases, savedContent, activityFeed, notifications, messages, content, conversations,
+  releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -815,4 +815,95 @@ export async function markConversationAsRead(conversationId: number, userId: num
         ne(messages.senderId, userId)
       )
     );
+}
+
+
+/**
+ * Add a reaction to a message
+ */
+export async function addMessageReaction(messageId: number, userId: number, emoji: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  try {
+    const result = await db
+      .insert(messageReactions)
+      .values({ messageId, userId, emoji });
+    return result;
+  } catch (error) {
+    // If unique constraint fails, the reaction already exists
+    console.log(`[DB] Reaction already exists: message ${messageId}, user ${userId}, emoji ${emoji}`);
+    return null;
+  }
+}
+
+/**
+ * Remove a reaction from a message
+ */
+export async function removeMessageReaction(messageId: number, userId: number, emoji: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  return await db
+    .delete(messageReactions)
+    .where(
+      and(
+        eq(messageReactions.messageId, messageId),
+        eq(messageReactions.userId, userId),
+        eq(messageReactions.emoji, emoji)
+      )
+    );
+}
+
+/**
+ * Get all reactions for a message
+ */
+export async function getMessageReactions(messageId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const reactions = await db
+    .select()
+    .from(messageReactions)
+    .where(eq(messageReactions.messageId, messageId));
+
+  // Group reactions by emoji and count
+  const grouped = reactions.reduce((acc, reaction) => {
+    const existing = acc.find((r) => r.emoji === reaction.emoji);
+    if (existing) {
+      existing.count++;
+      existing.userIds.push(reaction.userId);
+    } else {
+      acc.push({
+        emoji: reaction.emoji,
+        count: 1,
+        userIds: [reaction.userId],
+      });
+    }
+    return acc;
+  }, [] as Array<{ emoji: string; count: number; userIds: number[] }>);
+
+  return grouped;
+}
+
+/**
+ * Check if user has reacted with specific emoji
+ */
+export async function hasUserReacted(messageId: number, userId: number, emoji: string) {
+  const db = await getDb();
+  if (!db) return false;
+
+  const reaction = await db
+    .select()
+    .from(messageReactions)
+    .where(
+      and(
+        eq(messageReactions.messageId, messageId),
+        eq(messageReactions.userId, userId),
+        eq(messageReactions.emoji, emoji)
+      )
+    )
+    .limit(1);
+
+  return reaction.length > 0;
 }
