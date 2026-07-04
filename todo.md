@@ -178,3 +178,5 @@
 
 ## UX Improvements
 - [x] Skeleton loading on content feed page
+
+- [x] Infinite scroll pagination on Discover page

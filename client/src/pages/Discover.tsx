@@ -10,6 +10,7 @@ import type { ContentItem } from '@/lib/data';
 import { toast } from 'sonner';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { ContentSkeletonGrid } from '@/components/ContentSkeleton';
+import { useInfiniteScroll } from '@/_core/hooks/useInfiniteScroll';
 
 
 
@@ -101,30 +102,57 @@ export default function Discover() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'popular'>('recent');
   const [isLoading, setIsLoading] = useState(false);
+  const [displayCount, setDisplayCount] = useState(12);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const handleLoadMore = () => {
+    if (isLoadingMore) return;
+    setIsLoadingMore(true);
+    setTimeout(() => {
+      setDisplayCount(prev => prev + 6);
+      setIsLoadingMore(false);
+    }, 400);
+  };
+
+  const scrollTarget = useInfiniteScroll({
+    onLoadMore: handleLoadMore,
+    threshold: 300,
+    enabled: !isLoading && !isLoadingMore,
+  });
 
   // Simulate loading state for demonstration
   const handleSearch = (query: string) => {
     setIsLoading(true);
     setSearchQuery(query);
+    setDisplayCount(12);
     setTimeout(() => setIsLoading(false), 500);
   };
 
   const handleCategoryChange = (category: string) => {
     setIsLoading(true);
     setActiveCategory(category);
+    setDisplayCount(12);
     setTimeout(() => setIsLoading(false), 500);
   };
 
   const handleSortChange = (sort: typeof sortBy) => {
     setIsLoading(true);
     setSortBy(sort);
+    setDisplayCount(12);
     setTimeout(() => setIsLoading(false), 500);
   };
 
-  const filtered = CONTENT_ITEMS
+  // Get all filtered items (without pagination)
+  const allFiltered = CONTENT_ITEMS
     .filter(item => activeCategory === 'all' || item.type === activeCategory)
     .filter(item => !searchQuery || item.title.toLowerCase().includes(searchQuery.toLowerCase()) || item.description.toLowerCase().includes(searchQuery.toLowerCase()))
     .sort((a, b) => sortBy === 'popular' ? b.likes - a.likes : new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+
+  // Get paginated slice for display
+  const filtered = allFiltered.slice(0, displayCount);
+
+  // Check if there are more items to load
+  const hasMore = displayCount < allFiltered.length;
 
   return (
     <div style={{ background: 'oklch(0.04 0.008 285)', minHeight: '100vh', paddingBottom: '80px' }}>
@@ -220,11 +248,30 @@ export default function Discover() {
           <ContentSkeletonGrid count={6} />
         ) : filtered.length > 0 ? (
           // Show actual content when loaded
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2px' }}>
-            {filtered.map(item => (
-              <DiscoverCard key={item.id} item={item} />
-            ))}
-          </div>
+          <>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2px' }}>
+              {filtered.map(item => (
+                <DiscoverCard key={item.id} item={item} />
+              ))}
+            </div>
+
+            {/* Infinite scroll trigger point */}
+            <div ref={scrollTarget} style={{ height: '100px', marginTop: '60px' }} />
+
+            {/* Loading more indicator */}
+            {isLoadingMore && (
+              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                <ContentSkeletonGrid count={3} />
+              </div>
+            )}
+
+            {/* End of content message */}
+            {!hasMore && filtered.length > 0 && (
+              <div style={{ textAlign: 'center', padding: '60px 20px', color: 'oklch(0.35 0.02 60)', fontFamily: "'Cinzel', serif", fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                ✦ End of collection ✦
+              </div>
+            )}
+          </>
         ) : (
           // Show empty state when no results
           <div style={{ textAlign: 'center', padding: '80px 20px', color: 'oklch(0.35 0.02 60)', fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '20px' }}>
