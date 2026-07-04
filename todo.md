@@ -189,5 +189,5 @@
 - [x] Display badge on creator profiles
 - [x] Display badge in Discover search results
 - [x] Display badge in Creators list page
-- [ ] Admin panel: Creator management with verification toggle
-- [ ] Tests for verification procedures
+- [x] Admin panel: Creator management with verification toggle
+- [x] Tests for verification procedures

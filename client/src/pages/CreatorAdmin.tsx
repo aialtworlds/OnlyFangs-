@@ -9,6 +9,7 @@ import { TierTable } from "@/components/TierTable";
 import { SubscriptionsTable } from "@/components/SubscriptionsTable";
 import { AnalyticsChart } from "@/components/AnalyticsChart";
 import { CreatorSettingsForm } from "@/components/CreatorSettingsForm";
+import { AdminCreatorManagement } from "@/components/AdminCreatorManagement";
 import { toast } from "sonner";
 import { Plus, LogOut } from "lucide-react";
 import { getLoginUrl } from "@/const";
@@ -156,11 +157,14 @@ export default function CreatorAdmin() {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="analytics" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="tiers">Tiers</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
+            {user?.role === 'admin' && (
+              <TabsTrigger value="creators">Creators</TabsTrigger>
+            )}
           </TabsList>
 
           {/* Analytics Tab */}
@@ -246,6 +250,19 @@ export default function CreatorAdmin() {
               </Card>
             )}
           </TabsContent>
+
+          {/* Admin: Creators Tab */}
+          {user?.role === 'admin' && (
+            <TabsContent value="creators" className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold">Creator Management</h2>
+                <p className="text-muted-foreground mt-1">
+                  Manage creator verification status
+                </p>
+              </div>
+              <AdminCreatorManagement />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>

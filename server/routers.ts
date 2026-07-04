@@ -1,10 +1,10 @@
-import { z } from "zod";
 import { Buffer } from "buffer";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router, creatorProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
+import { z } from "zod";
 import { createCheckoutSession, createBillingPortalSession, cancelSubscription } from "./stripe";
 import {
   getPatronStats,
@@ -98,6 +98,11 @@ export const appRouter = router({
   }),
 
   public: router({
+    allCreators: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+      return db.select().from(creators);
+    }),
     creatorByHandle: publicProcedure
       .input(z.object({ handle: z.string() }))
       .query(async ({ input }) => {
