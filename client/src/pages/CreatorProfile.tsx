@@ -12,6 +12,7 @@ import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
+import { VerificationBadge } from '@/components/VerificationBadge';
 
 interface CreatorProfileProps {
   creatorId: string;
@@ -588,23 +589,11 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                   letterSpacing: '0.06em',
                 }}
               >
-                {creator.alias}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {creator.alias}
+                  <VerificationBadge verified={creator.verified ?? false} size="md" />
+                </div>
               </h1>
-              {creator.verified && (
-                <span
-                  style={{
-                    background: 'oklch(0.72 0.09 75)',
-                    color: 'oklch(0.04 0.008 285)',
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: '7px',
-                    letterSpacing: '0.3em',
-                    padding: '4px 10px',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Verified
-                </span>
-              )}
             </div>
             <div
               style={{

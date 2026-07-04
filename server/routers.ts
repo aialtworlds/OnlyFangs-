@@ -45,7 +45,7 @@ import {
   getDb,
   isConversationParticipant,
 } from "./db";
-import { conversations, messages } from "../drizzle/schema";
+import { conversations, messages, creators } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { storagePut } from "./storage";
 
@@ -542,6 +542,39 @@ export const appRouter = router({
         }
 
         return getMessageReactions(input.messageId);
+      }),
+  }),
+  admin: router({
+    toggleCreatorVerification: protectedProcedure
+      .input(z.object({ creatorId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        // Only admins can verify creators
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can verify creators' });
+        }
+
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+
+        // Get current verified status
+        const creator = await db
+          .select()
+          .from(creators)
+          .where(eq(creators.id, input.creatorId))
+          .limit(1);
+
+        if (!creator.length) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Creator not found' });
+        }
+
+        // Toggle verified status
+        const newVerifiedStatus = !creator[0].verified;
+        await db
+          .update(creators)
+          .set({ verified: newVerifiedStatus })
+          .where(eq(creators.id, input.creatorId));
+
+        return { verified: newVerifiedStatus, creatorId: input.creatorId };
       }),
   }),
 });

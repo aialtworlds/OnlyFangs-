@@ -180,3 +180,14 @@
 - [x] Skeleton loading on content feed page
 
 - [x] Infinite scroll pagination on Discover page
+
+
+## Creator Verification Badge System
+- [x] Add `verified` boolean column to creators table (already exists)
+- [x] tRPC admin procedure: admin.toggleCreatorVerification
+- [x] VerificationBadge component for displaying verified checkmark
+- [x] Display badge on creator profiles
+- [ ] Display badge in Discover search results
+- [ ] Display badge in Creators list page
+- [ ] Admin panel: Creator management with verification toggle
+- [ ] Tests for verification procedures
