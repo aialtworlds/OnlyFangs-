@@ -174,3 +174,7 @@
 - [x] Show success toast with new tier name
 - [x] Loading state during duplication
 - [x] Disable other buttons while duplicating
+
+
+## UX Improvements
+- [x] Skeleton loading on content feed page

@@ -9,6 +9,7 @@ import { CONTENT_ITEMS, CREATORS, CATEGORIES } from '@/lib/data';
 import type { ContentItem } from '@/lib/data';
 import { toast } from 'sonner';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
+import { ContentSkeletonGrid } from '@/components/ContentSkeleton';
 
 
 
@@ -99,6 +100,26 @@ export default function Discover() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'popular'>('recent');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Simulate loading state for demonstration
+  const handleSearch = (query: string) => {
+    setIsLoading(true);
+    setSearchQuery(query);
+    setTimeout(() => setIsLoading(false), 500);
+  };
+
+  const handleCategoryChange = (category: string) => {
+    setIsLoading(true);
+    setActiveCategory(category);
+    setTimeout(() => setIsLoading(false), 500);
+  };
+
+  const handleSortChange = (sort: typeof sortBy) => {
+    setIsLoading(true);
+    setSortBy(sort);
+    setTimeout(() => setIsLoading(false), 500);
+  };
 
   const filtered = CONTENT_ITEMS
     .filter(item => activeCategory === 'all' || item.type === activeCategory)
@@ -133,7 +154,7 @@ export default function Discover() {
               className="input-dark"
               placeholder="Search works, creators, categories..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => handleSearch(e.target.value)}
               style={{ paddingLeft: '44px' }}
             />
           </div>
@@ -143,7 +164,7 @@ export default function Discover() {
             {CATEGORIES.map(cat => (
               <button
                 key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
+                onClick={() => handleCategoryChange(cat.id)}
                 style={{
                   fontFamily: "'Cinzel', serif",
                   fontSize: '9px',
@@ -171,7 +192,7 @@ export default function Discover() {
             {[{ id: 'recent', label: 'Most Recent' }, { id: 'popular', label: 'Most Popular' }].map(s => (
               <button
                 key={s.id}
-                onClick={() => setSortBy(s.id as typeof sortBy)}
+                onClick={() => handleSortChange(s.id as typeof sortBy)}
                 style={{
                   fontFamily: "'Cinzel', serif",
                   fontSize: '9px',
@@ -194,13 +215,18 @@ export default function Discover() {
 
       {/* Content Grid */}
       <div className="container" style={{ paddingTop: '48px' }}>
-        {filtered.length > 0 ? (
+        {isLoading ? (
+          // Show skeleton loading while filtering/searching
+          <ContentSkeletonGrid count={6} />
+        ) : filtered.length > 0 ? (
+          // Show actual content when loaded
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2px' }}>
             {filtered.map(item => (
               <DiscoverCard key={item.id} item={item} />
             ))}
           </div>
         ) : (
+          // Show empty state when no results
           <div style={{ textAlign: 'center', padding: '80px 20px', color: 'oklch(0.35 0.02 60)', fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '20px' }}>
             No content found in the darkness...
           </div>
