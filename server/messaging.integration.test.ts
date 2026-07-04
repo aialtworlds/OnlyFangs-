@@ -13,7 +13,7 @@ import {
 import { users, creators, conversations, messages } from '../drizzle/schema';
 import { eq } from 'drizzle-orm';
 
-describe.skip('Messaging System Integration Tests (Disabled: Database schema requires manual migration)', () => {
+describe.skip('Messaging System Integration Tests (Disabled: Fragile data dependencies)', () => {
   let db: any;
   let creatorUserId = 1;
   let patronUserId = 2;

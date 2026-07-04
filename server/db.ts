@@ -724,10 +724,17 @@ export async function sendMessage(conversationId: number, senderId: number, cont
   const db = await getDb();
   if (!db) return null;
 
-  const [msg] = await db
+  const result = await db
     .insert(messages)
-    .values({ conversationId, senderId, content })
-    .$returningId();
+    .values({ conversationId, senderId, content });
+
+  // Get the inserted message ID
+  const [msg] = await db
+    .select()
+    .from(messages)
+    .where(eq(messages.conversationId, conversationId))
+    .orderBy(desc(messages.id))
+    .limit(1);
 
   await db
     .update(conversations)
