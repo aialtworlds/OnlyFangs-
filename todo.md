@@ -187,7 +187,7 @@
 - [x] tRPC admin procedure: admin.toggleCreatorVerification
 - [x] VerificationBadge component for displaying verified checkmark
 - [x] Display badge on creator profiles
-- [ ] Display badge in Discover search results
-- [ ] Display badge in Creators list page
+- [x] Display badge in Discover search results
+- [x] Display badge in Creators list page
 - [ ] Admin panel: Creator management with verification toggle
 - [ ] Tests for verification procedures

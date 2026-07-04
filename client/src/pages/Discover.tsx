@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { ContentSkeletonGrid } from '@/components/ContentSkeleton';
 import { useInfiniteScroll } from '@/_core/hooks/useInfiniteScroll';
+import { VerificationBadge } from '@/components/VerificationBadge';
 
 
 
@@ -87,6 +88,7 @@ function DiscoverCard({ item }: { item: ContentItem }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <img src={creator.avatar} alt={creator.alias} style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', border: '1px solid oklch(0.72 0.09 75 / 30%)' }} />
               <span style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.1em', color: 'oklch(0.55 0.03 60)', textTransform: 'uppercase' }}>{creator.alias}</span>
+              <VerificationBadge verified={creator.verified ?? false} size="sm" />
             </div>
           )}
           <span style={{ fontFamily: "'Cinzel', serif", fontSize: '10px', color: 'oklch(0.35 0.02 60)' }}>♥ {item.likes.toLocaleString('en-US')}</span>

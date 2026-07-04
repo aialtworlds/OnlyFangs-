@@ -7,6 +7,7 @@ import { useLocation } from 'wouter';
 import { Image, Music, BookOpen, Camera, Search } from 'lucide-react';
 import { CREATORS } from '@/lib/data';
 import type { Creator } from '@/lib/data';
+import { VerificationBadge } from '@/components/VerificationBadge';
 
 
 
@@ -60,7 +61,10 @@ function CreatorCard({ creator }: { creator: Creator }) {
             ))}
           </div>
         </div>
-        <div style={{ fontFamily: "'Cinzel', serif", fontSize: '14px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.05em', marginBottom: '2px' }}>{creator.alias}</div>
+        <div style={{ fontFamily: "'Cinzel', serif", fontSize: '14px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.05em', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {creator.alias}
+          <VerificationBadge verified={creator.verified ?? false} size="sm" />
+        </div>
         <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.55 0.03 60)', marginBottom: '10px' }}>{creator.category}</div>
         <div style={{ display: 'flex', gap: '16px', borderTop: '1px solid oklch(1 0 0 / 6%)', paddingTop: '10px' }}>
           <div>
