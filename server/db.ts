@@ -316,7 +316,9 @@ export async function createRelease(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(releases).values(data);
+  const result = await db.insert(releases).values(data);
+  const releaseId = Array.isArray(result) ? (result[0] as any).id : (result as any).insertId;
+  
   const [creator] = await db
     .select({ totalReleases: creators.totalReleases })
     .from(creators)
@@ -328,6 +330,8 @@ export async function createRelease(data: {
       .set({ totalReleases: creator.totalReleases + 1 })
       .where(eq(creators.id, data.creatorId));
   }
+  
+  return releaseId;
 }
 
 export async function updateUserProfile(

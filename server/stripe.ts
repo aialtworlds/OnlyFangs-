@@ -8,6 +8,7 @@ import {
   sendSubscriptionCancellationEmail,
   sendCreatorNotificationEmail,
 } from "./email";
+import { notifySubscriptionConfirmed } from "./db";
 
 // ── Stripe client ──────────────────────────────────────────────
 const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -239,6 +240,11 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
             .update(creators)
             .set({ totalSubscribers: creator.totalSubscribers + 1 })
             .where(eq(creators.id, tier.creatorId));
+          // Notify creator about new subscription
+          const [patron] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+          if (patron) {
+            await notifySubscriptionConfirmed(tier.creatorId, patron.name || 'Unknown', tier.name);
+          }
         }
       }
 

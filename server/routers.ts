@@ -241,7 +241,9 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const creator = await getCreatorByUserId(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
-        await createRelease({ creatorId: creator.id, ...input });
+        const releaseId = await createRelease({ creatorId: creator.id, ...input });
+        // Notify followers about new release
+        await notifyFollowersAboutNewRelease(creator.id, releaseId, input.title);
         return { success: true };
       }),
     myTiers: creatorProcedure.query(async ({ ctx }) => {
@@ -447,7 +449,12 @@ export const appRouter = router({
         if (!conv) {
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create conversation" });
         }
-        return sendMessage(conv.id, ctx.user.id, input.content);
+        const message = await sendMessage(conv.id, ctx.user.id, input.content);
+        // Notify creator about new message
+        const user = ctx.user;
+        const preview = input.content.substring(0, 50);
+        await notifyNewMessage(creator.id, user.name || 'Unknown', preview);
+        return message;
       }),
     markAsRead: protectedProcedure
       .input(z.object({ messageId: z.number() }))

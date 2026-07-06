@@ -202,5 +202,5 @@
 - [x] NotificationToast component for real-time toast alerts
 - [x] Integrate NotificationBell into Navbar
 - [x] Create /notifications page with full notification history
-- [ ] Notification triggers: new content from followed creators, subscription events, new messages
+- [x] Notification triggers: new content from followed creators, subscription events, new messages
 - [x] Tests for notification procedures (CRUD, authorization, real-time delivery)
