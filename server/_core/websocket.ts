@@ -4,11 +4,11 @@ import { Server as HTTPServer } from 'http';
 /**
  * WebSocket Message Types
  */
-export type WSMessageType = 'message' | 'read' | 'typing' | 'online' | 'offline';
+export type WSMessageType = 'message' | 'read' | 'typing' | 'online' | 'offline' | 'notification';
 
 export interface WSMessage {
   type: WSMessageType;
-  conversationId: number;
+  conversationId?: number;
   userId: number;
   data?: any;
   timestamp?: number;
@@ -54,7 +54,7 @@ export function initWebSocketServer(httpServer: HTTPServer): WebSocketServer {
         }
 
         // Handle message events
-        if (message.type === 'message') {
+        if (message.type === 'message' && message.conversationId) {
           broadcastToConversation(message.conversationId, {
             type: 'message',
             conversationId: message.conversationId,
@@ -65,7 +65,7 @@ export function initWebSocketServer(httpServer: HTTPServer): WebSocketServer {
         }
 
         // Handle read receipts
-        if (message.type === 'read') {
+        if (message.type === 'read' && message.conversationId) {
           broadcastToConversation(message.conversationId, {
             type: 'read',
             conversationId: message.conversationId,
@@ -76,7 +76,7 @@ export function initWebSocketServer(httpServer: HTTPServer): WebSocketServer {
         }
 
         // Handle typing indicators
-        if (message.type === 'typing') {
+        if (message.type === 'typing' && message.conversationId) {
           broadcastToConversation(message.conversationId, {
             type: 'typing',
             conversationId: message.conversationId,
@@ -86,7 +86,7 @@ export function initWebSocketServer(httpServer: HTTPServer): WebSocketServer {
         }
 
         // Handle subscription to conversation
-        if (message.type === 'online') {
+        if (message.type === 'online' && message.conversationId) {
           subscribeToConversation(message.conversationId, userId);
         }
       } catch (error) {
@@ -200,4 +200,27 @@ export function getUsersInConversation(conversationId: number): number[] {
     result.push(userId);
   });
   return result;
+}
+
+
+/**
+ * Send notification to specific user via WebSocket
+ */
+export function sendNotificationToUser(userId: number, notification: any): void {
+  const message: WSMessage = {
+    type: 'notification',
+    userId: userId,
+    data: notification,
+    timestamp: Date.now(),
+  };
+  sendToUser(userId, message);
+}
+
+/**
+ * Broadcast notification to multiple users
+ */
+export function broadcastNotificationToUsers(userIds: number[], notification: any): void {
+  userIds.forEach(userId => {
+    sendNotificationToUser(userId, notification);
+  });
 }

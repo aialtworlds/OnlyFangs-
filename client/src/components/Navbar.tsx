@@ -5,11 +5,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
-import { Search, Menu, X, Bell, LogOut, User, ChevronDown } from 'lucide-react';
+import { Search, Menu, X, LogOut, User, ChevronDown, Bell } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { trpc } from '@/lib/trpc';
+import { NotificationBell } from './NotificationBell';
 
 export default function Navbar() {
   const [location, setLocation] = useLocation();
@@ -198,22 +199,9 @@ export default function Navbar() {
             {isAuthenticated ? (
               <>
                 {/* Notifications — desktop only */}
-                <button
-                  onClick={() => toast('No new notifications', { description: 'The silence is a ritual.' })}
-                  className="hidden md:flex items-center"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'oklch(0.55 0.03 60)',
-                    cursor: 'pointer',
-                    padding: '8px',
-                    transition: 'color 0.25s',
-                  }}
-                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'oklch(0.72 0.09 75)'; }}
-                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'oklch(0.55 0.03 60)'; }}
-                >
-                  <Bell size={16} />
-                </button>
+                <div className="hidden md:flex items-center">
+                  <NotificationBell />
+                </div>
 
                 {/* User Avatar + Dropdown — desktop */}
                 <div ref={userMenuRef} className="hidden md:block" style={{ position: 'relative' }}>
@@ -335,7 +323,7 @@ export default function Navbar() {
                         ...(user?.role === 'creator' || user?.role === 'admin' ? [
                           { icon: <User size={13} />, label: 'Creator Admin', action: () => setLocation('/creator-admin') },
                         ] : []),
-                        { icon: <Bell size={13} />, label: 'Notifications', action: () => toast('No new notifications') },
+                        { icon: <User size={13} />, label: 'Notifications', action: () => setLocation('/notifications') },
                       ].map((item) => (
                         <button
                           key={item.label}

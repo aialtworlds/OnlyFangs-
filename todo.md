@@ -191,3 +191,16 @@
 - [x] Display badge in Creators list page
 - [x] Admin panel: Creator management with verification toggle
 - [x] Tests for verification procedures
+
+
+## Notification System (In-App)
+- [x] Database schema: notifications table (id, userId, type, title, content, relatedId, read, createdAt)
+- [x] tRPC procedures: notifications.list, notifications.markAsRead, notifications.delete, notifications.getUnread
+- [x] WebSocket integration for real-time notification delivery
+- [x] NotificationBell component with unread count badge
+- [x] NotificationDropdown component showing recent notifications
+- [x] NotificationToast component for real-time toast alerts
+- [x] Integrate NotificationBell into Navbar
+- [x] Create /notifications page with full notification history
+- [ ] Notification triggers: new content from followed creators, subscription events, new messages
+- [x] Tests for notification procedures (CRUD, authorization, real-time delivery)

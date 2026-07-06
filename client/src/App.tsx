@@ -21,6 +21,7 @@ import NotFound from "./pages/NotFound";
 import PatronProfile from "./pages/PatronProfile";
 import CreatorAdmin from "./pages/CreatorAdmin";
 import CreatorContent from "./pages/CreatorContent";
+import Notifications from "./pages/Notifications";
 
 function AppLayout() {
   const { currentTrack, closePlayer } = useMusicPlayer();
@@ -38,6 +39,7 @@ function AppLayout() {
         <Route path="/creator/:id/content" component={CreatorContent} />
         <Route path="/creator/:id">{(params) => <CreatorProfile creatorId={params.id || ''} />}</Route>
         <Route path="/profile" component={PatronProfile} />
+        <Route path="/notifications" component={Notifications} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

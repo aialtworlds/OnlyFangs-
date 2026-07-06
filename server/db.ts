@@ -928,3 +928,174 @@ export async function hasUserReacted(messageId: number, userId: number, emoji: s
 
   return reaction.length > 0;
 }
+
+
+// ── Notifications ─────────────────────────────────────────────
+
+/**
+ * Get all notifications for a user
+ */
+export async function getUserNotifications(userId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit);
+}
+
+/**
+ * Mark notification as read
+ */
+export async function markNotificationAsRead(notificationId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Verify ownership
+  const notification = await db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.id, notificationId))
+    .limit(1);
+
+  if (!notification.length || notification[0].userId !== userId) {
+    throw new Error("Notification not found or unauthorized");
+  }
+
+  await db
+    .update(notifications)
+    .set({ read: true })
+    .where(eq(notifications.id, notificationId));
+
+  return notification[0];
+}
+
+/**
+ * Mark all notifications as read for a user
+ */
+export async function markAllNotificationsAsRead(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .update(notifications)
+    .set({ read: true })
+    .where(and(eq(notifications.userId, userId), eq(notifications.read, false)));
+}
+
+/**
+ * Create a notification for a user
+ */
+export async function createNotification(
+  userId: number,
+  type: string,
+  title: string,
+  message?: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const result = await db.insert(notifications).values({
+    userId,
+    type,
+    title,
+    message: message || null,
+    read: false,
+  });
+
+  const notificationId = result[0].insertId as number;
+  return db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.id, notificationId))
+    .limit(1)
+    .then(rows => rows[0]);
+}
+
+/**
+ * Delete a notification
+ */
+export async function deleteNotification(notificationId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Verify ownership
+  const notification = await db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.id, notificationId))
+    .limit(1);
+
+  if (!notification.length || notification[0].userId !== userId) {
+    throw new Error("Notification not found or unauthorized");
+  }
+
+  await db
+    .delete(notifications)
+    .where(eq(notifications.id, notificationId));
+
+  return { success: true };
+}
+
+/**
+ * Notify creator followers about new release
+ */
+export async function notifyFollowersAboutNewRelease(creatorId: number, releaseId: number, releaseTitle: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  // Get all followers of the creator
+  const followers = await db
+    .select({ followerId: follows.followerId })
+    .from(follows)
+    .where(eq(follows.creatorId, creatorId));
+
+  if (followers.length === 0) return;
+
+  // Get creator name
+  const creator = await db
+    .select({ alias: creators.alias })
+    .from(creators)
+    .where(eq(creators.id, creatorId))
+    .limit(1);
+
+  if (!creator.length) return;
+
+  // Create notifications for all followers
+  const creatorName = creator[0].alias;
+  for (const follower of followers) {
+    await createNotification(
+      follower.followerId,
+      'new_release',
+      `New release from ${creatorName}`,
+      `${creatorName} posted: ${releaseTitle}`
+    );
+  }
+}
+
+/**
+ * Notify user about subscription confirmation
+ */
+export async function notifySubscriptionConfirmed(userId: number, creatorName: string, tierName: string) {
+  await createNotification(
+    userId,
+    'subscription_confirmed',
+    `Subscription confirmed`,
+    `You are now subscribed to ${creatorName}'s ${tierName} tier`
+  );
+}
+
+/**
+ * Notify user about new message
+ */
+export async function notifyNewMessage(userId: number, senderName: string, messagePreview: string) {
+  await createNotification(
+    userId,
+    'new_message',
+    `New message from ${senderName}`,
+    messagePreview.substring(0, 100)
+  );
+}

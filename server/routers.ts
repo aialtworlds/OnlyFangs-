@@ -44,9 +44,17 @@ import {
   hasUserReacted,
   getDb,
   isConversationParticipant,
+  getUserNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  createNotification,
+  deleteNotification,
+  notifyFollowersAboutNewRelease,
+  notifySubscriptionConfirmed,
+  notifyNewMessage,
 } from "./db";
-import { conversations, messages, creators } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { conversations, messages, creators, notifications } from "../drizzle/schema";
+import { eq, desc } from "drizzle-orm";
 import { storagePut } from "./storage";
 
 export const appRouter = router({
@@ -549,6 +557,32 @@ export const appRouter = router({
         return getMessageReactions(input.messageId);
       }),
   }),
+
+  notifications: router({
+    list: protectedProcedure
+      .input(z.object({ limit: z.number().min(1).max(100).optional() }).optional())
+      .query(async ({ ctx, input }) => {
+        return getUserNotifications(ctx.user.id, input?.limit ?? 50);
+      }),
+    unread: protectedProcedure.query(async ({ ctx }) => {
+      return getUnreadNotificationCount(ctx.user.id);
+    }),
+    markAsRead: protectedProcedure
+      .input(z.object({ notificationId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        return markNotificationAsRead(input.notificationId, ctx.user.id);
+      }),
+    markAllAsRead: protectedProcedure.mutation(async ({ ctx }) => {
+      await markAllNotificationsAsRead(ctx.user.id);
+      return { success: true };
+    }),
+    delete: protectedProcedure
+      .input(z.object({ notificationId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        return deleteNotification(input.notificationId, ctx.user.id);
+      }),
+  }),
+
   admin: router({
     toggleCreatorVerification: protectedProcedure
       .input(z.object({ creatorId: z.number() }))
