@@ -1,4 +1,4 @@
-import { eq, desc, and, count, sql, isNull, or, ne } from "drizzle-orm";
+import { eq, desc, and, count, sql, isNull, or, ne, isNotNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
@@ -1242,6 +1242,124 @@ export async function getTrendingCreators(limit: number = 6) {
       .limit(limit);
   } catch (error) {
     console.error('[Trending] Error fetching trending creators:', error);
+    return [];
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// Search & Filtering Functions
+// ═══════════════════════════════════════════════════════════
+
+export async function searchCreators(query: string, category?: string, limit: number = 20) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    let conditions = [];
+
+    // Filter by search query (alias or bio)
+    if (query && query.trim()) {
+      const searchTerm = `%${query.trim()}%`;
+      conditions.push(
+        sql`(LOWER(${creators.alias}) LIKE LOWER(${searchTerm}) OR LOWER(${creators.bio}) LIKE LOWER(${searchTerm}))`
+      );
+    }
+
+    // Filter by category
+    if (category && category !== 'all') {
+      conditions.push(eq(creators.category, category));
+    }
+
+    let query_builder: any = db
+      .select({
+        id: creators.id,
+        alias: creators.alias,
+        bio: creators.bio,
+        avatarUrl: creators.avatarUrl,
+        coverUrl: creators.coverUrl,
+        verified: creators.verified,
+        totalSubscribers: creators.totalSubscribers,
+        totalReleases: creators.totalReleases,
+        category: creators.category,
+      })
+      .from(creators);
+
+    if (conditions.length > 0) {
+      query_builder = query_builder.where(and(...(conditions as any)));
+    }
+
+    const results = await (query_builder as any)
+      .orderBy(desc(creators.verified), desc(creators.totalSubscribers))
+      .limit(limit);
+
+    return results;
+  } catch (error) {
+    console.error('[Search] Error searching creators:', error);
+    return [];
+  }
+}
+
+export async function searchContent(query: string, limit: number = 20) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    let conditions = [];
+
+    // Filter by search query (title or description)
+    if (query && query.trim()) {
+      const searchTerm = `%${query.trim()}%`;
+      conditions.push(
+        sql`(LOWER(${content.title}) LIKE LOWER(${searchTerm}) OR LOWER(${content.description}) LIKE LOWER(${searchTerm}))`
+      );
+    }
+
+    let query_builder: any = db
+      .select({
+        id: content.id,
+        title: content.title,
+        description: content.description,
+        thumbnailUrl: content.thumbnailUrl,
+        creatorId: content.creatorId,
+        type: content.type,
+        tierId: content.tierId,
+        createdAt: content.createdAt,
+      })
+      .from(content);
+
+    if (conditions.length > 0) {
+      query_builder = query_builder.where(and(...(conditions as any)));
+    }
+
+    const results = await (query_builder as any)
+      .orderBy(desc(content.createdAt))
+      .limit(limit);
+
+    return results;
+  } catch (error) {
+    console.error('[Search] Error searching content:', error);
+    return [];
+  }
+}
+
+export async function getCategories() {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    // Get unique categories from creators
+    const creatorCategories = await db
+      .selectDistinct({ category: creators.category })
+      .from(creators)
+      .where(isNotNull(creators.category));
+
+    return creatorCategories
+      .map(c => c.category)
+      .filter((cat): cat is string => cat !== null && cat !== undefined)
+      .sort();
+  } catch (error) {
+    console.error('[Search] Error fetching categories:', error);
     return [];
   }
 }

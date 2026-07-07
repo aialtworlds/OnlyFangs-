@@ -4,16 +4,18 @@
 
 import { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Lock, Play, BookOpen, Image, Music, Camera, Search } from 'lucide-react';
-import { CONTENT_ITEMS, CREATORS, CATEGORIES } from '@/lib/data';
-import type { ContentItem } from '@/lib/data';
+import { Lock, Play, BookOpen, Image, Music, Camera } from 'lucide-react';
+import { CREATORS } from '@/lib/data';
 import { toast } from 'sonner';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { ContentSkeletonGrid } from '@/components/ContentSkeleton';
 import { useInfiniteScroll } from '@/_core/hooks/useInfiniteScroll';
 import { VerificationBadge } from '@/components/VerificationBadge';
-
-
+import SearchBar from '@/components/SearchBar';
+import CategoryFilter from '@/components/CategoryFilter';
+import { trpc } from '@/lib/trpc';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 function ContentIcon({ type }: { type: string }) {
   const icons: Record<string, React.ReactNode> = {
@@ -32,67 +34,236 @@ const tierLabels: Record<string, string> = {
   immortal: 'Immortal',
 };
 
-function DiscoverCard({ item }: { item: ContentItem }) {
+// Gradient fallback for missing images
+function GradientFallback({ seed }: { seed: string | number }) {
+  const hues = [330, 60, 120, 240, 300];
+  const hue = hues[Number(seed) % hues.length];
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        background: `linear-gradient(135deg, oklch(0.3 0.1 ${hue}) 0%, oklch(0.15 0.05 ${hue + 30}) 100%)`,
+      }}
+    />
+  );
+}
+
+function CreatorCard({ creator }: { creator: any }) {
   const [, setLocation] = useLocation();
-  const { playTrack } = useMusicPlayer();
   const [hovered, setHovered] = useState(false);
-  const creator = CREATORS.find(c => c.id === item.creatorId);
+  const [imageError, setImageError] = useState(false);
 
   return (
     <div
-      className="card-dark"
-      style={{ cursor: 'pointer' }}
+      className="card-dark cursor-pointer hover:shadow-lg transition-shadow"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => setLocation('/creator/' + item.creatorId )}
+      onClick={() => setLocation(`/creator/${creator.id}`)}
     >
-      <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
-        <img
-          src={item.thumbnail}
-          alt={item.title}
+      <div style={{ position: 'relative', height: '200px', overflow: 'hidden' }}>
+        {!imageError && creator.coverUrl ? (
+          <img
+            src={creator.coverUrl}
+            alt={creator.alias}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transition: 'transform 0.3s ease',
+              transform: hovered ? 'scale(1.05)' : 'scale(1)',
+            }}
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <GradientFallback seed={creator.id} />
+        )}
+        <div
           style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 0.6s ease',
-            transform: hovered ? 'scale(1.05)' : 'scale(1)',
-            filter: item.locked ? 'brightness(0.35) blur(3px)' : 'brightness(0.8)',
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(180deg, transparent 30%, oklch(0.085 0.015 330) 100%)',
           }}
         />
-        {item.locked && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-            <Lock size={24} style={{ color: 'oklch(0.72 0.09 75)' }} />
-            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'oklch(0.72 0.09 75)' }}>
-              Tier {tierLabels[item.tier]}
-            </div>
-          </div>
-        )}
-        {item.type === 'music' && !item.locked && hovered && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'oklch(0.04 0.008 285 / 40%)' }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'oklch(0.72 0.09 75)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              onClick={(e) => { e.stopPropagation(); playTrack({ id: item.id, title: item.title, artist: creator?.alias || '', duration: item.duration || '0:00', thumbnail: item.thumbnail, tier: item.tier }); }}>
-              <Play size={18} fill="oklch(0.04 0.008 285)" style={{ color: 'oklch(0.04 0.008 285)', marginLeft: '2px' }} />
-            </div>
-          </div>
-        )}
-        <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'oklch(0.04 0.008 285 / 80%)', backdropFilter: 'blur(4px)', border: '1px solid oklch(1 0 0 / 10%)', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '6px', color: 'oklch(0.82 0.03 75)', fontSize: '11px', fontFamily: "'Cinzel', serif", letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          <ContentIcon type={item.type} />
-          {item.type === 'music' && item.duration && <span>{item.duration}</span>}
-          {item.type === 'book' && item.pages && <span>{item.pages}p</span>}
-        </div>
       </div>
-      <div style={{ padding: '14px 16px' }}>
-        <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.04em', marginBottom: '4px' }}>{item.title}</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
-          {creator && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <img src={creator.avatar} alt={creator.alias} style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', border: '1px solid oklch(0.72 0.09 75 / 30%)' }} />
-              <span style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.1em', color: 'oklch(0.55 0.03 60)', textTransform: 'uppercase' }}>{creator.alias}</span>
-              <VerificationBadge verified={creator.verified ?? false} size="sm" />
-            </div>
-          )}
-          <span style={{ fontFamily: "'Cinzel', serif", fontSize: '10px', color: 'oklch(0.35 0.02 60)' }}>♥ {item.likes.toLocaleString('en-US')}</span>
+
+      <div style={{ padding: '16px' }}>
+        <div
+          style={{
+            fontFamily: "'Cinzel', serif",
+            fontSize: '14px',
+            color: 'oklch(0.93 0.02 80)',
+            letterSpacing: '0.05em',
+            marginBottom: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          {creator.alias}
+          {creator.verified && <VerificationBadge verified={true} />}
         </div>
+        <p style={{ fontSize: '12px', color: 'oklch(0.55 0.03 60)', marginBottom: '12px' }}>
+          {creator.totalSubscribers} seguidores
+        </p>
+        <p
+          style={{
+            fontSize: '12px',
+            color: 'oklch(0.7 0.05 70)',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {creator.bio}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ContentCard({ content, creator }: { content: any; creator: any }) {
+  const [, setLocation] = useLocation();
+  const [hovered, setHovered] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div
+      className="card-dark cursor-pointer hover:shadow-lg transition-shadow"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={() => setLocation(`/creator/${content.creatorId}`)}
+    >
+      <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
+        {!imageError && content.thumbnailUrl ? (
+          <img
+            src={content.thumbnailUrl}
+            alt={content.title}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transition: 'transform 0.3s ease',
+              transform: hovered ? 'scale(1.08)' : 'scale(1)',
+            }}
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <GradientFallback seed={content.id} />
+        )}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(180deg, transparent 30%, oklch(0.085 0.015 330) 100%)',
+          }}
+        />
+        {content.tierId && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              background: 'oklch(0.72 0.09 75)',
+              color: 'oklch(0.04 0.008 285)',
+              fontFamily: "'Cinzel', serif",
+              fontSize: '7px',
+              letterSpacing: '0.3em',
+              padding: '4px 10px',
+              textTransform: 'uppercase',
+            }}
+          >
+            {tierLabels[content.tierId] || 'Premium'}
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding: '16px' }}>
+        <div
+          style={{
+            fontFamily: "'Cinzel', serif",
+            fontSize: '14px',
+            color: 'oklch(0.93 0.02 80)',
+            letterSpacing: '0.05em',
+            marginBottom: '6px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {content.title}
+        </div>
+        <div
+          style={{
+            fontSize: '12px',
+            color: 'oklch(0.55 0.03 60)',
+            marginBottom: '12px',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {content.description}
+        </div>
+
+        {creator && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              paddingTop: '12px',
+              borderTop: '1px solid oklch(1 0 0 / 10%)',
+            }}
+          >
+            {creator.avatar && !imageError ? (
+              <img
+                src={creator.avatar}
+                alt={creator.alias}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                }}
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'oklch(0.2 0.08 330)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '12px',
+                  color: 'oklch(0.72 0.09 75)',
+                  fontWeight: 'bold',
+                }}
+              >
+                {creator.alias?.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: 'oklch(0.93 0.02 80)',
+                  fontWeight: 500,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {creator.alias}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -100,12 +271,22 @@ function DiscoverCard({ item }: { item: ContentItem }) {
 
 export default function Discover() {
   const [, setLocation] = useLocation();
-  const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'recent' | 'popular'>('recent');
-  const [isLoading, setIsLoading] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [activeTab, setActiveTab] = useState<'creators' | 'content'>('creators');
   const [displayCount, setDisplayCount] = useState(12);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  // Fetch search results
+  const { data: creatorResults = [], isLoading: isSearchingCreators } = trpc.creator.search.useQuery(
+    { query: searchQuery, category: activeCategory !== 'all' ? activeCategory : undefined, limit: 50 },
+    { enabled: searchQuery.length > 0 }
+  );
+
+  const { data: contentResults = [], isLoading: isSearchingContent } = trpc.content.search.useQuery(
+    { query: searchQuery, limit: 50 },
+    { enabled: searchQuery.length > 0 }
+  );
 
   const handleLoadMore = () => {
     if (isLoadingMore) return;
@@ -119,166 +300,152 @@ export default function Discover() {
   const scrollTarget = useInfiniteScroll({
     onLoadMore: handleLoadMore,
     threshold: 300,
-    enabled: !isLoading && !isLoadingMore,
+    enabled: !isSearchingCreators && !isSearchingContent && !isLoadingMore,
   });
 
-  // Simulate loading state for demonstration
   const handleSearch = (query: string) => {
-    setIsLoading(true);
     setSearchQuery(query);
     setDisplayCount(12);
-    setTimeout(() => setIsLoading(false), 500);
   };
 
   const handleCategoryChange = (category: string) => {
-    setIsLoading(true);
     setActiveCategory(category);
     setDisplayCount(12);
-    setTimeout(() => setIsLoading(false), 500);
   };
 
-  const handleSortChange = (sort: typeof sortBy) => {
-    setIsLoading(true);
-    setSortBy(sort);
-    setDisplayCount(12);
-    setTimeout(() => setIsLoading(false), 500);
-  };
+  // Display results
+  const displayedCreators = searchQuery.length > 0 
+    ? creatorResults.slice(0, displayCount)
+    : CREATORS.slice(0, displayCount);
 
-  // Get all filtered items (without pagination)
-  const allFiltered = CONTENT_ITEMS
-    .filter(item => activeCategory === 'all' || item.type === activeCategory)
-    .filter(item => !searchQuery || item.title.toLowerCase().includes(searchQuery.toLowerCase()) || item.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    .sort((a, b) => sortBy === 'popular' ? b.likes - a.likes : new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
+  const displayedContent = searchQuery.length > 0 
+    ? contentResults.slice(0, displayCount)
+    : [];
 
-  // Get paginated slice for display
-  const filtered = allFiltered.slice(0, displayCount);
+  const hasMoreCreators = searchQuery.length > 0 
+    ? creatorResults.length > displayCount
+    : CREATORS.length > displayCount;
 
-  // Check if there are more items to load
-  const hasMore = displayCount < allFiltered.length;
+  const hasMoreContent = contentResults.length > displayCount;
+
+  const isSearching = isSearchingCreators || isSearchingContent;
 
   return (
-    <div style={{ background: 'oklch(0.04 0.008 285)', minHeight: '100vh', paddingBottom: '80px' }}>
+    <div style={{ minHeight: '100vh', background: 'oklch(0.085 0.015 330)', paddingBottom: '60px' }}>
       {/* Header */}
-      <div
-        style={{
-          background: 'oklch(0.06 0.01 285)',
-          borderBottom: '1px solid oklch(0.72 0.09 75 / 8%)',
-          padding: '60px 0 40px',
-        }}
-      >
+      <div style={{ paddingTop: '80px', paddingBottom: '40px', background: 'linear-gradient(135deg, oklch(0.085 0.015 330) 0%, oklch(0.1 0.02 330) 100%)' }}>
         <div className="container">
-          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <span className="tag-label">Explore</span>
-            <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: 'clamp(28px, 4vw, 48px)', marginTop: '18px', color: 'oklch(0.93 0.02 80)' }}>
-              Discover Content
-            </h1>
-            <div className="ornament" style={{ margin: '18px auto' }}>
-              <span style={{ color: 'oklch(0.72 0.09 75)' }}>✦</span>
+          <h1
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontSize: '32px',
+              color: 'oklch(0.93 0.02 80)',
+              letterSpacing: '0.1em',
+              marginBottom: '32px',
+              textTransform: 'uppercase',
+            }}
+          >
+            Descobrir
+          </h1>
+
+          {/* Search & Filter Bar */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <SearchBar
+                onSearch={handleSearch}
+                placeholder="Buscar criadores e conteúdo..."
+              />
             </div>
-          </div>
-
-          {/* Search */}
-          <div style={{ maxWidth: '560px', margin: '0 auto 32px', position: 'relative' }}>
-            <Search size={16} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'oklch(0.35 0.02 60)' }} />
-            <input
-              className="input-dark"
-              placeholder="Search works, creators, categories..."
-              value={searchQuery}
-              onChange={e => handleSearch(e.target.value)}
-              style={{ paddingLeft: '44px' }}
+            <CategoryFilter
+              onCategoryChange={handleCategoryChange}
+              selectedCategory={activeCategory}
             />
-          </div>
-
-          {/* Filters */}
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '16px' }}>
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => handleCategoryChange(cat.id)}
-                style={{
-                  fontFamily: "'Cinzel', serif",
-                  fontSize: '9px',
-                  letterSpacing: '0.22em',
-                  textTransform: 'uppercase',
-                  padding: '10px 20px',
-                  border: `1px solid ${activeCategory === cat.id ? 'oklch(0.72 0.09 75)' : 'oklch(1 0 0 / 10%)'}`,
-                  background: activeCategory === cat.id ? 'oklch(0.72 0.09 75 / 12%)' : 'transparent',
-                  color: activeCategory === cat.id ? 'oklch(0.72 0.09 75)' : 'oklch(0.55 0.03 60)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <span>{cat.icon}</span>
-                {cat.name}
-              </button>
-            ))}
-          </div>
-
-          {/* Sort */}
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-            {[{ id: 'recent', label: 'Most Recent' }, { id: 'popular', label: 'Most Popular' }].map(s => (
-              <button
-                key={s.id}
-                onClick={() => handleSortChange(s.id as typeof sortBy)}
-                style={{
-                  fontFamily: "'Cinzel', serif",
-                  fontSize: '9px',
-                  letterSpacing: '0.15em',
-                  textTransform: 'uppercase',
-                  padding: '8px 16px',
-                  border: `1px solid ${sortBy === s.id ? 'oklch(0.72 0.09 75 / 40%)' : 'oklch(1 0 0 / 8%)'}`,
-                  background: sortBy === s.id ? 'oklch(0.72 0.09 75 / 8%)' : 'transparent',
-                  color: sortBy === s.id ? 'oklch(0.72 0.09 75)' : 'oklch(0.35 0.02 60)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s',
-                }}
-              >
-                {s.label}
-              </button>
-            ))}
           </div>
         </div>
       </div>
 
-      {/* Content Grid */}
-      <div className="container" style={{ paddingTop: '48px' }}>
-        {isLoading ? (
-          // Show skeleton loading while filtering/searching
-          <ContentSkeletonGrid count={6} />
-        ) : filtered.length > 0 ? (
-          // Show actual content when loaded
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '2px' }}>
-              {filtered.map(item => (
-                <DiscoverCard key={item.id} item={item} />
-              ))}
-            </div>
-
-            {/* Infinite scroll trigger point */}
-            <div ref={scrollTarget} style={{ height: '100px', marginTop: '60px' }} />
-
-            {/* Loading more indicator */}
-            {isLoadingMore && (
-              <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                <ContentSkeletonGrid count={3} />
-              </div>
-            )}
-
-            {/* End of content message */}
-            {!hasMore && filtered.length > 0 && (
-              <div style={{ textAlign: 'center', padding: '60px 20px', color: 'oklch(0.35 0.02 60)', fontFamily: "'Cinzel', serif", fontSize: '12px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                ✦ End of collection ✦
-              </div>
-            )}
-          </>
-        ) : (
-          // Show empty state when no results
-          <div style={{ textAlign: 'center', padding: '80px 20px', color: 'oklch(0.35 0.02 60)', fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '20px' }}>
-            No content found in the darkness...
+      {/* Results */}
+      <div className="container py-12">
+        {isSearching ? (
+          <ContentSkeletonGrid count={12} />
+        ) : searchQuery.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎭</div>
+            <p style={{ color: 'oklch(0.55 0.03 60)', fontSize: '16px' }}>
+              Comece a buscar para descobrir criadores e conteúdo
+            </p>
           </div>
+        ) : displayedCreators.length === 0 && displayedContent.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 0' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
+            <p style={{ color: 'oklch(0.55 0.03 60)', fontSize: '16px' }}>
+              Nenhum resultado encontrado para "{searchQuery}"
+            </p>
+          </div>
+        ) : (
+          <>
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'creators' | 'content')} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-8">
+                <TabsTrigger value="creators">
+                  Criadores ({displayedCreators.length})
+                </TabsTrigger>
+                <TabsTrigger value="content">
+                  Conteúdo ({displayedContent.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="creators">
+                {displayedCreators.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                    <p style={{ color: 'oklch(0.55 0.03 60)' }}>Nenhum criador encontrado</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {displayedCreators.map((creator: any) => (
+                        <CreatorCard key={creator.id} creator={creator} />
+                      ))}
+                    </div>
+
+                    {hasMoreCreators && (
+                      <div ref={scrollTarget} className="mt-12 text-center">
+                        <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
+                          {isLoadingMore ? 'Carregando...' : 'Carregar mais'}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent value="content">
+                {displayedContent.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                    <p style={{ color: 'oklch(0.55 0.03 60)' }}>Nenhum conteúdo encontrado</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {displayedContent.map((content: any) => {
+                        const creator = CREATORS.find(c => c.id === content.creatorId);
+                        return (
+                          <ContentCard key={content.id} content={content} creator={creator} />
+                        );
+                      })}
+                    </div>
+
+                    {hasMoreContent && (
+                      <div ref={scrollTarget} className="mt-12 text-center">
+                        <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
+                          {isLoadingMore ? 'Carregando...' : 'Carregar mais'}
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </TabsContent>
+            </Tabs>
+          </>
         )}
       </div>
     </div>

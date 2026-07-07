@@ -55,6 +55,9 @@ import {
   getRecommendedCreators,
   getTrendingCreators,
   trackContentView,
+  searchCreators,
+  searchContent,
+  getCategories,
 } from "./db";
 import { conversations, messages, creators, notifications } from "../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
@@ -363,6 +366,21 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return getTrendingCreators(input.limit);
       }),
+
+    search: publicProcedure
+      .input(z.object({
+        query: z.string().min(1).max(100),
+        category: z.string().optional(),
+        limit: z.number().int().min(1).max(50).default(20),
+      }))
+      .query(async ({ input }) => {
+        return searchCreators(input.query, input.category, input.limit);
+      }),
+
+    categories: publicProcedure
+      .query(async () => {
+        return getCategories();
+      }),
   }),
 
   content: router({
@@ -432,6 +450,14 @@ export const appRouter = router({
           await trackContentView(ctx.user.id, input.contentId, content.creatorId);
         }
         return content;
+      }),
+    search: publicProcedure
+      .input(z.object({
+        query: z.string().min(1).max(100),
+        limit: z.number().int().min(1).max(50).default(20),
+      }))
+      .query(async ({ input }) => {
+        return searchContent(input.query, input.limit);
       }),
   }),
 

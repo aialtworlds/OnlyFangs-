@@ -219,3 +219,19 @@
 - [x] Fix image fallbacks and add empty states to RecommendedCreators (gradient fallback, emoji placeholder, explicit empty state)
 - [x] Improve tests to validate recommendation ranking logic (viewing history tests enabled, 103 tests passing)
 - [x] Apply migration to database (applied via SQL)
+
+
+## Search & Filtering System
+- [x] Database helpers: searchCreators, searchContent (by name, category, tags)
+- [x] tRPC procedures: creator.search, content.search with filters
+- [x] SearchBar component with debounced input
+- [x] CategoryFilter component with multi-select
+- [x] Integrate search into Discover page
+- [x] Tests for search procedures
+
+### Gaps Fixed
+- [x] Fix SearchBar debounce with proper useEffect pattern
+- [x] Implement content.search tRPC procedure
+- [x] Integrate content search into Discover page (with tabs for creators/content)
+- [x] Fix image fallbacks (gradient fallback + emoji avatar fallback)
+- [x] Add tests for content.search and filtering (16 tests total)
