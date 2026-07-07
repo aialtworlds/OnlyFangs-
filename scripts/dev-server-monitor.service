@@ -1,0 +1,19 @@
+[Unit]
+Description=Only Fangs Dev Server Monitor
+After=network.target
+Wants=dev-server-monitor.timer
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/only-fangs
+ExecStart=/home/ubuntu/only-fangs/scripts/monitor-dev-server.sh
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+Environment="PATH=/home/ubuntu/.local/share/pnpm:/home/ubuntu/.nvm/versions/node/v22.13.0/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="HOME=/home/ubuntu"
+
+[Install]
+WantedBy=multi-user.target
