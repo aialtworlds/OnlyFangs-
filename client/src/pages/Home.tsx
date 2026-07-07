@@ -8,6 +8,7 @@ import { useLocation } from 'wouter';
 import { ArrowRight, Lock, Play, BookOpen, Image, Music, Camera, Star, ChevronRight } from 'lucide-react';
 import { CREATORS, CONTENT_ITEMS, STATS, TIERS, CATEGORIES, getFeaturedCreators } from '@/lib/data';
 import type { ContentItem, Creator } from '@/lib/data';
+import { RecommendedCreators } from '@/components/RecommendedCreators';
 
 interface HomeProps {}
 
@@ -1479,6 +1480,13 @@ export default function Home() {
               Explore as a Patron
             </button>
           </div>
+        </div>
+      </section>
+
+      {/* Recommended Creators Section */}
+      <section style={{ padding: '80px 20px', background: 'oklch(0.085 0.015 330)', borderTop: '1px solid oklch(0.72 0.09 75 / 20%)' }}>
+        <div className="container mx-auto max-w-6xl">
+          <RecommendedCreators />
         </div>
       </section>
     </div>

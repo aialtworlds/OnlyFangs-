@@ -43,6 +43,13 @@
       "when": 1783144165809,
       "tag": "0005_mysterious_fantastic_four",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1783337178043,
+      "tag": "0006_perpetual_gateway",
+      "breakpoints": true
     }
   ]
 }

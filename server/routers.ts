@@ -52,6 +52,9 @@ import {
   notifyFollowersAboutNewRelease,
   notifySubscriptionConfirmed,
   notifyNewMessage,
+  getRecommendedCreators,
+  getTrendingCreators,
+  trackContentView,
 } from "./db";
 import { conversations, messages, creators, notifications } from "../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
@@ -350,6 +353,16 @@ export const appRouter = router({
         await deleteTier(input.tierId, creator.id);
         return { success: true };
       }),
+    getRecommendations: protectedProcedure
+      .input(z.object({ limit: z.number().int().min(1).max(20).default(6) }))
+      .query(async ({ ctx, input }) => {
+        return getRecommendedCreators(ctx.user.id, input.limit);
+      }),
+    getTrending: publicProcedure
+      .input(z.object({ limit: z.number().int().min(1).max(20).default(6) }))
+      .query(async ({ input }) => {
+        return getTrendingCreators(input.limit);
+      }),
   }),
 
   content: router({
@@ -400,12 +413,25 @@ export const appRouter = router({
     canAccess: protectedProcedure
       .input(z.object({ contentId: z.number() }))
       .query(async ({ ctx, input }) => {
-        return canAccessContent(ctx.user.id, input.contentId);
+        const hasAccess = await canAccessContent(ctx.user.id, input.contentId);
+        // Track view if user has access
+        if (hasAccess) {
+          const content = await getContentById(input.contentId);
+          if (content) {
+            await trackContentView(ctx.user.id, input.contentId, content.creatorId);
+          }
+        }
+        return hasAccess;
       }),
     getById: publicProcedure
       .input(z.object({ contentId: z.number() }))
-      .query(async ({ input }) => {
-        return getContentById(input.contentId);
+      .query(async ({ input, ctx }) => {
+        const content = await getContentById(input.contentId);
+        // Track view if user is authenticated
+        if (ctx.user && content) {
+          await trackContentView(ctx.user.id, input.contentId, content.creatorId);
+        }
+        return content;
       }),
   }),
 

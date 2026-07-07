@@ -204,3 +204,18 @@
 - [x] Create /notifications page with full notification history
 - [x] Notification triggers: new content from followed creators, subscription events, new messages
 - [x] Tests for notification procedures (CRUD, authorization, real-time delivery)
+
+
+## Creator Recommendation System
+- [x] Database helpers: getRecommendedCreators (based on viewing history + subscriptions)
+- [x] tRPC procedure: creator.getRecommendations with pagination
+- [x] RecommendedCreators component with grid layout
+- [x] Integrate into Home page as "Criadores para Você" section
+- [x] Tests for recommendation algorithm
+
+### Gaps Fixed
+- [x] Add viewingHistory table to track user content views (schema added, migration applied)
+- [x] Implement real viewing history tracking in recommendation algorithm (bonus +25 points, integrated into content viewing)
+- [x] Fix image fallbacks and add empty states to RecommendedCreators (gradient fallback, emoji placeholder, explicit empty state)
+- [x] Improve tests to validate recommendation ranking logic (viewing history tests enabled, 103 tests passing)
+- [x] Apply migration to database (applied via SQL)

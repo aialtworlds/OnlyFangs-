@@ -9,6 +9,7 @@ import {
   decimal,
   json,
   unique,
+  index,
 } from "drizzle-orm/mysql-core";
 
 // ── Users ─────────────────────────────────────────────────────
@@ -241,3 +242,23 @@ export const messageReactions = mysqlTable(
 
 export type MessageReaction = typeof messageReactions.$inferSelect;
 export type InsertMessageReaction = typeof messageReactions.$inferInsert;
+
+
+// ── Viewing History ────────────────────────────────────────────
+export const viewingHistory = mysqlTable(
+  "viewingHistory",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("userId").notNull(),
+    contentId: int("contentId").notNull(),
+    creatorId: int("creatorId").notNull(),
+    viewedAt: timestamp("viewedAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    userContentIndex: index("userContentIndex").on(table.userId, table.contentId),
+    userCreatorIndex: index("userCreatorIndex").on(table.userId, table.creatorId),
+  })
+);
+
+export type ViewingHistory = typeof viewingHistory.$inferSelect;
+export type InsertViewingHistory = typeof viewingHistory.$inferInsert;

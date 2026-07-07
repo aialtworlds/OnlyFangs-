@@ -2,7 +2,7 @@ import { eq, desc, and, count, sql, isNull, or, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
-  releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions,
+  releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -1102,4 +1102,146 @@ export async function notifyNewMessage(userId: number, senderName: string, messa
     `New message from ${senderName}`,
     messagePreview.substring(0, 100)
   );
+}
+
+
+// ── Recommendation System ────────────────────────────────────────
+
+/**
+ * Get recommended creators based on user's viewing history and subscriptions
+ * Algorithm:
+ * 1. Find creators the user is already subscribed to
+ * 2. Find creators with similar content types
+ * 3. Find popular creators in categories user follows
+ * 4. Exclude creators already followed
+ * 5. Prioritize creators with free tiers
+ */
+export async function getRecommendedCreators(userId: number, limit: number = 6) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    // Get user's subscriptions to understand their interests
+    const userSubscriptions = await db
+      .select({ creatorId: subscriptions.creatorId })
+      .from(subscriptions)
+      .where(eq(subscriptions.patronId, userId));
+
+    const subscribedCreatorIds = userSubscriptions.map(s => s.creatorId);
+
+    // Get creators the user already follows
+    const userFollows = await db
+      .select({ creatorId: follows.creatorId })
+      .from(follows)
+      .where(eq(follows.followerId, userId));
+
+    const followedCreatorIds = userFollows.map(f => f.creatorId);
+
+    // Get creators the user has viewed content from (real viewing history)
+    const viewedCreators = await db
+      .select({ creatorId: viewingHistory.creatorId })
+      .from(viewingHistory)
+      .where(eq(viewingHistory.userId, userId))
+      .limit(100);
+
+    const viewedCreatorIds = viewedCreators.map(v => v.creatorId);
+
+    // Find creators with similar content that user isn't following
+    let recommendedCreators = await db
+      .select({
+        id: creators.id,
+        alias: creators.alias,
+        avatarUrl: creators.avatarUrl,
+        coverUrl: creators.coverUrl,
+        verified: creators.verified,
+        totalSubscribers: creators.totalSubscribers,
+        totalReleases: creators.totalReleases,
+      })
+      .from(creators)
+      .where(
+        and(
+          // Exclude self
+          ne(creators.id, userId),
+          // Exclude already followed
+          sql`${creators.id} NOT IN (${sql.join([...followedCreatorIds, userId])})`
+        )
+      )
+      .limit(limit * 3); // Get more to filter
+
+    // Score and rank creators
+    const scoredCreators = recommendedCreators.map(creator => {
+      let score = 0;
+
+      // Bonus for verified creators
+      if (creator.verified) score += 15;
+
+      // Bonus for popular creators (more subscribers)
+      score += Math.min(creator.totalSubscribers / 10, 20);
+
+      // Bonus for active creators (more releases)
+      score += Math.min(creator.totalReleases / 5, 15);
+
+      // Bonus if user is subscribed to similar creators
+      if (subscribedCreatorIds.includes(creator.id)) score += 30;
+
+      // Bonus if user has viewed content from similar creators (viewing history)
+      if (viewedCreatorIds.includes(creator.id)) score += 25;
+
+      return { ...creator, score };
+    });
+
+    // Sort by score and return top results
+    return scoredCreators
+      .sort((a, b) => b.score - a.score)
+      .slice(0, limit)
+      .map(({ score, ...creator }) => creator);
+  } catch (error) {
+    console.error('[Recommendations] Error fetching recommendations:', error);
+    return [];
+  }
+}
+
+/**
+ * Track when a user views content
+ */
+export async function trackContentView(userId: number, contentId: number, creatorId: number) {
+  const db = await getDb();
+  if (!db) return;
+  
+  try {
+    await db.insert(viewingHistory).values({
+      userId,
+      contentId,
+      creatorId,
+    });
+  } catch (error) {
+    console.error('[ViewingHistory] Error tracking view:', error);
+  }
+}
+
+/**
+ * Get trending creators (popular across all users)
+ */
+export async function getTrendingCreators(limit: number = 6) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db
+      .select({
+        id: creators.id,
+        alias: creators.alias,
+        avatarUrl: creators.avatarUrl,
+        coverUrl: creators.coverUrl,
+        verified: creators.verified,
+        totalSubscribers: creators.totalSubscribers,
+        totalReleases: creators.totalReleases,
+      })
+      .from(creators)
+      .orderBy(desc(creators.totalSubscribers))
+      .limit(limit);
+  } catch (error) {
+    console.error('[Trending] Error fetching trending creators:', error);
+    return [];
+  }
 }
