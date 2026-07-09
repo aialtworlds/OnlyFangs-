@@ -235,3 +235,21 @@
 - [x] Integrate content search into Discover page (with tabs for creators/content)
 - [x] Fix image fallbacks (gradient fallback + emoji avatar fallback)
 - [x] Add tests for content.search and filtering (16 tests total)
+
+
+## Content Moderation Dashboard
+- [x] Database schema: moderation_queue table (id, contentId, creatorId, status, submittedAt, reviewedAt, reviewedBy, notes, rejectionReason)
+- [x] Database schema: moderation_logs table (id, contentId, action, performedBy, reason, createdAt)
+- [x] Database schema: content_flags table (id, contentId, flaggedBy, reason, description, flaggedAt, resolved, resolvedBy, resolvedAt)
+- [x] tRPC procedures: moderation.getPending, moderation.approve, moderation.reject, moderation.requestChanges
+- [x] tRPC procedures: moderation.getStats, moderation.getFlags, moderation.resolveFlag, moderation.flagContent
+- [x] Database helpers: submitContentForModeration, getPendingModerations, approveContent, rejectContent, requestChanges
+- [x] Database helpers: getModerationStats, flagContent, getContentFlags, resolveFlag
+- [x] ModerationDashboard component with tabs (Pending Review, Flagged Content)
+- [x] Stats cards showing pending, approved, rejected, changes_requested counts
+- [x] Moderation queue UI with inline actions (Approve, Reject, Request Changes)
+- [x] Content flags UI with resolve action
+- [x] Admin-only access control (role='admin' required)
+- [x] Route: /moderation integrated into App.tsx
+- [x] Loading states and empty states
+- [x] Real-time mutations with cache invalidation

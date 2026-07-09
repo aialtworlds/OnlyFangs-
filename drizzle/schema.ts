@@ -262,3 +262,73 @@ export const viewingHistory = mysqlTable(
 
 export type ViewingHistory = typeof viewingHistory.$inferSelect;
 export type InsertViewingHistory = typeof viewingHistory.$inferInsert;
+
+// ── Moderation Queue ──────────────────────────────────────────
+export const moderationQueue = mysqlTable(
+  "moderation_queue",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    contentId: int("contentId").notNull(),
+    creatorId: int("creatorId").notNull(),
+    status: mysqlEnum("status", ["pending", "approved", "rejected", "changes_requested"]).default("pending").notNull(),
+    submittedAt: timestamp("submittedAt").defaultNow().notNull(),
+    reviewedAt: timestamp("reviewedAt"),
+    reviewedBy: int("reviewedBy"), // Admin user ID
+    notes: text("notes"),
+    rejectionReason: text("rejectionReason"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    contentIndex: index("contentIndex").on(table.contentId),
+    creatorIndex: index("creatorIndex").on(table.creatorId),
+    statusIndex: index("statusIndex").on(table.status),
+  })
+);
+
+export type ModerationQueue = typeof moderationQueue.$inferSelect;
+export type InsertModerationQueue = typeof moderationQueue.$inferInsert;
+
+// ── Moderation Logs ──────────────────────────────────────────
+export const moderationLogs = mysqlTable(
+  "moderation_logs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    contentId: int("contentId").notNull(),
+    action: mysqlEnum("action", ["submitted", "approved", "rejected", "flagged", "changes_requested"]).notNull(),
+    performedBy: int("performedBy").notNull(), // User ID (admin or system)
+    reason: text("reason"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    contentIndex: index("contentIndex").on(table.contentId),
+    actionIndex: index("actionIndex").on(table.action),
+  })
+);
+
+export type ModerationLog = typeof moderationLogs.$inferSelect;
+export type InsertModerationLog = typeof moderationLogs.$inferInsert;
+
+// ── Content Flags (User Reports) ──────────────────────────────
+export const contentFlags = mysqlTable(
+  "content_flags",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    contentId: int("contentId").notNull(),
+    flaggedBy: int("flaggedBy").notNull(), // User who reported
+    reason: mysqlEnum("reason", ["inappropriate", "copyright", "spam", "other"]).notNull(),
+    description: text("description"),
+    flaggedAt: timestamp("flaggedAt").defaultNow().notNull(),
+    resolved: boolean("resolved").default(false).notNull(),
+    resolvedBy: int("resolvedBy"), // Admin who resolved
+    resolvedAt: timestamp("resolvedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    contentIndex: index("contentIndex").on(table.contentId),
+    resolvedIndex: index("resolvedIndex").on(table.resolved),
+  })
+);
+
+export type ContentFlag = typeof contentFlags.$inferSelect;
+export type InsertContentFlag = typeof contentFlags.$inferInsert;

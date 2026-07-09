@@ -58,6 +58,15 @@ import {
   searchCreators,
   searchContent,
   getCategories,
+  submitContentForModeration,
+  getPendingModerations,
+  approveContent,
+  rejectContent,
+  requestChanges,
+  getModerationStats,
+  flagContent,
+  getContentFlags,
+  resolveFlag,
 } from "./db";
 import { conversations, messages, creators, notifications } from "../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
@@ -673,6 +682,71 @@ export const appRouter = router({
           .where(eq(creators.id, input.creatorId));
 
         return { verified: newVerifiedStatus, creatorId: input.creatorId };
+      }),
+  }),
+
+  moderation: router({
+    getPending: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can view moderation queue' });
+        }
+        return getPendingModerations(100);
+      }),
+    approve: protectedProcedure
+      .input(z.object({ contentId: z.number(), notes: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can approve content' });
+        }
+        return approveContent(input.contentId, ctx.user.id, input.notes);
+      }),
+    reject: protectedProcedure
+      .input(z.object({ contentId: z.number(), reason: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can reject content' });
+        }
+        return rejectContent(input.contentId, ctx.user.id, input.reason);
+      }),
+    requestChanges: protectedProcedure
+      .input(z.object({ contentId: z.number(), notes: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can request changes' });
+        }
+        return requestChanges(input.contentId, ctx.user.id, input.notes);
+      }),
+    getStats: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can view moderation stats' });
+        }
+        return getModerationStats();
+      }),
+    getFlags: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can view content flags' });
+        }
+        return getContentFlags(100);
+      }),
+    resolveFlag: protectedProcedure
+      .input(z.object({ flagId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can resolve flags' });
+        }
+        return resolveFlag(input.flagId, ctx.user.id);
+      }),
+    flagContent: protectedProcedure
+      .input(z.object({
+        contentId: z.number(),
+        reason: z.enum(['inappropriate', 'copyright', 'spam', 'other']),
+        description: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return flagContent(input.contentId, ctx.user.id, input.reason, input.description);
       }),
   }),
 });

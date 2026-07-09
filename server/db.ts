@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
   releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
+  moderationQueue, moderationLogs, contentFlags,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -1361,5 +1362,286 @@ export async function getCategories() {
   } catch (error) {
     console.error('[Search] Error fetching categories:', error);
     return [];
+  }
+}
+
+
+// ── MODERATION HELPERS ────────────────────────────────────────
+
+export async function submitContentForModeration(contentId: number, creatorId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    // Check if already in queue
+    const existing = await db
+      .select()
+      .from(moderationQueue)
+      .where(eq(moderationQueue.contentId, contentId))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return existing[0];
+    }
+
+    // Create new moderation queue entry
+    const result = await db
+      .insert(moderationQueue)
+      .values({
+        contentId,
+        creatorId,
+        status: "pending",
+      });
+
+    // Log the submission
+    await db
+      .insert(moderationLogs)
+      .values({
+        contentId,
+        action: "submitted",
+        performedBy: creatorId,
+        reason: "Content submitted for moderation",
+      });
+
+    return { contentId, status: "pending" };
+  } catch (error) {
+    console.error("[Moderation] Error submitting content:", error);
+    throw error;
+  }
+}
+
+export async function getPendingModerations(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db
+      .select({
+        id: moderationQueue.id,
+        contentId: moderationQueue.contentId,
+        creatorId: moderationQueue.creatorId,
+        status: moderationQueue.status,
+        submittedAt: moderationQueue.submittedAt,
+        reviewedAt: moderationQueue.reviewedAt,
+        notes: moderationQueue.notes,
+        title: content.title,
+        type: content.type,
+        creatorAlias: creators.alias,
+      })
+      .from(moderationQueue)
+      .leftJoin(content, eq(moderationQueue.contentId, content.id))
+      .leftJoin(creators, eq(moderationQueue.creatorId, creators.userId))
+      .where(eq(moderationQueue.status, "pending"))
+      .orderBy(desc(moderationQueue.submittedAt))
+      .limit(limit);
+  } catch (error) {
+    console.error("[Moderation] Error fetching pending:", error);
+    return [];
+  }
+}
+
+export async function approveContent(contentId: number, adminId: number, notes?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    // Update moderation queue
+    await db
+      .update(moderationQueue)
+      .set({
+        status: "approved",
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+        notes: notes || null,
+      })
+      .where(eq(moderationQueue.contentId, contentId));
+
+    // Log the approval
+    await db
+      .insert(moderationLogs)
+      .values({
+        contentId,
+        action: "approved",
+        performedBy: adminId,
+        reason: notes || "Content approved",
+      });
+
+    return { success: true, contentId };
+  } catch (error) {
+    console.error("[Moderation] Error approving content:", error);
+    throw error;
+  }
+}
+
+export async function rejectContent(contentId: number, adminId: number, rejectionReason: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    // Update moderation queue
+    await db
+      .update(moderationQueue)
+      .set({
+        status: "rejected",
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+        rejectionReason,
+      })
+      .where(eq(moderationQueue.contentId, contentId));
+
+    // Log the rejection
+    await db
+      .insert(moderationLogs)
+      .values({
+        contentId,
+        action: "rejected",
+        performedBy: adminId,
+        reason: rejectionReason,
+      });
+
+    return { success: true, contentId };
+  } catch (error) {
+    console.error("[Moderation] Error rejecting content:", error);
+    throw error;
+  }
+}
+
+export async function requestChanges(contentId: number, adminId: number, notes: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    // Update moderation queue
+    await db
+      .update(moderationQueue)
+      .set({
+        status: "changes_requested",
+        reviewedBy: adminId,
+        reviewedAt: new Date(),
+        notes,
+      })
+      .where(eq(moderationQueue.contentId, contentId));
+
+    // Log the request
+    await db
+      .insert(moderationLogs)
+      .values({
+        contentId,
+        action: "changes_requested",
+        performedBy: adminId,
+        reason: notes,
+      });
+
+    return { success: true, contentId };
+  } catch (error) {
+    console.error("[Moderation] Error requesting changes:", error);
+    throw error;
+  }
+}
+
+export async function getModerationStats() {
+  const db = await getDb();
+  if (!db) return { pending: 0, approved: 0, rejected: 0 };
+
+  try {
+    const stats = await db
+      .select({
+        status: moderationQueue.status,
+        count: count(),
+      })
+      .from(moderationQueue)
+      .groupBy(moderationQueue.status);
+
+    const result = { pending: 0, approved: 0, rejected: 0, changes_requested: 0 };
+    stats.forEach((stat) => {
+      if (stat.status in result) {
+        result[stat.status as keyof typeof result] = stat.count;
+      }
+    });
+
+    return result;
+  } catch (error) {
+    console.error("[Moderation] Error fetching stats:", error);
+    return { pending: 0, approved: 0, rejected: 0, changes_requested: 0 };
+  }
+}
+
+export async function flagContent(contentId: number, userId: number, reason: string, description?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    const result = await db
+      .insert(contentFlags)
+      .values({
+        contentId,
+        flaggedBy: userId,
+        reason: reason as "inappropriate" | "copyright" | "spam" | "other",
+        description: description || null,
+      });
+
+    // Log the flag
+    await db
+      .insert(moderationLogs)
+      .values({
+        contentId,
+        action: "flagged",
+        performedBy: userId,
+        reason: `Flagged as ${reason}: ${description || ""}`,
+      });
+
+    return { success: true, flagId: (result as any).insertId || 0 };
+  } catch (error) {
+    console.error("[Moderation] Error flagging content:", error);
+    throw error;
+  }
+}
+
+export async function getContentFlags(limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+
+  try {
+    return await db
+      .select({
+        id: contentFlags.id,
+        contentId: contentFlags.contentId,
+        reason: contentFlags.reason,
+        description: contentFlags.description,
+        flaggedAt: contentFlags.flaggedAt,
+        resolved: contentFlags.resolved,
+        title: content.title,
+        creatorAlias: creators.alias,
+      })
+      .from(contentFlags)
+      .leftJoin(content, eq(contentFlags.contentId, content.id))
+      .leftJoin(creators, eq(content.creatorId, creators.userId))
+      .where(eq(contentFlags.resolved, false))
+      .orderBy(desc(contentFlags.flaggedAt))
+      .limit(limit);
+  } catch (error) {
+    console.error("[Moderation] Error fetching flags:", error);
+    return [];
+  }
+}
+
+export async function resolveFlag(flagId: number, adminId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  try {
+    await db
+      .update(contentFlags)
+      .set({
+        resolved: true,
+        resolvedBy: adminId,
+        resolvedAt: new Date(),
+      })
+      .where(eq(contentFlags.id, flagId));
+
+    return { success: true, flagId };
+  } catch (error) {
+    console.error("[Moderation] Error resolving flag:", error);
+    throw error;
   }
 }
