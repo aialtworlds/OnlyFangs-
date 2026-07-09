@@ -1,0 +1,1 @@
+ALTER TABLE `content` ADD `moderationStatus` enum('pending','approved','rejected') DEFAULT 'pending' NOT NULL;

@@ -3,7 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Trash2, Loader2, Image, Music, Video, FileText, Lock } from "lucide-react";
+import { Trash2, Loader2, Image, Music, Video, FileText, Lock, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -121,6 +121,27 @@ export function ContentGallery() {
                   ) : (
                     <FileText className="w-8 h-8 text-muted-foreground" />
                   )}
+                  {/* Moderation Status Badge */}
+                  <div className="absolute top-2 left-2 flex gap-1">
+                    {item.moderationStatus === "pending" && (
+                      <div className="bg-yellow-500/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Pending
+                      </div>
+                    )}
+                    {item.moderationStatus === "approved" && (
+                      <div className="bg-green-500/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        Approved
+                      </div>
+                    )}
+                    {item.moderationStatus === "rejected" && (
+                      <div className="bg-red-500/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        Rejected
+                      </div>
+                    )}
+                  </div>
                   {/* Tier Badge */}
                   <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
                     <Lock className="w-3 h-3" />

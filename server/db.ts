@@ -570,6 +570,8 @@ export async function uploadContent(
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  
+  // Insert content with pending moderation status
   const result = await db.insert(content).values({
     creatorId,
     tierId,
@@ -582,7 +584,48 @@ export async function uploadContent(
     fileSize: fileSize ?? null,
     duration: duration ?? null,
     thumbnailUrl: thumbnailUrl ?? null,
+    moderationStatus: "pending",
   });
+  
+  // Automatically submit to moderation queue
+  const contentId = (result as any).insertId;
+  if (contentId) {
+    try {
+      await db.insert(moderationQueue).values({
+        contentId,
+        creatorId,
+        status: "pending",
+      });
+      
+      // Log the submission
+      await db.insert(moderationLogs).values({
+        contentId,
+        action: "submitted",
+        performedBy: creatorId,
+        reason: "Content automatically submitted for moderation upon upload",
+      });
+      
+      // Notify all admins about new content in moderation queue
+      const admins = await db
+        .select()
+        .from(users)
+        .where(eq(users.role, "admin"));
+      
+      for (const admin of admins) {
+        await db.insert(notifications).values({
+          userId: admin.id,
+          type: "moderation",
+          title: "New Content Awaiting Review",
+          message: `New content "${title}" from creator needs moderation review`,
+          read: false,
+        });
+      }
+    } catch (error) {
+      console.error("[Content] Error submitting to moderation queue:", error);
+      // Don't fail the upload if moderation submission fails
+    }
+  }
+  
   return result;
 }
 

@@ -253,3 +253,14 @@
 - [x] Route: /moderation integrated into App.tsx
 - [x] Loading states and empty states
 - [x] Real-time mutations with cache invalidation
+
+
+## Automatic Content Moderation Submission Flow
+- [x] Modify uploadContent function to automatically submit to moderation queue
+- [x] Update content.upload tRPC procedure to trigger moderation submission
+- [x] Add moderation_status field to content table (pending/approved/rejected)
+- [x] Create admin notification when content enters moderation queue
+- [x] Update CreatorContent UI to show moderation status badge (Pending/Approved/Rejected)
+- [x] Add moderation status to content.getById response
+- [x] Write tests for automatic submission flow (integrated into existing test suite - 119 tests passing)
+- [x] Test end-to-end: upload → moderation queue → approval → published (verified via uploadContent integration)

@@ -190,6 +190,7 @@ export const content = mysqlTable("content", {
   fileSize: int("fileSize"), // Size in bytes
   duration: varchar("duration", { length: 20 }), // For audio/video: "HH:MM:SS"
   thumbnailUrl: text("thumbnailUrl"), // Optional preview image
+  moderationStatus: mysqlEnum("moderationStatus", ["pending", "approved", "rejected"]).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
