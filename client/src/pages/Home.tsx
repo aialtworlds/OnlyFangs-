@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { ArrowRight, Lock, Play, BookOpen, Image, Music, Camera, Star, ChevronRight } from 'lucide-react';
-import { CREATORS, CONTENT_ITEMS, STATS, TIERS, CATEGORIES, getFeaturedCreators } from '@/lib/data';
+import { CREATORS, CONTENT_ITEMS, TIERS, CATEGORIES, getFeaturedCreators } from '@/lib/data';
 import type { ContentItem, Creator } from '@/lib/data';
 import { RecommendedCreators } from '@/components/RecommendedCreators';
 
@@ -747,6 +747,12 @@ export default function Home() {
               gap: '18px',
               justifyContent: 'center',
               flexWrap: 'wrap',
+              width: '100%',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              paddingLeft: '12px',
+              paddingRight: '12px',
+              boxSizing: 'border-box',
             }}
           >
             {/* Patron Card */}
@@ -757,10 +763,12 @@ export default function Home() {
                 padding: '28px 32px',
                 textAlign: 'center',
                 maxWidth: '240px',
+                minWidth: '200px',
                 cursor: 'pointer',
                 transition: 'all 0.4s',
                 position: 'relative',
                 overflow: 'hidden',
+                flex: '1 1 auto',
               }}
               onClick={() => setLocation('/discover')}
               onMouseEnter={(e) => {
@@ -829,10 +837,12 @@ export default function Home() {
                 padding: '28px 32px',
                 textAlign: 'center',
                 maxWidth: '240px',
+                minWidth: '200px',
                 cursor: 'pointer',
                 transition: 'all 0.4s',
                 position: 'relative',
                 overflow: 'hidden',
+                flex: '1 1 auto',
               }}
               onClick={() => setLocation('/apply')}
               onMouseEnter={(e) => {
@@ -957,64 +967,7 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── STATS ────────────────────────────────────────────── */}
-      <section
-        id="stats"
-        ref={(el) => { sectionRefs.current['stats'] = el; }}
-        style={{
-          padding: '80px 0',
-          background: 'oklch(0.04 0.008 285)',
-          opacity: visibleSections.has('stats') ? 1 : 0,
-          transform: visibleSections.has('stats') ? 'translateY(0)' : 'translateY(28px)',
-          transition: 'opacity 0.8s ease, transform 0.8s ease',
-        }}
-      >
-        <div className="container">
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '2px',
-            }}
-          >
-            {STATS.map((stat, i) => (
-              <div
-                key={i}
-                style={{
-                  background: 'oklch(0.085 0.015 330)',
-                  padding: '40px 32px',
-                  textAlign: 'center',
-                  borderTop: '2px solid oklch(0.72 0.09 75 / 20%)',
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: 'clamp(24px, 3vw, 40px)',
-                    fontWeight: 700,
-                    color: 'oklch(0.72 0.09 75)',
-                    marginBottom: '8px',
-                    textShadow: '0 0 20px oklch(0.72 0.09 75 / 30%)',
-                  }}
-                >
-                  {stat.value}
-                </div>
-                <div
-                  style={{
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: '9px',
-                    letterSpacing: '0.3em',
-                    textTransform: 'uppercase',
-                    color: 'oklch(0.55 0.03 60)',
-                  }}
-                >
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+
 
       {/* ── FEATURED CREATORS ────────────────────────────────── */}
       <section

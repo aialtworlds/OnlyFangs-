@@ -28,10 +28,10 @@ function ContentIcon({ type }: { type: string }) {
 }
 
 const tierLabels: Record<string, string> = {
-  mortal: 'Mortal',
-  initiate: 'Initiate',
-  acolyte: 'Acolyte',
-  immortal: 'Immortal',
+  fledgling: 'Fledgling',
+  dweller: 'Dweller',
+  courtier: 'Courtier',
+  'night-royalty': 'Night Royalty',
 };
 
 // Gradient fallback for missing images
@@ -104,7 +104,7 @@ function CreatorCard({ creator }: { creator: any }) {
           {creator.verified && <VerificationBadge verified={true} />}
         </div>
         <p style={{ fontSize: '12px', color: 'oklch(0.55 0.03 60)', marginBottom: '12px' }}>
-          {creator.totalSubscribers} seguidores
+          {creator.totalSubscribers} followers
         </p>
         <p
           style={{
@@ -345,7 +345,7 @@ export default function Discover() {
               textTransform: 'uppercase',
             }}
           >
-            Descobrir
+            Discover
           </h1>
 
           {/* Search & Filter Bar */}
@@ -353,7 +353,7 @@ export default function Discover() {
             <div className="flex-1">
               <SearchBar
                 onSearch={handleSearch}
-                placeholder="Buscar criadores e conteúdo..."
+                placeholder="Search creators and content..."
               />
             </div>
             <CategoryFilter
@@ -372,14 +372,14 @@ export default function Discover() {
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎭</div>
             <p style={{ color: 'oklch(0.55 0.03 60)', fontSize: '16px' }}>
-              Comece a buscar para descobrir criadores e conteúdo
+              Start searching to discover creators and content
             </p>
           </div>
         ) : displayedCreators.length === 0 && displayedContent.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
             <p style={{ color: 'oklch(0.55 0.03 60)', fontSize: '16px' }}>
-              Nenhum resultado encontrado para "{searchQuery}"
+              No results found for "{searchQuery}"
             </p>
           </div>
         ) : (
@@ -387,17 +387,17 @@ export default function Discover() {
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'creators' | 'content')} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-8">
                 <TabsTrigger value="creators">
-                  Criadores ({displayedCreators.length})
+                  Creators ({displayedCreators.length})
                 </TabsTrigger>
                 <TabsTrigger value="content">
-                  Conteúdo ({displayedContent.length})
+                  Content ({displayedContent.length})
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="creators">
                 {displayedCreators.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <p style={{ color: 'oklch(0.55 0.03 60)' }}>Nenhum criador encontrado</p>
+                    <p style={{ color: 'oklch(0.55 0.03 60)' }}>No creators found</p>
                   </div>
                 ) : (
                   <>
@@ -410,7 +410,7 @@ export default function Discover() {
                     {hasMoreCreators && (
                       <div ref={scrollTarget} className="mt-12 text-center">
                         <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
-                          {isLoadingMore ? 'Carregando...' : 'Carregar mais'}
+                          {isLoadingMore ? 'Loading...' : 'Load more'}
                         </Button>
                       </div>
                     )}
@@ -421,7 +421,7 @@ export default function Discover() {
               <TabsContent value="content">
                 {displayedContent.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                    <p style={{ color: 'oklch(0.55 0.03 60)' }}>Nenhum conteúdo encontrado</p>
+                    <p style={{ color: 'oklch(0.55 0.03 60)' }}>No content found</p>
                   </div>
                 ) : (
                   <>
@@ -437,7 +437,7 @@ export default function Discover() {
                     {hasMoreContent && (
                       <div ref={scrollTarget} className="mt-12 text-center">
                         <Button variant="outline" onClick={handleLoadMore} disabled={isLoadingMore}>
-                          {isLoadingMore ? 'Carregando...' : 'Carregar mais'}
+                          {isLoadingMore ? 'Loading...' : 'Load more'}
                         </Button>
                       </div>
                     )}

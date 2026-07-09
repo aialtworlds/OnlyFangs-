@@ -279,7 +279,7 @@ function TierSidebar({ creatorId: mockCreatorId }: { creatorId: string }) {
 
   // Use real tiers if available, otherwise fall back to mock tiers
   const mockCreator = getCreatorById(mockCreatorId);
-  const mockTiers = mockCreator?.tiers.filter(t => t.id !== 'mortal') ?? [];
+  const mockTiers = mockCreator?.tiers.filter(t => t.id !== 'fledgling') ?? [];
 
   if (realTiers && realTiers.length > 0) {
     return (

@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 
 export type ContentType = 'image' | 'photo' | 'music' | 'book';
-export type TierLevel = 'mortal' | 'initiate' | 'acolyte' | 'immortal';
+export type TierLevel = 'fledgling' | 'dweller' | 'courtier' | 'night-royalty';
 
 export interface Tier {
   id: TierLevel;
@@ -58,8 +58,8 @@ export interface ContentItem {
 
 export const TIERS: Tier[] = [
   {
-    id: 'mortal',
-    name: 'Mortal',
+    id: 'fledgling',
+    name: 'Fledgling',
     latinName: 'Homo Mortalis',
     price: 0,
     icon: '🕯️',
@@ -71,28 +71,28 @@ export const TIERS: Tier[] = [
     ],
   },
   {
-    id: 'initiate',
-    name: 'Initiate',
+    id: 'dweller',
+    name: 'Dweller',
     latinName: 'Initiatus',
     price: 9.90,
     icon: '🩸',
     description: 'The first step beyond the veil. Exclusive content unlocked.',
     perks: [
-      'All Mortal tier content',
+      'All Fledgling tier content',
       'Monthly exclusive posts',
       'Access to image gallery',
       'Community Discord',
     ],
   },
   {
-    id: 'acolyte',
-    name: 'Acolyte',
+    id: 'courtier',
+    name: 'Courtier',
     latinName: 'Acolythus',
     price: 24.90,
     icon: '🦇',
     description: 'Initiated into the mysteries. Access to the complete grimoire.',
     perks: [
-      'All Initiate tier content',
+      'All Dweller tier content',
       'Complete book library',
       'Exclusive music albums',
       'Monthly live sessions',
@@ -101,14 +101,14 @@ export const TIERS: Tier[] = [
     featured: true,
   },
   {
-    id: 'immortal',
-    name: 'Immortal',
+    id: 'night-royalty',
+    name: 'Night Royalty',
     latinName: 'Immortalis',
     price: 59.90,
     icon: '👑',
     description: 'Beyond death. Eternal access and direct communion with the creator.',
     perks: [
-      'All Acolyte tier content',
+      'All Courtier tier content',
       'Exclusive content for Immortals',
       'Direct message with the creator',
       'Digitally signed prints',
@@ -227,7 +227,7 @@ export const CONTENT_ITEMS: ContentItem[] = [
     description: 'Photographic series in a Victorian cemetery at dawn.',
     type: 'photo',
     thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&q=80',
-    tier: 'mortal',
+    tier: 'fledgling',
     locked: false,
     likes: 342,
     comments: 28,
@@ -240,7 +240,7 @@ export const CONTENT_ITEMS: ContentItem[] = [
     description: 'Exclusive photoshoot with candles and antique mirrors.',
     type: 'photo',
     thumbnail: 'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=600&q=80',
-    tier: 'initiate',
+    tier: 'dweller',
     locked: true,
     likes: 891,
     comments: 67,
@@ -253,7 +253,7 @@ export const CONTENT_ITEMS: ContentItem[] = [
     description: 'Complete dark fashion series with 40 high-resolution images.',
     type: 'image',
     thumbnail: 'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600&q=80',
-    tier: 'acolyte',
+    tier: 'courtier',
     locked: true,
     likes: 1204,
     comments: 89,
@@ -268,7 +268,7 @@ export const CONTENT_ITEMS: ContentItem[] = [
     description: 'Composition for electric guitar and chamber orchestra.',
     type: 'music',
     thumbnail: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&q=80',
-    tier: 'mortal',
+    tier: 'fledgling',
     locked: false,
     likes: 567,
     comments: 43,
@@ -282,7 +282,7 @@ export const CONTENT_ITEMS: ContentItem[] = [
     description: 'Complete 12-track album. Dark ambient with medieval elements.',
     type: 'music',
     thumbnail: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80',
-    tier: 'acolyte',
+    tier: 'courtier',
     locked: true,
     likes: 2341,
     comments: 178,
@@ -297,7 +297,7 @@ export const CONTENT_ITEMS: ContentItem[] = [
     description: 'Illustrated grimoire with 30 creatures from dark folklore.',
     type: 'book',
     thumbnail: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=600&q=80',
-    tier: 'initiate',
+    tier: 'dweller',
     locked: true,
     likes: 1876,
     comments: 134,
@@ -312,7 +312,7 @@ export const CONTENT_ITEMS: ContentItem[] = [
     description: 'High-resolution digital illustrations. 8 works from the complete series.',
     type: 'image',
     thumbnail: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600&q=80',
-    tier: 'mortal',
+    tier: 'fledgling',
     locked: false,
     likes: 3201,
     comments: 267,
@@ -325,7 +325,7 @@ export const CONTENT_ITEMS: ContentItem[] = [
     description: 'Complete collection of spells, rituals and illustrations. 300 pages.',
     type: 'book',
     thumbnail: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=600&q=80',
-    tier: 'immortal',
+    tier: 'night-royalty',
     locked: true,
     likes: 4521,
     comments: 389,
@@ -341,7 +341,7 @@ export const CONTENT_ITEMS: ContentItem[] = [
     description: 'Collection of 33 dark poems. Free reading for all.',
     type: 'book',
     thumbnail: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&q=80',
-    tier: 'mortal',
+    tier: 'fledgling',
     locked: false,
     likes: 892,
     comments: 71,
@@ -353,10 +353,10 @@ export const CONTENT_ITEMS: ContentItem[] = [
     id: 'ns-002',
     creatorId: 'necro-scribe',
     title: 'The Crypt — Gothic Romance',
-    description: 'Gothic horror novel. 420 pages. Exclusive for Acolytes.',
+    description: 'Gothic horror novel. 420 pages. Exclusive for Courtiers.',
     type: 'book',
     thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80',
-    tier: 'acolyte',
+    tier: 'courtier',
     locked: true,
     likes: 1234,
     comments: 98,
@@ -376,7 +376,7 @@ export const CATEGORIES = [
 
 export const STATS = [
   { value: '—', label: 'Creators' },
-  { value: '—', label: 'Subscribers' },
+  { value: '—', label: 'Retainers' },
   { value: '—', label: 'Releases Published' },
   { value: '—', label: 'Paid to Creators' },
 ];
@@ -398,15 +398,15 @@ export function getFeaturedCreators(): Creator[] {
 }
 
 export const TIER_COLORS: Record<TierLevel, string> = {
-  mortal: 'oklch(0.55 0.03 60)',
-  initiate: 'oklch(0.72 0.09 75)',
-  acolyte: 'oklch(0.72 0.09 75)',
-  immortal: 'oklch(0.82 0.1 78)',
+  fledgling: 'oklch(0.55 0.03 60)',
+  dweller: 'oklch(0.72 0.09 75)',
+  courtier: 'oklch(0.72 0.09 75)',
+  'night-royalty': 'oklch(0.82 0.1 78)',
 };
 
 export const TIER_LABELS: Record<TierLevel, string> = {
-  mortal: 'Mortal',
-  initiate: 'Initiate',
-  acolyte: 'Acolyte',
-  immortal: 'Immortal',
+  fledgling: 'Fledgling',
+  dweller: 'Dweller',
+  courtier: 'Courtier',
+  'night-royalty': 'Night Royalty',
 };

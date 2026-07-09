@@ -27,7 +27,7 @@ export function RecommendedCreators() {
     return (
       <div className="w-full">
         <h2 className="text-2xl font-bold mb-6">
-          {isAuthenticated ? "Criadores para Você" : "Criadores em Destaque"}
+          {isAuthenticated ? "Creators for You" : "Featured Creators"}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -46,11 +46,11 @@ export function RecommendedCreators() {
     return (
       <div className="w-full">
         <h2 className="text-2xl font-bold mb-6">
-          {isAuthenticated ? "Criadores para Você" : "Criadores em Destaque"}
+          {isAuthenticated ? "Creators for You" : "Featured Creators"}
         </h2>
         <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-center">
           <p className="text-sm text-destructive">
-            Erro ao carregar recomendações. Tente novamente mais tarde.
+            Error loading recommendations. Please try again later.
           </p>
         </div>
       </div>
@@ -61,15 +61,15 @@ export function RecommendedCreators() {
     return (
       <div className="w-full">
         <h2 className="text-2xl font-bold mb-6">
-          {isAuthenticated ? "Criadores para Você" : "Criadores em Destaque"}
+          {isAuthenticated ? "Creators for You" : "Featured Creators"}
         </h2>
         <div className="rounded-lg border border-border bg-card p-12 text-center">
           <div className="text-4xl mb-4">🎭</div>
-          <p className="text-lg font-semibold mb-2">Nenhum criador encontrado</p>
+          <p className="text-lg font-semibold mb-2">No creators found</p>
           <p className="text-sm text-muted-foreground">
             {isAuthenticated
-              ? "Comece a seguir criadores para receber recomendações personalizadas."
-              : "Explore a plataforma para descobrir novos criadores."}
+              ? "Start following creators to receive personalized recommendations."
+              : "Explore the platform to discover new creators."}
           </p>
         </div>
       </div>
@@ -102,7 +102,7 @@ export function RecommendedCreators() {
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="text-center text-slate-400">
                       <div className="text-3xl mb-2">🎨</div>
-                      <div className="text-xs">Sem capa</div>
+                      <div className="text-xs">No cover</div>
                     </div>
                   </div>
                 )}
@@ -142,10 +142,10 @@ export function RecommendedCreators() {
                 {/* Stats */}
                 <div className="flex gap-2 text-xs text-muted-foreground flex-wrap">
                   <Badge variant="secondary" className="text-xs">
-                    {creator.totalSubscribers} inscritos
+                    {creator.totalSubscribers} subscribers
                   </Badge>
                   <Badge variant="secondary" className="text-xs">
-                    {creator.totalReleases} conteúdos
+                    {creator.totalReleases} releases
                   </Badge>
                 </div>
               </div>
