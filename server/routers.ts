@@ -67,6 +67,11 @@ import {
   flagContent,
   getContentFlags,
   resolveFlag,
+  submitAppeal,
+  getCreatorAppeals,
+  getPendingAppeals,
+  approveAppeal,
+  denyAppeal,
 } from "./db";
 import { conversations, messages, creators, notifications } from "../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
@@ -747,6 +752,53 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         return flagContent(input.contentId, ctx.user.id, input.reason, input.description);
+      }),
+  }),
+  appeals: router({
+    submit: creatorProcedure
+      .input(z.object({
+        contentId: z.number(),
+        reason: z.string().min(10).max(1000),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new TRPCError({ code: 'FORBIDDEN', message: 'Creator profile not found' });
+        return submitAppeal(input.contentId, creator.id, input.reason);
+      }),
+    list: creatorProcedure
+      .query(async ({ ctx }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) return [];
+        return getCreatorAppeals(creator.id);
+      }),
+    getPending: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can view pending appeals' });
+        }
+        return getPendingAppeals();
+      }),
+    approve: protectedProcedure
+      .input(z.object({
+        appealId: z.number(),
+        adminResponse: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can approve appeals' });
+        }
+        return approveAppeal(input.appealId, ctx.user.id, input.adminResponse);
+      }),
+    deny: protectedProcedure
+      .input(z.object({
+        appealId: z.number(),
+        adminResponse: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can deny appeals' });
+        }
+        return denyAppeal(input.appealId, ctx.user.id, input.adminResponse);
       }),
   }),
 });

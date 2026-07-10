@@ -64,6 +64,13 @@
       "when": 1783570332514,
       "tag": "0008_stale_oracle",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1783571907504,
+      "tag": "0009_fair_colonel_america",
+      "breakpoints": true
     }
   ]
 }

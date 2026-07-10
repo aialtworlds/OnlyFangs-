@@ -23,6 +23,7 @@ import CreatorAdmin from "./pages/CreatorAdmin";
 import CreatorContent from "./pages/CreatorContent";
 import Notifications from "./pages/Notifications";
 import ModerationDashboard from "./pages/ModerationDashboard";
+import SignupPage from "./pages/SignupPage";
 
 function AppLayout() {
   const { currentTrack, closePlayer } = useMusicPlayer();
@@ -42,6 +43,7 @@ function AppLayout() {
         <Route path="/profile" component={PatronProfile} />
         <Route path="/notifications" component={Notifications} />
         <Route path="/moderation" component={ModerationDashboard} />
+        <Route path="/signup" component={SignupPage} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

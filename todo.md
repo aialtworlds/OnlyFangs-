@@ -264,3 +264,35 @@
 - [x] Add moderation status to content.getById response
 - [x] Write tests for automatic submission flow (integrated into existing test suite - 119 tests passing)
 - [x] Test end-to-end: upload → moderation queue → approval → published (verified via uploadContent integration)
+
+
+## Content Appeal System
+- [ ] Database schema: appeals table (id, contentId, creatorId, reason, status, submittedAt, reviewedAt, reviewedBy, adminResponse)
+- [ ] tRPC procedures: appeals.submit, appeals.list, appeals.getById, appeals.approve, appeals.deny
+- [ ] Database helpers: submitAppeal, getCreatorAppeals, getAdminAppeals, approveAppeal, denyAppeal
+- [ ] Appeal UI for creators: show "Appeal" button on rejected content, form to submit appeal reason
+- [ ] Admin appeal review interface in ModerationDashboard
+- [ ] Appeal notifications: creator notified when appeal is reviewed
+- [ ] Appeal status tracking: pending, approved, denied
+- [ ] Tests for appeal submission, review, and notifications
+- [ ] End-to-end test: reject content → creator appeals → admin reviews → content re-published
+
+
+## Patron Dashboard (User-Facing)
+- [x] Create PatronDashboard component with sidebar navigation
+- [x] Build stat cards (Active Subscriptions, Saved Content, Following Creators, Loyalty Status)
+- [x] Implement Your Subscriptions section with creator list and renewal dates
+- [x] Build Recent Activity feed showing creator posts
+- [x] Create Continue Exploring section with category cards
+- [x] Add dark theme styling with red accents matching design mockup
+- [x] Integrate with tRPC to fetch real subscription and activity data
+- [x] Add route /patron-dashboard to App.tsx
+- [x] Test dashboard end-to-end
+
+## Patron/Creator Signup Flow
+- [x] Create SignupPage component with role selection (Patron/Creator)
+- [x] Update Home.tsx buttons to redirect to signup with role parameter
+- [x] Update getLoginUrl to accept optional returnPath parameter
+- [x] Add signup route to App.tsx
+- [x] Fix TypeScript errors in moderation logs (appeal_approved, appeal_denied, appeal_submitted)
+- [x] Test signup page loads correctly

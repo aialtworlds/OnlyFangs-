@@ -770,7 +770,7 @@ export default function Home() {
                 overflow: 'hidden',
                 flex: '1 1 auto',
               }}
-              onClick={() => setLocation('/discover')}
+              onClick={() => setLocation('/signup?role=patron')}
               onMouseEnter={(e) => {
                 const el = e.currentTarget;
                 el.style.borderColor = 'oklch(0.72 0.09 75 / 40%)';
@@ -844,7 +844,7 @@ export default function Home() {
                 overflow: 'hidden',
                 flex: '1 1 auto',
               }}
-              onClick={() => setLocation('/apply')}
+              onClick={() => setLocation('/signup?role=creator')}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
               }}

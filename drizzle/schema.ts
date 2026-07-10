@@ -333,3 +333,30 @@ export const contentFlags = mysqlTable(
 
 export type ContentFlag = typeof contentFlags.$inferSelect;
 export type InsertContentFlag = typeof contentFlags.$inferInsert;
+
+
+// ── Content Appeals ────────────────────────────────────────────
+export const appeals = mysqlTable(
+  "appeals",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    contentId: int("contentId").notNull(),
+    creatorId: int("creatorId").notNull(), // Creator submitting appeal
+    reason: text("reason").notNull(), // Why content should be reconsidered
+    status: mysqlEnum("status", ["pending", "approved", "denied"]).default("pending").notNull(),
+    submittedAt: timestamp("submittedAt").defaultNow().notNull(),
+    reviewedAt: timestamp("reviewedAt"),
+    reviewedBy: int("reviewedBy"), // Admin who reviewed
+    adminResponse: text("adminResponse"), // Admin's feedback
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  (table) => ({
+    contentIndex: index("appealContentIndex").on(table.contentId),
+    creatorIndex: index("appealCreatorIndex").on(table.creatorId),
+    statusIndex: index("appealStatusIndex").on(table.status),
+  })
+);
+
+export type Appeal = typeof appeals.$inferSelect;
+export type InsertAppeal = typeof appeals.$inferInsert;

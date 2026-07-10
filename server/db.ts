@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
   releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
-  moderationQueue, moderationLogs, contentFlags,
+  moderationQueue, moderationLogs, contentFlags, appeals,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -1685,6 +1685,232 @@ export async function resolveFlag(flagId: number, adminId: number) {
     return { success: true, flagId };
   } catch (error) {
     console.error("[Moderation] Error resolving flag:", error);
+    throw error;
+  }
+}
+
+
+// ── Content Appeals ────────────────────────────────────────────
+
+export async function submitAppeal(
+  contentId: number,
+  creatorId: number,
+  reason: string
+): Promise<{ appealId: number }> {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
+    // Check if content exists and belongs to creator
+    const contentItem = await db
+      .select()
+      .from(content)
+      .where(eq(content.id, contentId));
+
+    if (!contentItem.length) throw new Error("Content not found");
+    if (contentItem[0].creatorId !== creatorId) throw new Error("Unauthorized");
+    if (contentItem[0].moderationStatus !== "rejected") {
+      throw new Error("Can only appeal rejected content");
+    }
+
+    // Check if appeal already exists
+    const existingAppeal = await db
+      .select()
+      .from(appeals)
+      .where(
+        and(
+          eq(appeals.contentId, contentId),
+          eq(appeals.status, "pending")
+        )
+      );
+
+    if (existingAppeal.length) {
+      throw new Error("Appeal already pending for this content");
+    }
+
+    // Create appeal
+    const result = await db.insert(appeals).values({
+      contentId,
+      creatorId,
+      reason,
+      status: "pending",
+    });
+
+    const appealId = (result as any).insertId;
+
+    // Log appeal submission
+    await db.insert(moderationLogs).values({
+      contentId,
+      action: "submitted",
+      performedBy: creatorId,
+      reason: `Creator appealed rejection with reason: ${reason}`,
+    });
+
+    // Notify admins
+    const admins = await db
+      .select()
+      .from(users)
+      .where(eq(users.role, "admin"));
+
+    for (const admin of admins) {
+      await db.insert(notifications).values({
+        userId: admin.id,
+        type: "appeal",
+        title: "New Content Appeal",
+        message: `Creator appealed rejected content. Review needed.`,
+        read: false,
+      });
+    }
+
+    return { appealId };
+  } catch (error) {
+    console.error("[Appeals] Error submitting appeal:", error);
+    throw error;
+  }
+}
+
+export async function getCreatorAppeals(creatorId: number) {
+  try {
+    const db = await getDb();
+    if (!db) return [];
+
+    return await db
+      .select()
+      .from(appeals)
+      .where(eq(appeals.creatorId, creatorId))
+      .orderBy(desc(appeals.submittedAt));
+  } catch (error) {
+    console.error("[Appeals] Error fetching creator appeals:", error);
+    return [];
+  }
+}
+
+export async function getPendingAppeals() {
+  try {
+    const db = await getDb();
+    if (!db) return [];
+
+    return await db
+      .select()
+      .from(appeals)
+      .where(eq(appeals.status, "pending"))
+      .orderBy(desc(appeals.submittedAt));
+  } catch (error) {
+    console.error("[Appeals] Error fetching pending appeals:", error);
+    return [];
+  }
+}
+
+export async function approveAppeal(
+  appealId: number,
+  adminId: number,
+  adminResponse?: string
+): Promise<{ success: boolean }> {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
+    // Get appeal
+    const appeal = await db
+      .select()
+      .from(appeals)
+      .where(eq(appeals.id, appealId));
+
+    if (!appeal.length) throw new Error("Appeal not found");
+
+    const appealData = appeal[0];
+
+    // Update appeal status
+    await db
+      .update(appeals)
+      .set({
+        status: "approved",
+        reviewedAt: new Date(),
+        reviewedBy: adminId,
+        adminResponse: adminResponse || "Appeal approved",
+      })
+      .where(eq(appeals.id, appealId));
+
+    // Update content status back to approved
+    await db
+      .update(content)
+      .set({ moderationStatus: "approved" })
+      .where(eq(content.id, appealData.contentId));
+
+    // Log approval
+    await db.insert(moderationLogs).values({
+      contentId: appealData.contentId,
+      action: "approved",
+      performedBy: adminId,
+      reason: `Appeal approved. Content re-published.`,
+    });
+
+    // Notify creator
+    await db.insert(notifications).values({
+      userId: appealData.creatorId,
+      type: "appeal",
+      title: "Appeal Approved",
+      message: `Your appeal has been approved. Content is now published.`,
+      read: false,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("[Appeals] Error approving appeal:", error);
+    throw error;
+  }
+}
+
+export async function denyAppeal(
+  appealId: number,
+  adminId: number,
+  adminResponse: string
+): Promise<{ success: boolean }> {
+  try {
+    const db = await getDb();
+    if (!db) throw new Error("Database not available");
+
+    // Get appeal
+    const appeal = await db
+      .select()
+      .from(appeals)
+      .where(eq(appeals.id, appealId));
+
+    if (!appeal.length) throw new Error("Appeal not found");
+
+    const appealData = appeal[0];
+
+    // Update appeal status
+    await db
+      .update(appeals)
+      .set({
+        status: "denied",
+        reviewedAt: new Date(),
+        reviewedBy: adminId,
+        adminResponse: adminResponse || "Appeal denied",
+      })
+      .where(eq(appeals.id, appealId));
+
+    // Log denial
+    await db.insert(moderationLogs).values({
+      contentId: appealData.contentId,
+      action: "rejected",
+      performedBy: adminId,
+      reason: `Appeal denied. Reason: ${adminResponse}`,
+    });
+
+    // Notify creator
+    await db.insert(notifications).values({
+      userId: appealData.creatorId,
+      type: "appeal",
+      title: "Appeal Denied",
+      message: `Your appeal has been denied. ${adminResponse}`,
+      read: false,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("[Appeals] Error denying appeal:", error);
     throw error;
   }
 }
