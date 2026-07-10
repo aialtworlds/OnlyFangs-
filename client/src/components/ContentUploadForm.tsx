@@ -34,14 +34,14 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
   // Upload mutation
   const uploadMutation = trpc.content.upload.useMutation({
     onSuccess: () => {
-      toast.success("Conteúdo enviado com sucesso!");
+      toast.success("Content uploaded successfully!");
       setFormData({ title: "", description: "", tierId: "", type: "image" });
       setSelectedFile(null);
       setFilePreview(null);
       onSuccess?.();
     },
     onError: (error) => {
-      toast.error(`Erro ao enviar: ${error.message}`);
+      toast.error(`Error uploading: ${error.message}`);
     },
   });
 
@@ -209,7 +209,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
             </label>
             <Textarea
               id="description"
-              placeholder="Descreva o conteúdo (opcional)"
+              placeholder="Describe the content (optional)"
               value={formData.description}
               onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
               disabled={isLoading}
@@ -227,7 +227,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
             {tiers.length === 0 ? (
               <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
                 <AlertCircle className="w-4 h-4" />
-                <span>Crie um tier antes de enviar conteúdo</span>
+                <span>Create a tier before uploading content</span>
               </div>
             ) : (
               <Select value={formData.tierId} onValueChange={(value) => setFormData((prev) => ({ ...prev, tierId: value }))}>

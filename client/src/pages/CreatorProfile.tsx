@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { useLocation, useParams } from 'wouter';
 import { Lock, Play, BookOpen, Image, Music, Camera, Heart, MessageCircle, Share2, ChevronLeft, Loader2 } from 'lucide-react';
-import { CREATORS, CONTENT_ITEMS, getCreatorById, getContentByCreator } from '@/lib/data';
+import { CREATORS, CONTENT_ITEMS, getCreatorById, getContentByCreatorId } from '@/lib/data';
 import type { ContentItem } from '@/lib/data';
 import { toast } from 'sonner';
 import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
@@ -462,7 +462,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
   const [, setLocation] = useLocation();
   const { playTrack } = useMusicPlayer();
   const creator = getCreatorById(creatorId) || CREATORS[0];
-  const content = getContentByCreator(creator.id);
+  const content = getContentByCreatorId(creator.id);
   const [activeTab, setActiveTab] = useState<'all' | 'image' | 'photo' | 'music' | 'book'>('all');
 
   const handlePlayMusic = (item: ContentItem) => {
@@ -749,7 +749,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                 gap: '2px',
               }}
             >
-              {filteredContent.map(item => (
+              {filteredContent.map((item: any) => (
                 <ContentCard key={item.id} item={item} onPlayMusic={handlePlayMusic} />
               ))}
               {filteredContent.length === 0 && (

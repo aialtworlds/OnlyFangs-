@@ -1092,16 +1092,6 @@ export default function Home() {
               >
                 <span>{cat.icon}</span>
                 {cat.name}
-                <span
-                  style={{
-                    background: 'oklch(0.15 0.01 285)',
-                    padding: '2px 6px',
-                    fontSize: '8px',
-                    color: 'oklch(0.35 0.02 60)',
-                  }}
-                >
-                  {cat.count}
-                </span>
               </button>
             ))}
           </div>

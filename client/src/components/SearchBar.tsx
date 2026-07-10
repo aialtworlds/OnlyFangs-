@@ -10,7 +10,7 @@ interface SearchBarProps {
 
 export default function SearchBar({
   onSearch,
-  placeholder = 'Buscar criadores...',
+  placeholder = 'Search creators...',
   debounceMs = 300,
 }: SearchBarProps) {
   const [query, setQuery] = useState('');
@@ -50,7 +50,7 @@ export default function SearchBar({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={placeholder}
+            placeholder={placeholder || 'Search creators...'}
             className="border-0 bg-transparent focus-visible:ring-0 flex-1"
           />
           {query && (

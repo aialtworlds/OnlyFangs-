@@ -42,11 +42,11 @@ export default function CreatorContent() {
   if (!creator) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <p className="text-muted-foreground">Criador não encontrado</p>
+        <p className="text-muted-foreground">Creator not found</p>
         <Link href="/">
           <Button variant="outline">
             <ChevronLeft className="w-4 h-4 mr-2" />
-            Voltar para Home
+            Back to Home
           </Button>
         </Link>
       </div>
@@ -83,12 +83,12 @@ export default function CreatorContent() {
           <Link href={`/creator/${creatorHandle}`}>
             <Button variant="ghost" size="sm" className="mb-4">
               <ChevronLeft className="w-4 h-4 mr-2" />
-              Voltar ao Perfil
+              Back to Profile
             </Button>
           </Link>
           <div>
             <h1 className="text-3xl font-bold">{creator.alias}</h1>
-            <p className="text-muted-foreground">Conteúdo Exclusivo</p>
+            <p className="text-muted-foreground">Exclusive Content</p>
           </div>
         </div>
       </div>
@@ -103,7 +103,7 @@ export default function CreatorContent() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
               <FileText className="w-12 h-12 text-muted-foreground mb-4 opacity-50" />
-              <p className="text-muted-foreground">Nenhum conteúdo disponível</p>
+              <p className="text-muted-foreground">No content available</p>
             </CardContent>
           </Card>
         ) : (

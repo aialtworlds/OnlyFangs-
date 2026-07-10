@@ -23,12 +23,12 @@ export function ContentGallery() {
   // Delete mutation
   const deleteMutation = trpc.content.delete.useMutation({
     onSuccess: () => {
-      toast.success("Conteúdo deletado com sucesso");
+      toast.success("Content deleted successfully");
       refetch();
       setDeleteId(null);
     },
     onError: (error) => {
-      toast.error(`Erro ao deletar: ${error.message}`);
+      toast.error(`Error deleting: ${error.message}`);
     },
   });
 
@@ -50,7 +50,7 @@ export function ContentGallery() {
   };
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("pt-BR", {
+    return new Date(date).toLocaleDateString("en-US", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -79,9 +79,9 @@ export function ContentGallery() {
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <FileText className="w-12 h-12 text-muted-foreground mb-4 opacity-50" />
-          <p className="text-muted-foreground">Nenhum conteúdo enviado ainda</p>
+          <p className="text-muted-foreground">No content uploaded yet</p>
           <p className="text-sm text-muted-foreground mt-1">
-            Comece a compartilhar conteúdo exclusivo com seus assinantes
+            Start sharing exclusive content with your patrons
           </p>
         </CardContent>
       </Card>
@@ -92,9 +92,9 @@ export function ContentGallery() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Meu Conteúdo</CardTitle>
+          <CardTitle>My Content</CardTitle>
           <CardDescription>
-            {contentList.length} arquivo{contentList.length !== 1 ? "s" : ""} enviado{contentList.length !== 1 ? "s" : ""}
+            {contentList.length} file{contentList.length !== 1 ? "s" : ""} uploaded
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -193,13 +193,13 @@ export function ContentGallery() {
       <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Deletar conteúdo?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O conteúdo será permanentemente deletado.
-            </AlertDialogDescription>
+                <AlertDialogTitle>Delete content?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. The content will be permanently deleted.
+              </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="flex gap-3">
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (deleteId) {

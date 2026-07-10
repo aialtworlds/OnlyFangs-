@@ -48,7 +48,7 @@ export function ContentPreview({ contentId, onUnlock }: ContentPreviewProps) {
       <Card>
         <CardContent className="flex items-center justify-center py-12 text-center">
           <div>
-            <p className="text-muted-foreground">Conteúdo não encontrado</p>
+            <p className="text-muted-foreground">Content not found</p>
           </div>
         </CardContent>
       </Card>
@@ -142,16 +142,16 @@ export function ContentPreview({ contentId, onUnlock }: ContentPreviewProps) {
               <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
                 {isAuthenticated ? (
                   <p className="text-sm text-amber-900">
-                    Você precisa de uma assinatura para acessar este conteúdo
+                    You need a subscription to access this content
                   </p>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-sm text-amber-900">
-                      Faça login para acessar conteúdo exclusivo
+                      Sign in to access exclusive content
                     </p>
                     <a href={getLoginUrl()}>
                       <Button size="sm" variant="outline">
-                        Fazer Login
+                        Sign In
                       </Button>
                     </a>
                   </div>

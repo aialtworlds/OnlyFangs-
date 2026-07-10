@@ -296,3 +296,43 @@
 - [x] Add signup route to App.tsx
 - [x] Fix TypeScript errors in moderation logs (appeal_approved, appeal_denied, appeal_submitted)
 - [x] Test signup page loads correctly
+
+
+## Glossary Unification & Copy Cleanup
+- [ ] Replace tier names (Mortal→Fledgling, Initiate→Dweller, Acolyte→Courtier, Immortal→Night Royalty) in all files
+- [ ] Remove Latin subtitles (Homo Mortalis, Initiatus, Acolythus, Immortalis) from tier descriptions
+- [ ] Replace "The Initiation Ritual" → "How It Works"
+- [ ] Replace "Choose Your Initiation Level" → "Membership Plans"
+- [ ] Replace "Sign the Pact" → "Subscribe" / "Join as Patron"
+- [ ] Remove decorative tier icons (candles, blood drops, bats, crowns)
+- [ ] Replace fixed prices with "Creator's Choice" placeholder
+- [ ] Add "Example Profile" / "Demo" badges to mock creator profiles
+- [ ] Remove generic "Coven" references (keep only for Feature 2: Covens/Communities)
+- [ ] Replace "Subscriber" → "Patron" in all contexts
+- [ ] Simplify tier descriptions (remove supernatural language)
+- [ ] Test all changes and verify consistency across site
+
+
+## Glossary Unification & Copy Cleanup (PHASE 1-5)
+- [x] Phase 1: Translate all Portuguese text to English
+  - [x] ContentUploadForm.tsx: success/error messages, placeholders
+  - [x] ContentGallery.tsx: empty state, deletion messages, file descriptions
+  - [x] ContentPreview.tsx: not found, access requirements, sign-in prompts
+  - [x] SearchBar.tsx: search placeholder
+  - [x] CreatorContent.tsx: creator not found, back button, exclusive content label
+  - [x] lib/data.ts: tier descriptions and perks
+  - [x] Fix TypeScript errors in CreatorProfile.tsx and Home.tsx
+- [ ] Phase 2: Update tier names and descriptions
+  - [ ] Update Home.tsx tier references (Mortal→Fledgling, etc.)
+  - [ ] Update CreatorProfile.tsx tier display
+  - [ ] Update all tier-related UI components
+- [ ] Phase 3: Replace "Subscriber" with "Patron"
+  - [ ] Update all component text and labels
+  - [ ] Update database display labels
+- [ ] Phase 4: Replace fixed prices with "Creator's Choice"
+  - [ ] Update pricing display in tier cards
+  - [ ] Update creator admin tier forms
+- [ ] Phase 5: Add Demo/Example badges and verify 100% English
+  - [ ] Add "Example Profile" badges to mock creators
+  - [ ] Final verification scan for any remaining Portuguese
+  - [ ] Test all pages for consistency
