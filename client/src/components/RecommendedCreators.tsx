@@ -4,6 +4,7 @@ import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { VerificationBadge } from "@/components/VerificationBadge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function RecommendedCreators() {
   const { user, isAuthenticated } = useAuth();

@@ -337,3 +337,9 @@
   - [x] Add "Demo" badges to mock creators (Creators.tsx, Discover.tsx, RecommendedCreators.tsx)
   - [x] Final verification scan for any remaining Portuguese (0 found)
   - [x] Test all pages for consistency (all 119 tests passing)
+
+## Interactive Tooltips for Demo Badges
+- [x] Add tooltip to demo badge in Creators.tsx
+- [x] Add tooltip to demo badge in Discover.tsx
+- [x] Tooltip message: "Example profile - explore features without affecting real data"
+- [x] All 119 tests passing

@@ -16,6 +16,7 @@ import CategoryFilter from '@/components/CategoryFilter';
 import { trpc } from '@/lib/trpc';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 function ContentIcon({ type }: { type: string }) {
   const icons: Record<string, React.ReactNode> = {
@@ -86,9 +87,16 @@ function CreatorCard({ creator }: { creator: any }) {
           }}
         />
         {creator.isDemo && (
-          <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'oklch(0.35 0.05 200)', color: 'oklch(0.93 0.02 80)', fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.3em', padding: '3px 8px', textTransform: 'uppercase' }}>
-            Demo
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'oklch(0.35 0.05 200)', color: 'oklch(0.93 0.02 80)', fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.3em', padding: '3px 8px', textTransform: 'uppercase', cursor: 'help' }}>
+                Demo
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Example profile - explore features without affecting real data</p>
+            </TooltipContent>
+          </Tooltip>
         )}
       </div>
 

@@ -8,6 +8,7 @@ import { Image, Music, BookOpen, Camera, Search } from 'lucide-react';
 import { CREATORS } from '@/lib/data';
 import type { Creator } from '@/lib/data';
 import { VerificationBadge } from '@/components/VerificationBadge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 
@@ -41,9 +42,16 @@ function CreatorCard({ creator }: { creator: Creator }) {
         />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 30%, oklch(0.085 0.015 330) 100%)' }} />
         {creator.isDemo && (
-          <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'oklch(0.35 0.05 200)', color: 'oklch(0.93 0.02 80)', fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.3em', padding: '3px 8px', textTransform: 'uppercase' }}>
-            Demo
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'oklch(0.35 0.05 200)', color: 'oklch(0.93 0.02 80)', fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.3em', padding: '3px 8px', textTransform: 'uppercase', cursor: 'help' }}>
+                Demo
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Example profile - explore features without affecting real data</p>
+            </TooltipContent>
+          </Tooltip>
         )}
         {creator.verified && (
           <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'oklch(0.72 0.09 75)', color: 'oklch(0.04 0.008 285)', fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.3em', padding: '3px 8px', textTransform: 'uppercase' }}>
