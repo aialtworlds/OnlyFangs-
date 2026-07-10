@@ -118,7 +118,7 @@ export function TierTable({ tiers, isLoading = false, onEdit, onRefresh }: TierT
                   </div>
                 </TableCell>
                 <TableCell>
-                  {tier.currency || "USD"} {tier.price}
+                  Creator's Choice
                 </TableCell>
                 <TableCell>
                   {tier.perks && tier.perks.length > 0 ? (

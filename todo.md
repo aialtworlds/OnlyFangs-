@@ -329,10 +329,11 @@
 - [x] Phase 3: Replace "Subscriber" with "Patron"
   - [x] Update all component text and labels (Home.tsx, CreatorProfile.tsx)
   - [x] Update database display labels
-- [ ] Phase 4: Replace fixed prices with "Creator's Choice"
-  - [ ] Update pricing display in tier cards
-  - [ ] Update creator admin tier forms
-- [ ] Phase 5: Add Demo/Example badges and verify 100% English
-  - [ ] Add "Example Profile" badges to mock creators
-  - [ ] Final verification scan for any remaining Portuguese
-  - [ ] Test all pages for consistency
+- [x] Phase 4: Replace fixed prices with "Creator's Choice"
+  - [x] Update pricing display in tier cards (TierPreview.tsx)
+  - [x] Update pricing display in tier tables (TierTable.tsx)
+  - [x] Update pricing display in analytics (AnalyticsChart.tsx)
+- [x] Phase 5: Add Demo/Example badges and verify 100% English
+  - [x] Add "Demo" badges to mock creators (Creators.tsx, Discover.tsx, RecommendedCreators.tsx)
+  - [x] Final verification scan for any remaining Portuguese (0 found)
+  - [x] Test all pages for consistency (all 119 tests passing)

@@ -51,13 +51,10 @@ export function TierPreview({
           {/* Price */}
           <div className="border-b pb-6">
             <div className="flex items-baseline gap-1">
-              <span className="text-4xl font-bold">{price || "0"}</span>
-              <span className="text-lg text-muted-foreground">
-                {currency}/month
-              </span>
+              <span className="text-4xl font-bold">Creator's Choice</span>
             </div>
             <p className="text-sm text-muted-foreground mt-2">
-              Billed monthly, cancel anytime
+              Pricing set by the creator. Billed monthly, cancel anytime.
             </p>
           </div>
 

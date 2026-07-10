@@ -32,6 +32,7 @@ export interface Creator {
   contentTypes: ContentType[];
   featured?: boolean;
   verified?: boolean;
+  isDemo?: boolean;
 }
 
 export interface ContentItem {
@@ -157,6 +158,7 @@ export const CREATORS: Creator[] = [
     contentTypes: ['music'],
     verified: true,
     featured: true,
+    isDemo: true,
   },
   {
     id: 'raven-ink',
@@ -172,6 +174,7 @@ export const CREATORS: Creator[] = [
     tiers: TIERS,
     tags: ['writing', 'poetry', 'fiction'],
     contentTypes: ['book'],
+    isDemo: true,
   },
   {
     id: 'shadow-lens',
@@ -188,6 +191,7 @@ export const CREATORS: Creator[] = [
     tags: ['photography', 'landscape', 'portrait'],
     contentTypes: ['photo'],
     verified: true,
+    isDemo: true,
   },
 ];
 

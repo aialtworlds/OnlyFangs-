@@ -79,7 +79,7 @@ export function RecommendedCreators() {
   return (
     <div className="w-full">
       <h2 className="text-2xl font-bold mb-6">
-        {isAuthenticated ? "Criadores para Você" : "Criadores em Destaque"}
+        {isAuthenticated ? "Recommended Creators" : "Featured Creators"}
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {creators.map((creator) => (
@@ -142,7 +142,7 @@ export function RecommendedCreators() {
                 {/* Stats */}
                 <div className="flex gap-2 text-xs text-muted-foreground flex-wrap">
                   <Badge variant="secondary" className="text-xs">
-                    {creator.totalSubscribers} subscribers
+                    {creator.totalSubscribers} patrons
                   </Badge>
                   <Badge variant="secondary" className="text-xs">
                     {creator.totalReleases} releases

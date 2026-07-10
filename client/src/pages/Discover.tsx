@@ -85,6 +85,11 @@ function CreatorCard({ creator }: { creator: any }) {
             background: 'linear-gradient(180deg, transparent 30%, oklch(0.085 0.015 330) 100%)',
           }}
         />
+        {creator.isDemo && (
+          <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'oklch(0.35 0.05 200)', color: 'oklch(0.93 0.02 80)', fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.3em', padding: '3px 8px', textTransform: 'uppercase' }}>
+            Demo
+          </div>
+        )}
       </div>
 
       <div style={{ padding: '16px' }}>
@@ -104,7 +109,7 @@ function CreatorCard({ creator }: { creator: any }) {
           {creator.verified && <VerificationBadge verified={true} />}
         </div>
         <p style={{ fontSize: '12px', color: 'oklch(0.55 0.03 60)', marginBottom: '12px' }}>
-          {creator.totalSubscribers} followers
+          {creator.totalSubscribers} patrons
         </p>
         <p
           style={{

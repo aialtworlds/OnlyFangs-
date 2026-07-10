@@ -40,6 +40,11 @@ function CreatorCard({ creator }: { creator: Creator }) {
           style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.6s ease', transform: hovered ? 'scale(1.05)' : 'scale(1)', filter: 'brightness(0.6)' }}
         />
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 30%, oklch(0.085 0.015 330) 100%)' }} />
+        {creator.isDemo && (
+          <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'oklch(0.35 0.05 200)', color: 'oklch(0.93 0.02 80)', fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.3em', padding: '3px 8px', textTransform: 'uppercase' }}>
+            Demo
+          </div>
+        )}
         {creator.verified && (
           <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'oklch(0.72 0.09 75)', color: 'oklch(0.04 0.008 285)', fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.3em', padding: '3px 8px', textTransform: 'uppercase' }}>
             Verified
@@ -69,7 +74,7 @@ function CreatorCard({ creator }: { creator: Creator }) {
         <div style={{ display: 'flex', gap: '16px', borderTop: '1px solid oklch(1 0 0 / 6%)', paddingTop: '10px' }}>
           <div>
             <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.72 0.09 75)', fontWeight: 700 }}>{creator.subscribers.toLocaleString('en-US')}</div>
-            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.15em', color: 'oklch(0.45 0.02 60)', textTransform: 'uppercase' }}>Subscribers</div>
+            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.15em', color: 'oklch(0.45 0.02 60)', textTransform: 'uppercase' }}>Patrons</div>
           </div>
           <div>
             <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.72 0.09 75)', fontWeight: 700 }}>{creator.totalPosts}</div>

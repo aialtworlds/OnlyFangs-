@@ -127,7 +127,7 @@ export function AnalyticsChart({ data, isLoading = false }: AnalyticsChartProps)
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-medium">${tier.price}/mo</p>
+                        <p className="font-medium">Creator's Choice</p>
                       </div>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
