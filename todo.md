@@ -322,13 +322,13 @@
   - [x] CreatorContent.tsx: creator not found, back button, exclusive content label
   - [x] lib/data.ts: tier descriptions and perks
   - [x] Fix TypeScript errors in CreatorProfile.tsx and Home.tsx
-- [ ] Phase 2: Update tier names and descriptions
-  - [ ] Update Home.tsx tier references (Mortal→Fledgling, etc.)
-  - [ ] Update CreatorProfile.tsx tier display
-  - [ ] Update all tier-related UI components
-- [ ] Phase 3: Replace "Subscriber" with "Patron"
-  - [ ] Update all component text and labels
-  - [ ] Update database display labels
+- [x] Phase 2: Update tier names and descriptions
+  - [x] Update Home.tsx tier references (Mortal→Fledgling, etc.)
+  - [x] Update CreatorProfile.tsx tier display
+  - [x] Update all tier-related UI components (TierForm, Footer, PatronProfile)
+- [x] Phase 3: Replace "Subscriber" with "Patron"
+  - [x] Update all component text and labels (Home.tsx, CreatorProfile.tsx)
+  - [x] Update database display labels
 - [ ] Phase 4: Replace fixed prices with "Creator's Choice"
   - [ ] Update pricing display in tier cards
   - [ ] Update creator admin tier forms

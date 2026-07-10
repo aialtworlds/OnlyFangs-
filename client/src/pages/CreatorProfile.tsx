@@ -29,10 +29,10 @@ function ContentIcon({ type }: { type: string }) {
 }
 
 const tierLabels: Record<string, string> = {
-  mortal: 'Mortal',
-  initiate: 'Initiate',
-  acolyte: 'Acolyte',
-  immortal: 'Immortal',
+  fledgling: 'Fledgling',
+  dweller: 'Dweller',
+  courtier: 'Courtier',
+  'night-royalty': 'Night Royalty',
 };
 
 function ContentCard({ item, onPlayMusic }: { item: ContentItem; onPlayMusic: (item: ContentItem) => void }) {
@@ -659,7 +659,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                   {creator.subscribers.toLocaleString('en-US')}
                 </div>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>
-                  Subscribers
+                  Patrons
                 </div>
               </div>
               <div>

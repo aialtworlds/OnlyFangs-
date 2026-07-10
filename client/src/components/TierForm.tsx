@@ -146,7 +146,7 @@ export function TierForm({ tier, onSuccess, onCancel }: TierFormProps) {
             <Label htmlFor="name">Tier Name *</Label>
             <Input
               id="name"
-              placeholder="e.g., Initiate, Acolyte, Immortal"
+              placeholder="e.g., Dweller, Courtier, Night Royalty"
               value={formData.name}
               onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
               disabled={isSubmitting}
@@ -158,7 +158,7 @@ export function TierForm({ tier, onSuccess, onCancel }: TierFormProps) {
             <Label htmlFor="slug">Slug *</Label>
             <Input
               id="slug"
-              placeholder="e.g., initiate, acolyte"
+              placeholder="e.g., dweller, courtier, night-royalty"
               value={formData.slug}
               onChange={(e) => setFormData((prev) => ({ ...prev, slug: e.target.value }))}
               disabled={isSubmitting}

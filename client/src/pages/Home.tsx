@@ -193,7 +193,7 @@ function CreatorCard({ creator }: { creator: Creator }) {
               {creator.subscribers.toLocaleString('en-US')}
             </div>
             <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.2em', color: 'oklch(0.35 0.02 60)', textTransform: 'uppercase' }}>
-              Subscribers
+              Patrons
             </div>
           </div>
           <div>
@@ -224,17 +224,17 @@ function ContentCard({ item }: { item: ContentItem }) {
   const creator = CREATORS.find((c) => c.id === item.creatorId);
 
   const tierColors: Record<string, string> = {
-    mortal: 'oklch(0.55 0.03 60)',
-    initiate: 'oklch(0.72 0.09 75)',
-    acolyte: 'oklch(0.72 0.09 75)',
-    immortal: 'oklch(0.82 0.1 78)',
+    fledgling: 'oklch(0.55 0.03 60)',
+    dweller: 'oklch(0.72 0.09 75)',
+    courtier: 'oklch(0.72 0.09 75)',
+    'night-royalty': 'oklch(0.82 0.1 78)',
   };
 
   const tierLabels: Record<string, string> = {
-    mortal: 'Mortal',
-    initiate: 'Initiate',
-    acolyte: 'Acolyte',
-    immortal: 'Immortal',
+    fledgling: 'Fledgling',
+    dweller: 'Dweller',
+    courtier: 'Courtier',
+    'night-royalty': 'Night Royalty',
   };
 
   return (
@@ -736,7 +736,7 @@ export default function Home() {
             <strong style={{ color: 'oklch(0.82 0.03 75)', fontStyle: 'normal', fontWeight: 400 }}>
               creatures of the night
             </strong>{' '}
-            share images, photos, books and music with their initiates.
+            share images, photos, books and music with their patrons.
           </p>
 
           {/* CTA Cards */}
@@ -1177,7 +1177,7 @@ export default function Home() {
               </div>
               {[
                 { n: '01', title: 'Discover Creators', desc: 'Explore the catalog of verified dark creators. Filter by content type, category or tier.' },
-                { n: '02', title: 'Choose Your Tier', desc: 'Select the access level you desire. From Mortal (free) to Immortal (full access).' },
+                { n: '02', title: 'Choose Your Tier', desc: 'Select the access level you desire. From Fledgling (free) to Night Royalty (full access).' },
                 { n: '03', title: 'Access the Content', desc: 'Unlock exclusive images, photos, books and music. Your personal grimoire.' },
                 { n: '04', title: 'Support the Darkness', desc: 'Each subscription goes directly to the creator. You sustain the art you love.' },
               ].map((step) => (

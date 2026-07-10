@@ -91,12 +91,12 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
     }
 
     if (!formData.title.trim()) {
-      toast.error("Título é obrigatório");
+      toast.error("Title is required");
       return;
     }
 
     if (!formData.tierId) {
-      toast.error("Selecione um tier");
+      toast.error("Select a tier");
       return;
     }
 
@@ -140,16 +140,16 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
   return (
     <Card className="w-full max-w-2xl">
       <CardHeader>
-        <CardTitle>Enviar Conteúdo Exclusivo</CardTitle>
+        <CardTitle>Upload Exclusive Content</CardTitle>
         <CardDescription>
-          Compartilhe fotos, música, vídeos e mais com seus assinantes
+          Share photos, music, videos and more with your patrons
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* File Upload */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Arquivo</label>
+            <label className="text-sm font-medium">File</label>
             <div className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition">
               <input
                 type="file"
@@ -189,11 +189,11 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
           {/* Title */}
           <div className="space-y-2">
             <label htmlFor="title" className="text-sm font-medium">
-              Título *
+              Title *
             </label>
             <Input
               id="title"
-              placeholder="Ex: Foto exclusiva do set de gravação"
+              placeholder="Ex: Exclusive behind-the-scenes photo"
               value={formData.title}
               onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
               disabled={isLoading}
@@ -205,7 +205,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
           {/* Description */}
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-medium">
-              Descrição
+              Description
             </label>
             <Textarea
               id="description"
@@ -259,7 +259,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
             ) : (
               <>
                 <Upload className="w-4 h-4 mr-2" />
-                Enviar Conteúdo
+                Upload Content
               </>
             )}
           </Button>

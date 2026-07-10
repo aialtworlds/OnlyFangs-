@@ -153,7 +153,7 @@ export default function PatronProfile() {
             marginBottom: '12px',
           }}
         >
-          You Are Not Initiated
+          You Are Not a Patron
         </h2>
         <p
           style={{
@@ -339,7 +339,7 @@ export default function PatronProfile() {
                   padding: '4px 12px',
                 }}
               >
-                ✦ Free Tier · Mortal
+                ✨ Free Tier · Fledgling
               </div>
             </div>
           </div>

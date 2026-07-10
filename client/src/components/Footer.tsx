@@ -177,7 +177,7 @@ export default function Footer() {
             }}
           >
             <span style={{ color: 'oklch(0.72 0.09 75 / 60%)' }}>✦</span>{' '}
-            Where immortality meets exclusivity{' '}
+            Where darkness meets exclusivity{' '}
             <span style={{ color: 'oklch(0.72 0.09 75 / 60%)' }}>✦</span>
           </p>
         </div>
