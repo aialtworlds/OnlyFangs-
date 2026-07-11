@@ -661,6 +661,7 @@ export default function Home() {
             left: '50%',
             transform: 'translateX(-50%)',
             width: '680px',
+            maxWidth: '100vw',
             height: '100%',
             zIndex: 1,
             pointerEvents: 'none',
