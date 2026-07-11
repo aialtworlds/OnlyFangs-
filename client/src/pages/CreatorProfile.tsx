@@ -678,7 +678,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                 document.getElementById('tiers-sidebar')?.scrollIntoView({ behavior: 'smooth' });
               }}
             >
-              Join the Coven
+              Sign Up
             </button>
           </div>
         </div>

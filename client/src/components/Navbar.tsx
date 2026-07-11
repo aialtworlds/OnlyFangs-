@@ -393,7 +393,7 @@ export default function Navbar() {
                         }}
                       >
                         <LogOut size={13} />
-                        {logoutMutation.isPending ? 'Leaving...' : 'Leave the Coven'}
+                        {logoutMutation.isPending ? 'Leaving...' : 'Log Out'}
                       </button>
                     </div>
                   )}
@@ -401,7 +401,7 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                {/* Join the Coven CTA — desktop only, when NOT logged in */}
+                {/* Sign Up CTA — desktop only, when NOT logged in */}
                 <a
                   href={getLoginUrl()}
                   className="hidden md:block"
@@ -425,7 +425,7 @@ export default function Navbar() {
                   onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(0.97)'; }}
                   onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = 'scale(1)'; }}
                 >
-                  Join the Coven
+                  Sign Up
                 </a>
               </>
             )}
@@ -623,7 +623,7 @@ export default function Navbar() {
                   width: '100%',
                 }}
               >
-                Leave the Coven
+                Log Out
               </button>
             </>
           ) : (
@@ -646,7 +646,7 @@ export default function Navbar() {
                 textAlign: 'center',
               }}
             >
-              Join the Coven
+              Sign Up
             </a>
           )}
         </div>

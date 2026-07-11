@@ -117,7 +117,7 @@ export default function Creators() {
       <div style={{ background: 'oklch(0.06 0.01 285)', borderBottom: '1px solid oklch(0.72 0.09 75 / 8%)', padding: '60px 0 40px' }}>
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-            <span className="tag-label">The Coven</span>
+            <span className="tag-label">Featured Creators</span>
             <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: 'clamp(28px, 4vw, 48px)', marginTop: '18px', color: 'oklch(0.93 0.02 80)' }}>
               Creatures of the Night
             </h1>

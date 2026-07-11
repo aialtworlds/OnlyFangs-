@@ -47,7 +47,7 @@ export function AnalyticsChart({ data, isLoading = false }: AnalyticsChartProps)
 
   const stats = [
     {
-      title: "Total Subscribers",
+      title: "Total Patrons",
       value: data.totalSubscribers,
       icon: Users,
       color: "text-blue-600",
@@ -106,7 +106,7 @@ export function AnalyticsChart({ data, isLoading = false }: AnalyticsChartProps)
       {data.tierBreakdown.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Subscribers by Tier</CardTitle>
+            <CardTitle>Patrons by Tier</CardTitle>
             <CardDescription>Distribution of active subscriptions</CardDescription>
           </CardHeader>
           <CardContent>

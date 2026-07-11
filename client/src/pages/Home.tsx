@@ -554,7 +554,7 @@ function TierCard({ tier }: { tier: typeof TIERS[0] }) {
           el.style.background = tier.featured ? 'oklch(0.72 0.09 75 / 10%)' : 'transparent';
         }}
       >
-        {tier.price === 0 ? 'Begin for Free' : 'Sign the Pact'}
+        {tier.price === 0 ? 'Begin for Free' : 'Subscribe'}
       </button>
     </div>
   );
@@ -992,7 +992,7 @@ export default function Home() {
                 color: 'oklch(0.93 0.02 80)',
               }}
             >
-              The Chosen Coven
+              Featured Creators
             </h2>
             <div className="ornament" style={{ margin: '18px auto' }}>
               <span style={{ color: 'oklch(0.72 0.09 75)' }}>✦</span>
@@ -1248,7 +1248,7 @@ export default function Home() {
                 For Creators
               </div>
               {[
-                { n: '01', title: 'Apply to the Coven', desc: 'Submit your application. We review each application to ensure quality and authenticity of the dark aesthetic.' },
+                { n: '01', title: 'Apply', desc: 'Submit your application. We review each application to ensure quality and authenticity of the dark aesthetic.' },
                 { n: '02', title: 'Configure Your Tiers', desc: 'Define your access levels and prices. You control what each tier can see.' },
                 { n: '03', title: 'Publish Your Content', desc: 'Images, photos, books, music. All in one place, with your captive audience.' },
                 { n: '04', title: 'Receive Your Earnings', desc: 'Direct monthly payments. Full transparency. You keep 85% of each subscription.' },
@@ -1401,7 +1401,7 @@ export default function Home() {
               marginBottom: '14px',
             }}
           >
-            Ready to Enter the Coven?
+            Step Into the Dark
           </h2>
           <p
             className="font-fell"

@@ -165,7 +165,7 @@ export default function PatronProfile() {
             maxWidth: '360px',
           }}
         >
-          Join the Coven to access your profile, follow creators, and unlock exclusive content.
+          Sign up to access your profile, follow creators, and unlock exclusive content.
         </p>
         <a
           href={getLoginUrl()}
@@ -182,7 +182,7 @@ export default function PatronProfile() {
             transition: 'background 0.25s',
           }}
         >
-          Join the Coven
+          Sign Up
         </a>
       </div>
     );

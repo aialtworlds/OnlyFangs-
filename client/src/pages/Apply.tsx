@@ -89,7 +89,7 @@ export default function Apply() {
             Your Application Has Entered the Darkness
           </h2>
           <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '17px', color: 'oklch(0.55 0.03 60)', lineHeight: 1.8, marginBottom: '32px' }}>
-            The coven has received your submission.<br /><br />
+            We have received your submission.<br /><br />
             <strong style={{ color: 'oklch(0.72 0.09 75)', fontWeight: 400, fontStyle: 'normal' }}>We await your darkness.</strong><br /><br />
             We review each application with the gravity it deserves. If selected, you will receive a scroll of invitation.
           </p>
@@ -304,7 +304,7 @@ export default function Apply() {
               className="btn-crimson"
               style={{ width: '100%', padding: '16px', fontSize: '11px', letterSpacing: '0.25em', textAlign: 'center' }}
             >
-              Submit Application to the Coven
+              Submit Application
             </button>
             <p
               style={{

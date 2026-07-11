@@ -327,7 +327,7 @@ export default function CreatorDashboard() {
 
           <div style={{ display: "flex", gap: "32px", paddingBottom: "16px", borderBottom: "1px solid oklch(1 0 0 / 6%)", flexWrap: "wrap" }}>
             <StatBadge icon={Users} value={0} label="Followers" />
-            <StatBadge icon={Crown} value={0} label="Subscribers" />
+            <StatBadge icon={Crown} value={0} label="Patrons" />
             <StatBadge icon={BookOpen} value={releases?.length ?? 0} label="Releases" />
             <StatBadge icon={Bell} value={0} label="Renown" />
           </div>
