@@ -76,9 +76,11 @@ import {
 import { conversations, messages, creators, notifications } from "../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 import { storagePut } from "./storage";
+import { adminRouter } from "./routers/admin";
 
 export const appRouter = router({
   system: systemRouter,
+  admin: adminRouter,
 
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -656,7 +658,7 @@ export const appRouter = router({
       }),
   }),
 
-  admin: router({
+  adminLegacy: router({
     toggleCreatorVerification: protectedProcedure
       .input(z.object({ creatorId: z.number() }))
       .mutation(async ({ ctx, input }) => {

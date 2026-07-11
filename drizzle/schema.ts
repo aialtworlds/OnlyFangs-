@@ -19,7 +19,7 @@ export const users = mysqlTable("users", {
   name: text("name"),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "creator", "admin"]).default("user").notNull(),
+  role: mysqlEnum("role", ["user", "creator", "admin", "sub_admin", "moderator", "admin_master"]).default("user").notNull(),
   displayName: varchar("displayName", { length: 100 }),
   avatarUrl: text("avatarUrl"),
   loyaltyPoints: int("loyaltyPoints").default(0).notNull(),
@@ -360,3 +360,52 @@ export const appeals = mysqlTable(
 
 export type Appeal = typeof appeals.$inferSelect;
 export type InsertAppeal = typeof appeals.$inferInsert;
+
+
+// ── Admin Audit Logs ──────────────────────────────────────────
+export const adminAuditLogs = mysqlTable(
+  "admin_audit_logs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    adminId: int("adminId").notNull(), // Admin who performed action
+    action: varchar("action", { length: 100 }).notNull(), // e.g., "verify_creator", "remove_content", "ban_user"
+    targetType: varchar("targetType", { length: 50 }).notNull(), // "user", "creator", "content", "admin"
+    targetId: int("targetId"), // ID of affected entity
+    details: json("details").$type<Record<string, any>>().default({}), // Additional context
+    reason: text("reason"), // Why the action was taken
+    ipAddress: varchar("ipAddress", { length: 45 }), // IPv4 or IPv6
+    userAgent: text("userAgent"), // Browser/client info
+    status: mysqlEnum("status", ["success", "failed", "pending"]).default("success").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    adminIndex: index("adminIndex").on(table.adminId),
+    actionIndex: index("actionIndex").on(table.action),
+    targetIndex: index("targetIndex").on(table.targetType, table.targetId),
+    createdAtIndex: index("createdAtIndex").on(table.createdAt),
+  })
+);
+
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
+export type InsertAdminAuditLog = typeof adminAuditLogs.$inferInsert;
+
+// ── Admin Permissions ────────────────────────────────────────
+export const adminPermissions = mysqlTable(
+  "admin_permissions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    adminId: int("adminId").notNull(), // Admin user ID
+    permission: varchar("permission", { length: 100 }).notNull(), // e.g., "verify_creators", "remove_content", "manage_admins"
+    grantedBy: int("grantedBy"), // Admin who granted this permission
+    grantedAt: timestamp("grantedAt").defaultNow().notNull(),
+    expiresAt: timestamp("expiresAt"), // Optional expiration
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    adminIndex: index("permAdminIndex").on(table.adminId),
+    permissionIndex: index("permissionIndex").on(table.permission),
+  })
+);
+
+export type AdminPermission = typeof adminPermissions.$inferSelect;
+export type InsertAdminPermission = typeof adminPermissions.$inferInsert;

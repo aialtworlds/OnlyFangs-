@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
   releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
-  moderationQueue, moderationLogs, contentFlags, appeals,
+  moderationQueue, moderationLogs, contentFlags, appeals, adminAuditLogs, adminPermissions,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
