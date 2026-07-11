@@ -342,5 +342,4 @@
 - [x] Add tooltip to demo badge in Creators.tsx
 - [x] Add tooltip to demo badge in Discover.tsx
 - [x] Tooltip message: "Example profile - explore features without affecting real data"
-- [x] Add smooth fade-in animation to tooltip (duration-200 on enter, duration-150 on exit)
 - [x] All 119 tests passing
