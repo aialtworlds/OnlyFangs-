@@ -236,7 +236,7 @@ export default function PatronDashboard() {
           <div style={{ position: "absolute", inset: 0, padding: "32px" }}>
             <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.55 0.03 60)", marginBottom: "6px" }}>Welcome back,</div>
             <div style={{ fontFamily: "'Cinzel', serif", fontSize: "clamp(22px, 4vw, 34px)", fontWeight: 700, color: "oklch(0.93 0.02 80)", letterSpacing: "0.04em", marginBottom: "6px", display: "flex", alignItems: "center", gap: "12px" }}>
-              {displayName} <span style={{ fontSize: "20px" }}>🦇</span>
+              {displayName} <span style={{ fontSize: "20px" }}>✦</span>
             </div>
             <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "14px", color: "oklch(0.45 0.02 60)" }}>
               Your obsession. Your eternal access.
@@ -270,7 +270,7 @@ export default function PatronDashboard() {
                 <div style={{ padding: "32px", textAlign: "center", color: "oklch(0.35 0.02 60)", fontFamily: "'IM Fell English', serif", fontStyle: "italic" }}>Loading...</div>
               ) : !subscriptions || subscriptions.length === 0 ? (
                 <div style={{ padding: "32px", textAlign: "center" }}>
-                  <div style={{ fontSize: "28px", marginBottom: "10px" }}>🦇</div>
+                  <div style={{ fontSize: "28px", marginBottom: "10px" }}>✦</div>
                   <div style={{ fontFamily: "'Cinzel', serif", fontSize: "12px", color: "oklch(0.55 0.03 60)", marginBottom: "6px" }}>No active subscriptions</div>
                   <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.35 0.02 60)", marginBottom: "14px" }}>Discover creators and support the darkness</div>
                   <button onClick={() => navigate("/")} style={{ padding: "8px 20px", background: "oklch(0.38 0.14 20)", border: "none", color: "white", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px" }}>
@@ -367,7 +367,7 @@ export default function PatronDashboard() {
 
             {/* Support Banner */}
             <div style={{ background: "linear-gradient(135deg, oklch(0.1 0.04 20) 0%, oklch(0.07 0.012 330) 100%)", border: "1px solid oklch(0.38 0.14 20 / 20%)", borderRadius: "8px", padding: "20px 24px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-              <div style={{ width: "48px", height: "48px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px" }}>🦇</div>
+              <div style={{ width: "48px", height: "48px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px" }}>✦</div>
               <div style={{ flex: 1, minWidth: "200px" }}>
                 <div style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.04em", marginBottom: "4px" }}>Thank you for supporting the night.</div>
                 <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.45 0.02 60)" }}>Your support keeps the darkness alive.</div>

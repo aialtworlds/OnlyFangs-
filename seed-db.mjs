@@ -84,13 +84,13 @@ async function seed() {
     const tierData = [
       {
         creatorId,
-        name: 'Initiate',
-        slug: 'initiate',
-        description: 'The first step beyond the veil. Exclusive content unlocked.',
+        name: 'Dweller',
+        slug: 'dweller',
+        description: 'Step past the threshold. Exclusive content unlocked.',
         price: '9.90',
         currency: 'USD',
         perks: JSON.stringify([
-          'All Mortal tier content',
+          'All Fledgling tier content',
           'Monthly exclusive posts',
           'Access to image gallery',
           'Community Discord',
@@ -99,13 +99,13 @@ async function seed() {
       },
       {
         creatorId,
-        name: 'Acolyte',
-        slug: 'acolyte',
-        description: 'Initiated into the mysteries. Access to the complete grimoire.',
+        name: 'Courtier',
+        slug: 'courtier',
+        description: 'A trusted presence in the inner circle. Full access to the archive.',
         price: '24.90',
         currency: 'USD',
         perks: JSON.stringify([
-          'All Initiate tier content',
+          'All Dweller tier content',
           'Complete book library',
           'Exclusive music albums',
           'Monthly live sessions',
@@ -116,14 +116,14 @@ async function seed() {
       },
       {
         creatorId,
-        name: 'Immortal',
-        slug: 'immortal',
-        description: 'Beyond death. Eternal access and direct communion with the creator.',
+        name: 'Night Royalty',
+        slug: 'night-royalty',
+        description: 'The highest circle. Direct access and lasting presence with the creator.',
         price: '59.90',
         currency: 'USD',
         perks: JSON.stringify([
-          'All Acolyte tier content',
-          'Exclusive content for Immortals',
+          'All Courtier tier content',
+          'Exclusive content for Night Royalty',
           'Direct message with the creator',
           'Digitally signed prints',
           'Lifetime archive access',
@@ -158,7 +158,7 @@ async function seed() {
     console.log(`
 Test data created:
 - Creator: Lady Nocturna (handle: lady-nocturna)
-- Tiers: Initiate ($9.90), Acolyte ($24.90), Immortal ($59.90)
+- Tiers: Dweller ($9.90), Courtier ($24.90), Night Royalty ($59.90)
 
 You can now test Stripe checkout by:
 1. Going to /creator/lady-nocturna

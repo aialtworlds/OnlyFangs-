@@ -97,7 +97,7 @@ export default function SignupPage() {
                 (e.currentTarget as HTMLElement).style.background = "oklch(0.085 0.015 330)";
               }}
             >
-              <div style={{ fontSize: "32px", marginBottom: "12px" }}>🩸</div>
+              <div style={{ fontSize: "32px", marginBottom: "12px" }}>✦</div>
               <div
                 style={{
                   fontSize: "14px",
@@ -142,7 +142,7 @@ export default function SignupPage() {
                 (e.currentTarget as HTMLElement).style.background = "oklch(0.085 0.015 330)";
               }}
             >
-              <div style={{ fontSize: "32px", marginBottom: "12px" }}>🦇</div>
+              <div style={{ fontSize: "32px", marginBottom: "12px" }}>✦</div>
               <div
                 style={{
                   fontSize: "14px",
@@ -183,7 +183,7 @@ export default function SignupPage() {
                 }}
               >
                 <span style={{ color: "oklch(0.55 0.03 60)", fontSize: "12px" }}>
-                  {selectedRole === "patron" ? "🩸 Patron Account" : "🦇 Creator Account"}
+                  {selectedRole === "patron" ? "Patron Account" : "Creator Account"}
                 </span>
                 <button
                   type="button"
