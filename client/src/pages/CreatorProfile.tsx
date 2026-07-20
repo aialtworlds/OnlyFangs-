@@ -592,6 +592,22 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   {creator.alias}
                   <VerificationBadge verified={creator.verified ?? false} size="md" />
+                  {creator.isDemo && (
+                    <span
+                      style={{
+                        background: 'oklch(0.35 0.05 200)',
+                        color: 'oklch(0.93 0.02 80)',
+                        fontFamily: "'Cinzel', serif",
+                        fontSize: '9px',
+                        letterSpacing: '0.2em',
+                        padding: '3px 8px',
+                        textTransform: 'uppercase',
+                      }}
+                      title="Example profile - explore features without affecting real data"
+                    >
+                      Demo
+                    </span>
+                  )}
                 </div>
               </h1>
             </div>

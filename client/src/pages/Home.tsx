@@ -9,6 +9,7 @@ import { ArrowRight, Lock, Play, BookOpen, Image, Music, Camera, Star, ChevronRi
 import { CREATORS, CONTENT_ITEMS, TIERS, CATEGORIES, getFeaturedCreators } from '@/lib/data';
 import type { ContentItem, Creator } from '@/lib/data';
 import { RecommendedCreators } from '@/components/RecommendedCreators';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface HomeProps {}
 
@@ -86,6 +87,32 @@ function CreatorCard({ creator }: { creator: Creator }) {
             background: 'linear-gradient(180deg, transparent 30%, oklch(0.085 0.015 330) 100%)',
           }}
         />
+        {creator.isDemo && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  left: '12px',
+                  background: 'oklch(0.35 0.05 200)',
+                  color: 'oklch(0.93 0.02 80)',
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '7px',
+                  letterSpacing: '0.3em',
+                  padding: '4px 10px',
+                  textTransform: 'uppercase',
+                  cursor: 'help',
+                }}
+              >
+                Demo
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Example profile - explore features without affecting real data</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
         {creator.verified && (
           <div
             style={{
