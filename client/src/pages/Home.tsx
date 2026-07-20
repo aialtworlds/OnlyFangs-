@@ -518,7 +518,7 @@ function TierCard({ tier }: { tier: typeof TIERS[0] }) {
           marginBottom: '4px',
         }}
       >
-        {tier.price === 0 ? 'Free' : `$${tier.price.toFixed(2)}`}
+        {tier.price === 0 ? 'Free' : "Creator's Choice"}
       </div>
       <div style={{ fontSize: '13px', color: 'oklch(0.55 0.03 60)', marginBottom: '14px' }}>
         {tier.price > 0 ? '/month' : 'forever'}
@@ -1366,7 +1366,7 @@ export default function Home() {
               className="font-fell"
               style={{ color: 'oklch(0.55 0.03 60)', maxWidth: '480px', margin: '0 auto' }}
             >
-              Each creator defines their own tiers. The prices below are typical examples from the platform.
+              Each creator defines their own tiers and pricing. The names and structure below show how it works.
             </p>
           </div>
 
