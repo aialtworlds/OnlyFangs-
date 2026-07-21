@@ -274,6 +274,14 @@ export async function createCreatorProfile(data: {
     category: data.category ?? null,
     status: "pending",
   });
+  // Creating a creators row alone isn't enough to unlock creator-only
+  // endpoints — creatorProcedure gates access on users.role === 'creator',
+  // not on the existence of a creators row. Without this, a brand new
+  // creator would hit FORBIDDEN on their own dashboard right after signup.
+  await db
+    .update(users)
+    .set({ role: "creator" })
+    .where(eq(users.id, data.userId));
   const result = await db
     .select()
     .from(creators)

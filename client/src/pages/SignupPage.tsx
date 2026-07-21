@@ -288,7 +288,7 @@ export default function SignupPage() {
                   fontWeight: 700,
                 }}
               >
-                {isLoading ? "Creating Account..." : "Continue with Manus"}
+                {isLoading ? "Creating Account..." : "Continue with Google"}
               </button>
 
               {/* Back Button */}
@@ -327,7 +327,7 @@ export default function SignupPage() {
                 textAlign: "center",
               }}
             >
-              You'll be redirected to login or create an account with Manus. Your role will be set to {selectedRole === "patron" ? "Patron" : "Creator"}.
+              You'll be redirected to sign in with Google. Your role will be set to {selectedRole === "patron" ? "Patron" : "Creator"}.
             </div>
           </>
         )}
