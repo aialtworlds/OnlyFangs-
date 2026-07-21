@@ -9,6 +9,7 @@ import { TierTable } from "@/components/TierTable";
 import { SubscriptionsTable } from "@/components/SubscriptionsTable";
 import { AnalyticsChart } from "@/components/AnalyticsChart";
 import { CreatorSettingsForm } from "@/components/CreatorSettingsForm";
+import { ContentUploadForm } from "@/components/ContentUploadForm";
 import { AdminCreatorManagement } from "@/components/AdminCreatorManagement";
 import { toast } from "sonner";
 import { Plus, LogOut } from "lucide-react";
@@ -156,8 +157,9 @@ export default function CreatorAdmin() {
 
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="analytics" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs defaultValue="content" className="w-full">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="content">Content</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="tiers">Tiers</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
@@ -166,6 +168,17 @@ export default function CreatorAdmin() {
               <TabsTrigger value="creators">Creators</TabsTrigger>
             )}
           </TabsList>
+
+          {/* Content Tab */}
+          <TabsContent value="content" className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-bold">Publish Content</h2>
+              <p className="text-muted-foreground mt-1">
+                Upload a release for your patrons — image, photo, music, book, video, or a free post.
+              </p>
+            </div>
+            <ContentUploadForm onSuccess={() => toast.success("Content published!")} />
+          </TabsContent>
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">

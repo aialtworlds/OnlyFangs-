@@ -257,6 +257,55 @@ export async function getPublicCreatorTiers(creatorId: number) {
     .orderBy(tiers.sortOrder);
 }
 
+export async function followCreator(followerId: number, creatorId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await db
+    .select({ id: follows.id })
+    .from(follows)
+    .where(and(eq(follows.followerId, followerId), eq(follows.creatorId, creatorId)))
+    .limit(1);
+
+  if (existing.length > 0) return; // already following, nothing to do
+
+  await db.insert(follows).values({ followerId, creatorId });
+}
+
+export async function unfollowCreator(followerId: number, creatorId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db
+    .delete(follows)
+    .where(and(eq(follows.followerId, followerId), eq(follows.creatorId, creatorId)));
+}
+
+export async function isFollowingCreator(followerId: number, creatorId: number) {
+  const db = await getDb();
+  if (!db) return false;
+
+  const existing = await db
+    .select({ id: follows.id })
+    .from(follows)
+    .where(and(eq(follows.followerId, followerId), eq(follows.creatorId, creatorId)))
+    .limit(1);
+
+  return existing.length > 0;
+}
+
+export async function getFollowerCount(creatorId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const result = await db
+    .select({ value: count() })
+    .from(follows)
+    .where(eq(follows.creatorId, creatorId));
+
+  return result[0]?.value ?? 0;
+}
+
 export async function createCreatorProfile(data: {
   userId: number;
   alias: string;

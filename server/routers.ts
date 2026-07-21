@@ -28,6 +28,10 @@ import {
   getCreatorAnalytics,
   updateTier,
   deleteTier,
+  followCreator,
+  unfollowCreator,
+  isFollowingCreator,
+  getFollowerCount,
   uploadContent,
   getCreatorContent,
   getContentById,
@@ -167,6 +171,31 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const url = await createBillingPortalSession(ctx.user.id, input.origin);
         return { url };
+      }),
+  }),
+
+  follow: router({
+    isFollowing: protectedProcedure
+      .input(z.object({ creatorId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return isFollowingCreator(ctx.user.id, input.creatorId);
+      }),
+    followerCount: publicProcedure
+      .input(z.object({ creatorId: z.number() }))
+      .query(async ({ input }) => {
+        return getFollowerCount(input.creatorId);
+      }),
+    follow: protectedProcedure
+      .input(z.object({ creatorId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await followCreator(ctx.user.id, input.creatorId);
+        return { success: true };
+      }),
+    unfollow: protectedProcedure
+      .input(z.object({ creatorId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await unfollowCreator(ctx.user.id, input.creatorId);
+        return { success: true };
       }),
   }),
 

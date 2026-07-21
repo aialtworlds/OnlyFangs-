@@ -25,6 +25,7 @@ import Notifications from "./pages/Notifications";
 import ModerationDashboard from "./pages/ModerationDashboard";
 import SignupPage from "./pages/SignupPage";
 import CompleteSignup from "./pages/CompleteSignup";
+import Messages from "./pages/Messages";
 
 function AppLayout() {
   const { currentTrack, closePlayer } = useMusicPlayer();
@@ -46,6 +47,7 @@ function AppLayout() {
         <Route path="/moderation" component={ModerationDashboard} />
         <Route path="/signup" component={SignupPage} />
         <Route path="/complete-signup" component={CompleteSignup} />
+        <Route path="/messages" component={Messages} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

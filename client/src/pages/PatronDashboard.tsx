@@ -135,7 +135,13 @@ export default function PatronDashboard() {
   const handleNav = (id: string) => {
     setActiveNav(id);
     setMobileMenuOpen(false);
-    if (id === "discover") navigate("/");
+    // Some sidebar items already have a real, dedicated page elsewhere in
+    // the app — send the user there instead of just highlighting the icon
+    // with no visible change (the rest stay as in-page tabs for now).
+    if (id === "discover") navigate("/discover");
+    else if (id === "messages") navigate("/messages");
+    else if (id === "settings") navigate("/profile");
+    else if (id === "notifications") navigate("/notifications");
   };
 
   const SidebarContent = () => (

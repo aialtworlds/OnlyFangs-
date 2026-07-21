@@ -13,6 +13,7 @@ import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { VerificationBadge } from '@/components/VerificationBadge';
+import { FollowButton } from '@/components/FollowButton';
 
 interface CreatorProfileProps {
   creatorId: string;
@@ -610,6 +611,9 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                   )}
                 </div>
               </h1>
+              <div style={{ marginTop: '12px' }}>
+                <FollowButton handle={creatorId} />
+              </div>
             </div>
             <div
               style={{

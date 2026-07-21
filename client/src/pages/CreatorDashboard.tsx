@@ -133,6 +133,14 @@ export default function CreatorDashboard() {
   const handleNav = (id: string) => {
     setActiveNav(id);
     setMobileMenuOpen(false);
+    // Some sidebar items already have a real, dedicated page elsewhere in
+    // the app — send the user there instead of just highlighting the icon
+    // with no visible change (the rest stay as in-page tabs for now).
+    if (id === "messages") {
+      navigate("/messages");
+    } else if (id === "settings") {
+      navigate("/creator-admin");
+    }
   };
 
   const SidebarContent = () => (
@@ -146,7 +154,9 @@ export default function CreatorDashboard() {
 
       {/* Create Button */}
       <div style={{ padding: "16px 12px 8px" }}>
-        <button style={{
+        <button
+          onClick={() => navigate("/creator-admin")}
+          style={{
           width: "100%", padding: "12px", background: "oklch(0.38 0.14 20)",
           border: "none", color: "white", fontFamily: "'Cinzel', serif",
           fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase",
