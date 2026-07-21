@@ -35,6 +35,17 @@ export default function CompleteSignup() {
     if (authLoading) return;
     if (!isAuthenticated) return;
 
+    const hasExplicitRole = params.has('role');
+
+    // No role param means this came from a plain "Log In" link (an
+    // existing user signing back in, not picking a role for the first
+    // time). Just route them to whichever dashboard already matches their
+    // account — never attempt to create a creator profile here.
+    if (!hasExplicitRole) {
+      setLocation(user?.role === 'creator' ? '/creator-dashboard' : '/patron-dashboard');
+      return;
+    }
+
     if (role === 'patron') {
       setLocation('/patron-dashboard');
       return;

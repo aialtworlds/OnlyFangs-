@@ -403,7 +403,7 @@ export default function Navbar() {
               <>
                 {/* Sign Up CTA — desktop only, when NOT logged in */}
                 <a
-                  href={getLoginUrl()}
+                  href={getLoginUrl('/complete-signup')}
                   className="hidden md:block"
                   style={{
                     fontFamily: "'Cinzel', serif",
@@ -628,7 +628,7 @@ export default function Navbar() {
             </>
           ) : (
             <a
-              href={getLoginUrl()}
+              href={getLoginUrl('/complete-signup')}
               style={{
                 marginTop: '32px',
                 fontFamily: "'Cinzel', serif",
