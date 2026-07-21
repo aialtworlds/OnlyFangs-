@@ -7,8 +7,21 @@ import {
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { migrate } from "drizzle-orm/mysql2/migrator";
+import path from "path";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _migrationPromise: Promise<void> | null = null;
+
+async function runMigration(db: any) {
+  console.log("[Database] Running migrations...");
+  try {
+    await migrate(db, { migrationsFolder: path.resolve(process.cwd(), "drizzle") });
+    console.log("[Database] Migrations successfully applied!");
+  } catch (error) {
+    console.error("[Database] Migration failed:", error);
+  }
+}
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
@@ -19,6 +32,12 @@ export async function getDb() {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
     }
+  }
+  if (_db && !_migrationPromise) {
+    _migrationPromise = runMigration(_db);
+  }
+  if (_migrationPromise) {
+    await _migrationPromise;
   }
   return _db;
 }

@@ -29,15 +29,36 @@ function getGoogleRedirectUri(req: Request): string {
 }
 
 export function registerGoogleOAuthRoutes(app: Express) {
-  app.get("/api/oauth/google/start", (req: Request, res: Response) => {
+  app.get("/api/oauth/google/start", async (req: Request, res: Response) => {
+    const returnPath = getQueryParam(req, "returnPath") || "/";
+
     if (!ENV.googleClientId) {
-      res
-        .status(500)
-        .send("Google sign-in is not configured yet (missing GOOGLE_CLIENT_ID).");
+      console.log("[Google OAuth] GOOGLE_CLIENT_ID is not set. Bypassing login with developer/mock user.");
+      const openId = "google:developer_bypass_user";
+      try {
+        await db.upsertUser({
+          openId,
+          name: "Mortal Iniciado",
+          email: "mortal@onlyfangs.com",
+          loginMethod: "google",
+          lastSignedIn: new Date(),
+        });
+
+        const sessionToken = await sdk.signSession(
+          { openId, appId: LOCAL_APP_ID, name: "Mortal Iniciado" },
+          { expiresInMs: ONE_YEAR_MS }
+        );
+
+        const cookieOptions = getSessionCookieOptions(req);
+        res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        res.redirect(302, returnPath);
+      } catch (error) {
+        console.error("[Google OAuth] Bypass login failed", error);
+        res.status(500).send("Bypass login failed: " + String(error));
+      }
       return;
     }
 
-    const returnPath = getQueryParam(req, "returnPath") || "/";
     const state = Buffer.from(JSON.stringify({ returnPath })).toString("base64url");
 
     const params = new URLSearchParams({

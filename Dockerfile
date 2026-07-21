@@ -24,6 +24,7 @@ ENV NODE_ENV=production
 
 COPY package.json pnpm-lock.yaml ./
 COPY patches ./patches
+COPY drizzle ./drizzle
 RUN pnpm install --frozen-lockfile
 
 COPY --from=builder /app/dist ./dist
