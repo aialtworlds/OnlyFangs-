@@ -553,7 +553,7 @@ function TierCard({ tier }: { tier: typeof TIERS[0] }) {
         ))}
       </ul>
       <button
-        onClick={() => setLocation('/apply')}
+        onClick={() => setLocation('/signup?role=creator')}
         style={{
           display: 'block',
           width: '100%',
@@ -1444,7 +1444,7 @@ export default function Home() {
             Join thousands of creators and patrons who already dwell in the darkness.
           </p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button className="btn-gold" onClick={() => setLocation('/apply')}>
+            <button className="btn-gold" onClick={() => setLocation('/signup?role=creator')}>
               Apply as a Creator
             </button>
             <button className="btn-outline" onClick={() => setLocation('/discover')}>
