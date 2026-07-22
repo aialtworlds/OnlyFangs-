@@ -116,9 +116,65 @@ export default function CreatorDashboard() {
   const { data: tiers } = trpc.creator.tiers.useQuery();
   const { data: unread } = trpc.patron.unreadCounts.useQuery();
 
-  const displayName = profile?.alias || user.name || "Creator";
-  const handle = profile?.handle ? `@${profile.handle}` : "";
-  const tags = ["VAMPIRE AESTHETIC", "GOTHIC FASHION", "DARK ROMANCE", "LIFESTYLE"];
+  // Show loading while profile query is in flight
+  if (profileLoading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'oklch(0.04 0.008 285)' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '40px', height: '40px', border: '2px solid oklch(0.75 0.14 20 / 30%)', borderTop: '2px solid oklch(0.75 0.14 20)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+          <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>Summoning your dashboard...</div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  // If user has no creator profile yet, show onboarding prompt
+  if (!profile) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'oklch(0.04 0.008 285)', padding: '24px' }}>
+        <div style={{ textAlign: 'center', maxWidth: '460px' }}>
+          <div style={{ width: '100px', height: '100px', borderRadius: '50%', border: '1px solid oklch(0.38 0.14 20 / 30%)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: '42px', background: 'oklch(0.07 0.012 330)' }}>🦇</div>
+          <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '24px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.06em', marginBottom: '12px' }}>
+            Create Your Creator Profile
+          </h2>
+          <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '15px', color: 'oklch(0.55 0.03 60)', lineHeight: 1.7, marginBottom: '32px' }}>
+            You need a creator profile before you can access your dashboard. Choose your artist name, set up your page, and start sharing your darkness with the world.
+          </p>
+          <button
+            onClick={() => navigate('/apply')}
+            style={{
+              padding: '14px 32px',
+              background: 'oklch(0.38 0.14 20)',
+              border: 'none',
+              color: 'white',
+              fontFamily: "'Cinzel', serif",
+              fontSize: '11px',
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              borderRadius: '4px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              transition: 'background 0.2s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = 'oklch(0.48 0.16 20)'}
+            onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = 'oklch(0.38 0.14 20)'}
+          >
+            <Plus size={16} /> Become a Creator
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+
+  const displayName = profile.alias || user.name || "Creator";
+  const handle = profile.handle ? `@${profile.handle}` : "";
+  const tags = (profile.tags as string[] | null)?.length
+    ? (profile.tags as string[]).map(t => t.toUpperCase())
+    : ["CREATOR"];
 
   const navItems = [
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
