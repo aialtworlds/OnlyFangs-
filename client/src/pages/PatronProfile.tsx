@@ -340,10 +340,10 @@ export default function PatronProfile() {
                 }}
               >
                 {user?.role === 'admin'
-                  ? '👑 Admin Master'
+                  ? 'Admin Master'
                   : user?.role === 'creator'
-                  ? '🎭 Creator'
-                  : '✨ Patron'}
+                  ? 'Creator'
+                  : 'Patron'}
               </div>
             </div>
           </div>
