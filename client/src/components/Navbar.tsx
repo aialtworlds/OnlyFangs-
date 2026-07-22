@@ -311,9 +311,10 @@ export default function Navbar() {
                             fontStyle: 'italic',
                             fontSize: '11px',
                             color: 'oklch(0.45 0.02 60)',
+                            textTransform: 'capitalize',
                           }}
                         >
-                          Patron
+                          {user?.role || 'Patron'}
                         </div>
                       </div>
 
