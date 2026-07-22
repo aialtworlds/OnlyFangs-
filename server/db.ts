@@ -79,9 +79,16 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     if (user.role !== undefined) {
       values.role = user.role;
       updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId || user.email === "undeadavattar@gmail.com") {
-      values.role = 'admin';
-      updateSet.role = 'admin';
+    } else {
+      const adminEmails = ENV.adminEmails
+        ? ENV.adminEmails.split(",").map((email) => email.trim().toLowerCase())
+        : [];
+      const isEmailAdmin = !!(user.email && adminEmails.includes(user.email.toLowerCase()));
+
+      if (user.openId === ENV.ownerOpenId || isEmailAdmin) {
+        values.role = 'admin';
+        updateSet.role = 'admin';
+      }
     }
 
     if (!values.lastSignedIn) {
