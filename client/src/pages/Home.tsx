@@ -912,7 +912,7 @@ export default function Home() {
                   transition: 'all 0.3s',
                 }}
               >
-                Apply
+                Join
               </button>
             </div>
           </div>
@@ -1223,10 +1223,10 @@ export default function Home() {
                 For Creators
               </div>
               {[
-                { n: '01', title: 'Apply', desc: 'Submit your application. We review each application to ensure quality and authenticity of the dark aesthetic.' },
+                { n: '01', title: 'Create Profile', desc: 'Enter your alias, link, and choose a category. Your profile is active instantly.' },
                 { n: '02', title: 'Configure Your Tiers', desc: 'Define your access levels and prices. You control what each tier can see.' },
                 { n: '03', title: 'Publish Your Content', desc: 'Images, photos, books, music. All in one place, with your captive audience.' },
-                { n: '04', title: 'Receive Your Earnings', desc: 'Direct monthly payments. Full transparency. You keep 85% of each subscription.' },
+                { n: '04', title: 'Receive Your Earnings', desc: 'Direct monthly payments. Full transparency. You keep 90% of each subscription.' },
               ].map((step) => (
                 <div
                   key={step.n}
@@ -1392,7 +1392,7 @@ export default function Home() {
           </p>
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button className="btn-gold" onClick={() => setLocation('/signup?role=creator')}>
-              Apply as a Creator
+              Become a Creator
             </button>
             <button className="btn-outline" onClick={() => setLocation('/discover')}>
               Explore as a Patron

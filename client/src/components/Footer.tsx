@@ -7,7 +7,7 @@ export default function Footer() {
 
   const links = {
     Platform: ['Discover', 'Creators', 'Categories', 'Plans'],
-    Creators: ['Apply', 'How It Works', 'Fees & Payments', 'Resources'],
+    Creators: ['Become a Creator', 'How It Works', 'Fees & Payments', 'Resources'],
     Support: ['Help Center', 'Guidelines', 'Privacy', 'Terms'],
     Legal: ['Cookies', 'DMCA', 'Accessibility'],
   };

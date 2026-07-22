@@ -347,7 +347,7 @@ export async function createCreatorProfile(data: {
     handle: data.handle,
     bio: data.bio ?? null,
     category: data.category ?? null,
-    status: "pending",
+    status: "active",
   });
   // Creating a creators row alone isn't enough to unlock creator-only
   // endpoints — creatorProcedure gates access on users.role === 'creator',
