@@ -166,7 +166,7 @@ export async function createCheckoutSession(params: {
   // Se o criador tiver o Stripe Connect configurado, direcionar pagamento cobrando taxa
   if (creator.stripeConnectAccountId) {
     sessionParams.subscription_data = {
-      application_fee_percent: 10, // 10% de taxa da plataforma
+      application_fee_percent: 15, // 15% platform fee, per Sam's decision (creator keeps 85%)
       transfer_data: {
         destination: creator.stripeConnectAccountId,
       },
