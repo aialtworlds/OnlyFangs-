@@ -339,7 +339,11 @@ export default function PatronProfile() {
                   padding: '4px 12px',
                 }}
               >
-                ✨ Free Tier · Fledgling
+                {user?.role === 'admin'
+                  ? '👑 Admin Master'
+                  : user?.role === 'creator'
+                  ? '🎭 Creator'
+                  : '✨ Patron'}
               </div>
             </div>
           </div>
