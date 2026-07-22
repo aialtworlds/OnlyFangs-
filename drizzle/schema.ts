@@ -57,6 +57,7 @@ export const creators = mysqlTable("creators", {
   totalSubscribers: int("totalSubscribers").default(0).notNull(),
   totalReleases: int("totalReleases").default(0).notNull(),
   status: mysqlEnum("status", ["active", "pending", "suspended"]).default("pending").notNull(),
+  stripeConnectAccountId: varchar("stripeConnectAccountId", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -87,6 +87,44 @@ export async function getOrCreateStripePrice(tierId: number): Promise<string> {
 }
 
 // ── Create Checkout Session ────────────────────────────────────
+// ── Stripe Connect Express Onboarding ────────────────────────
+export async function createConnectedAccount(email: string, country: string = "US"): Promise<string> {
+  const stripe = getStripe();
+  const account = await stripe.accounts.create({
+    type: "express",
+    country,
+    email,
+    capabilities: {
+      card_payments: { requested: true },
+      transfers: { requested: true },
+    },
+  });
+  return account.id;
+}
+
+export async function createAccountOnboardingLink(accountId: string, origin: string): Promise<string> {
+  const stripe = getStripe();
+  const accountLink = await stripe.accountLinks.create({
+    account: accountId,
+    refresh_url: `${origin}/creator-admin?tab=payouts&refresh=1`,
+    return_url: `${origin}/creator-admin?tab=payouts&return=1`,
+    type: "account_onboarding",
+  });
+  return accountLink.url;
+}
+
+export async function createLoginLink(accountId: string): Promise<string> {
+  const stripe = getStripe();
+  const loginLink = await stripe.accounts.createLoginLink(accountId);
+  return loginLink.url;
+}
+
+export async function checkConnectedAccountActive(accountId: string): Promise<boolean> {
+  const stripe = getStripe();
+  const account = await stripe.accounts.retrieve(accountId);
+  return !!(account.charges_enabled && account.details_submitted);
+}
+
 export async function createCheckoutSession(params: {
   userId: number;
   userEmail: string;
@@ -99,7 +137,16 @@ export async function createCheckoutSession(params: {
   const customerId = await ensureStripeCustomer(params.userId, params.userEmail, params.userName);
   const priceId = await getOrCreateStripePrice(params.tierId);
 
-  const session = await stripe.checkout.sessions.create({
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [tier] = await db.select().from(tiers).where(eq(tiers.id, params.tierId)).limit(1);
+  if (!tier) throw new Error("Tier not found");
+
+  const [creator] = await db.select().from(creators).where(eq(creators.id, tier.creatorId)).limit(1);
+  if (!creator) throw new Error("Creator not found");
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
     customer: customerId,
     mode: "subscription",
     payment_method_types: ["card"],
@@ -114,7 +161,19 @@ export async function createCheckoutSession(params: {
       customer_email: params.userEmail,
       customer_name: params.userName || "",
     },
-  });
+  };
+
+  // Se o criador tiver o Stripe Connect configurado, direcionar pagamento cobrando taxa
+  if (creator.stripeConnectAccountId) {
+    sessionParams.subscription_data = {
+      application_fee_percent: 10, // 10% de taxa da plataforma
+      transfer_data: {
+        destination: creator.stripeConnectAccountId,
+      },
+    };
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionParams);
 
   if (!session.url) throw new Error("Failed to create checkout session URL");
   return session.url;

@@ -5,7 +5,15 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router, creatorProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { createCheckoutSession, createBillingPortalSession, cancelSubscription } from "./stripe";
+import {
+  createCheckoutSession,
+  createBillingPortalSession,
+  cancelSubscription,
+  createConnectedAccount,
+  createAccountOnboardingLink,
+  createLoginLink,
+  checkConnectedAccountActive,
+} from "./stripe";
 import {
   getPatronStats,
   getPatronSubscriptions,
@@ -423,6 +431,56 @@ export const appRouter = router({
     categories: publicProcedure
       .query(async () => {
         return getCategories();
+      }),
+
+    stripeConnectSetup: protectedProcedure
+      .input(z.object({ origin: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
+
+        let accountId = creator.stripeConnectAccountId;
+        if (!accountId) {
+          accountId = await createConnectedAccount(creator.email || ctx.user.email || "", "US");
+          await updateCreatorProfile(creator.id, { stripeConnectAccountId: accountId });
+        }
+
+        const url = await createAccountOnboardingLink(accountId, input.origin);
+        return { url };
+      }),
+
+    getStripeConnectStatus: protectedProcedure
+      .query(async ({ ctx }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
+
+        if (!creator.stripeConnectAccountId) {
+          return { connected: false, active: false };
+        }
+
+        try {
+          const active = await checkConnectedAccountActive(creator.stripeConnectAccountId);
+          return {
+            connected: true,
+            active,
+            accountId: creator.stripeConnectAccountId,
+          };
+        } catch (error) {
+          console.error("Error retrieving Stripe account:", error);
+          return { connected: true, active: false, accountId: creator.stripeConnectAccountId };
+        }
+      }),
+
+    getStripeLoginLink: protectedProcedure
+      .mutation(async ({ ctx }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
+        if (!creator.stripeConnectAccountId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "No Stripe Connect account found" });
+        }
+
+        const url = await createLoginLink(creator.stripeConnectAccountId);
+        return { url };
       }),
   }),
 

@@ -11,6 +11,7 @@ import { AnalyticsChart } from "@/components/AnalyticsChart";
 import { CreatorSettingsForm } from "@/components/CreatorSettingsForm";
 import { ContentUploadForm } from "@/components/ContentUploadForm";
 import { AdminCreatorManagement } from "@/components/AdminCreatorManagement";
+import { PayoutsTab } from "@/components/PayoutsTab";
 import { toast } from "sonner";
 import { Plus, LogOut } from "lucide-react";
 import { getLoginUrl } from "@/const";
@@ -158,11 +159,12 @@ export default function CreatorAdmin() {
       {/* Main Content */}
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="content" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className={`grid w-full ${user?.role === 'admin' ? 'grid-cols-7' : 'grid-cols-6'}`}>
             <TabsTrigger value="content">Content</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="tiers">Tiers</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+            <TabsTrigger value="payouts">Payouts</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
             {user?.role === 'admin' && (
               <TabsTrigger value="creators">Creators</TabsTrigger>
@@ -246,6 +248,11 @@ export default function CreatorAdmin() {
               subscriptions={subscriptions.data || []}
               isLoading={subscriptions.isLoading}
             />
+          </TabsContent>
+
+          {/* Payouts Tab */}
+          <TabsContent value="payouts" className="space-y-6">
+            <PayoutsTab />
           </TabsContent>
 
           {/* Settings Tab */}

@@ -372,6 +372,7 @@ export async function updateCreatorProfile(
     socialTiktok: string;
     socialTwitter: string;
     socialWebsite: string;
+    stripeConnectAccountId: string;
   }>
 ) {
   const db = await getDb();
