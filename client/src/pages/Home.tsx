@@ -1226,7 +1226,7 @@ export default function Home() {
                 { n: '01', title: 'Apply', desc: 'Submit your application. We review each application to ensure quality and authenticity of the dark aesthetic.' },
                 { n: '02', title: 'Configure Your Tiers', desc: 'Define your access levels and prices. You control what each tier can see.' },
                 { n: '03', title: 'Publish Your Content', desc: 'Images, photos, books, music. All in one place, with your captive audience.' },
-                { n: '04', title: 'Receive Your Earnings', desc: 'Direct monthly payments. Full transparency. You keep 85% of each subscription.' },
+                { n: '04', title: 'Receive Your Earnings', desc: 'Direct monthly payments. Full transparency. You keep 90% of each subscription.' },
               ].map((step) => (
                 <div
                   key={step.n}
