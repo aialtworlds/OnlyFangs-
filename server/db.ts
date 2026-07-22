@@ -1710,6 +1710,28 @@ export async function flagContent(contentId: number, userId: number, reason: str
         reason: `Flagged as ${reason}: ${description || ""}`,
       });
 
+    // Notify all admins about the new flag — same pattern already used
+    // when content is submitted for moderation review.
+    try {
+      const admins = await db
+        .select()
+        .from(users)
+        .where(eq(users.role, "admin"));
+
+      for (const admin of admins) {
+        await db.insert(notifications).values({
+          userId: admin.id,
+          type: "moderation",
+          title: "Content Flagged",
+          message: `Content was flagged as "${reason}"${description ? `: ${description}` : ""}`,
+          read: false,
+        });
+      }
+    } catch (notifyError) {
+      console.error("[Moderation] Error notifying admins of flag:", notifyError);
+      // Don't fail the flag submission if notifying admins fails
+    }
+
     return { success: true, flagId: (result as any).insertId || 0 };
   } catch (error) {
     console.error("[Moderation] Error flagging content:", error);

@@ -7,6 +7,7 @@ import { Loader2, Lock, Image, Music, Video, FileText, ChevronLeft } from "lucid
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { Link } from "wouter";
+import { ReportContentButton } from "@/components/ReportContentButton";
 
 export default function CreatorContent() {
   const [, params] = useRoute("/creator/:id/content");
@@ -167,6 +168,11 @@ export default function CreatorContent() {
                         <span className="capitalize">{item.type}</span>
                       </div>
                       <span>{new Date(item.createdAt).toLocaleDateString("pt-BR")}</span>
+                    </div>
+
+                    {/* Report — separate click target from the card's own onClick */}
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <ReportContentButton contentId={item.id} />
                     </div>
 
                     {/* CTA */}
