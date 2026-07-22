@@ -327,23 +327,54 @@ export default function PatronProfile() {
                 Patron · Member since {memberSince}
               </div>
 
-              <div
-                style={{
-                  display: 'inline-block',
-                  fontFamily: "'Cinzel', serif",
-                  fontSize: '8px',
-                  letterSpacing: '0.25em',
-                  textTransform: 'uppercase',
-                  color: 'oklch(0.72 0.09 75)',
-                  border: '1px solid oklch(0.72 0.09 75 / 30%)',
-                  padding: '4px 12px',
-                }}
-              >
-                {user?.role === 'admin'
-                  ? 'Admin Master'
-                  : user?.role === 'creator'
-                  ? 'Creator'
-                  : 'Patron'}
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
+                <div
+                  style={{
+                    display: 'inline-block',
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: '8px',
+                    letterSpacing: '0.25em',
+                    textTransform: 'uppercase',
+                    color: 'oklch(0.72 0.09 75)',
+                    border: '1px solid oklch(0.72 0.09 75 / 30%)',
+                    padding: '4px 12px',
+                  }}
+                >
+                  {user?.role === 'admin'
+                    ? 'Admin Master'
+                    : user?.role === 'creator'
+                    ? 'Creator'
+                    : 'Patron'}
+                </div>
+
+                {(user?.role === 'creator' || user?.role === 'admin') && (
+                  <button
+                    onClick={() => setLocation('/creator-dashboard')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      fontFamily: "'Cinzel', serif",
+                      fontSize: '8px',
+                      letterSpacing: '0.15em',
+                      textTransform: 'uppercase',
+                      color: 'white',
+                      background: 'oklch(0.38 0.14 20)',
+                      border: 'none',
+                      padding: '5px 12px',
+                      cursor: 'pointer',
+                      borderRadius: '2px',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = 'oklch(0.48 0.16 20)';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.background = 'oklch(0.38 0.14 20)';
+                    }}
+                  >
+                    Go to Dashboard
+                  </button>
+                )}
               </div>
             </div>
           </div>

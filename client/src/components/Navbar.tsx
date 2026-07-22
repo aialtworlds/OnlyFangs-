@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
-import { Search, Menu, X, LogOut, User, ChevronDown, Bell } from 'lucide-react';
+import { Search, Menu, X, LogOut, User, ChevronDown, Bell, LayoutDashboard, Settings, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
@@ -303,16 +303,17 @@ export default function Navbar() {
                       {[
                         { icon: <User size={13} />, label: 'My Profile', action: () => setLocation('/profile') },
                         ...(user?.role === 'creator' || user?.role === 'admin' ? [
-                          { icon: <User size={13} />, label: 'Creator Admin', action: () => setLocation('/creator-admin') },
+                          { icon: <LayoutDashboard size={13} />, label: 'Creator Dashboard', action: () => setLocation('/creator-dashboard') },
+                          { icon: <Settings size={13} />, label: 'Creator Admin', action: () => setLocation('/creator-admin') },
                         ] : []),
                         ...(user?.role === 'admin' ? [
                           {
-                            icon: <User size={13} />,
+                            icon: <ShieldAlert size={13} />,
                             label: pendingModerationCount > 0 ? `Moderation (${pendingModerationCount})` : 'Moderation',
                             action: () => setLocation('/moderation'),
                           },
                         ] : []),
-                        { icon: <User size={13} />, label: 'Notifications', action: () => setLocation('/notifications') },
+                        { icon: <Bell size={13} />, label: 'Notifications', action: () => setLocation('/notifications') },
                       ].map((item) => (
                         <button
                           key={item.label}
@@ -574,27 +575,49 @@ export default function Navbar() {
               >
                 My Profile
               </button>
-              {(user?.role === 'creator' || user?.role === 'admin') && (
-                <button
-                  onClick={() => { setLocation('/creator-admin'); setMobileOpen(false); }}
-                  style={{
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: '22px',
-                    letterSpacing: '0.1em',
-                    textTransform: 'uppercase',
-                    color: 'oklch(0.93 0.02 80)',
-                    background: 'none',
-                    border: 'none',
-                    borderBottom: '1px solid oklch(1 0 0 / 6%)',
-                    cursor: 'pointer',
-                    padding: '20px 0',
-                    textAlign: 'left',
-                    width: '100%',
-                    transition: 'color 0.2s',
-                  }}
-                >
-                  Creator Admin
-                </button>
+               {(user?.role === 'creator' || user?.role === 'admin') && (
+                <>
+                  <button
+                    onClick={() => { setLocation('/creator-dashboard'); setMobileOpen(false); }}
+                    style={{
+                      fontFamily: "'Cinzel', serif",
+                      fontSize: '22px',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: 'oklch(0.93 0.02 80)',
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: '1px solid oklch(1 0 0 / 6%)',
+                      cursor: 'pointer',
+                      padding: '20px 0',
+                      textAlign: 'left',
+                      width: '100%',
+                      transition: 'color 0.2s',
+                    }}
+                  >
+                    Creator Dashboard
+                  </button>
+                  <button
+                    onClick={() => { setLocation('/creator-admin'); setMobileOpen(false); }}
+                    style={{
+                      fontFamily: "'Cinzel', serif",
+                      fontSize: '22px',
+                      letterSpacing: '0.1em',
+                      textTransform: 'uppercase',
+                      color: 'oklch(0.93 0.02 80)',
+                      background: 'none',
+                      border: 'none',
+                      borderBottom: '1px solid oklch(1 0 0 / 6%)',
+                      cursor: 'pointer',
+                      padding: '20px 0',
+                      textAlign: 'left',
+                      width: '100%',
+                      transition: 'color 0.2s',
+                    }}
+                  >
+                    Creator Admin
+                  </button>
+                </>
               )}
               {user?.role === 'admin' && (
                 <button
