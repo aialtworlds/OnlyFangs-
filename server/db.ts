@@ -169,6 +169,7 @@ export async function getPatronSubscriptions(userId: number) {
       creatorCategory: creators.category,
       creatorAvatarUrl: creators.avatarUrl,
       creatorVerified: creators.verified,
+      tierId: subscriptions.tierId,
     })
     .from(subscriptions)
     .innerJoin(creators, eq(subscriptions.creatorId, creators.id))

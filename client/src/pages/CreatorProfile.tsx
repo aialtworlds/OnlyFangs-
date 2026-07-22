@@ -486,9 +486,96 @@ function TierSidebar({ creatorId: mockCreatorId }: { creatorId: string }) {
 export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
   const [, setLocation] = useLocation();
   const { playTrack } = useMusicPlayer();
-  const creator = getCreatorById(creatorId) || CREATORS[0];
-  const content = getContentByCreatorId(creator.id);
   const [activeTab, setActiveTab] = useState<'all' | 'image' | 'photo' | 'music' | 'book'>('all');
+
+  const { isAuthenticated, user } = useAuth();
+
+  // Try to find the real creator by handle
+  const { data: dbCreator, isLoading: dbCreatorLoading } = trpc.public.creatorByHandle.useQuery(
+    { handle: creatorId },
+    { retry: false }
+  );
+
+  // Fetch real content if database creator exists
+  const { data: dbContent, isLoading: dbContentLoading } = trpc.public.creatorContent.useQuery(
+    { creatorId: dbCreator?.id ?? 0 },
+    { enabled: !!dbCreator?.id, retry: false }
+  );
+
+  // Fetch real tiers if database creator exists
+  const { data: realTiers } = trpc.public.creatorTiers.useQuery(
+    { creatorId: dbCreator?.id ?? 0 },
+    { enabled: !!dbCreator?.id, retry: false }
+  );
+
+  // Fetch user subscriptions to verify access
+  const { data: userSubscriptions } = trpc.patron.subscriptions.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+
+  if (dbCreatorLoading || dbContentLoading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'oklch(0.04 0.008 285)' }}>
+        <Loader2 size={32} className="animate-spin" style={{ color: 'oklch(0.72 0.09 75)' }} />
+      </div>
+    );
+  }
+
+  // Resolve creator object (either DB or mock fallback)
+  const creator = dbCreator
+    ? {
+        id: dbCreator.id.toString(),
+        name: dbCreator.alias,
+        alias: dbCreator.alias,
+        category: dbCreator.category || 'Creator',
+        bio: dbCreator.bio || '',
+        avatar: dbCreator.avatarUrl || '/images/default-avatar.jpg',
+        coverImage: dbCreator.coverUrl || '/images/default-cover.jpg',
+        verified: dbCreator.verified,
+        subscribers: dbCreator.totalSubscribers || 0,
+        totalPosts: dbCreator.totalReleases || 0,
+        joinedDate: new Date(dbCreator.createdAt).toLocaleDateString(),
+        contentTypes: (dbCreator.contentTypes as string[]) || ['image', 'photo', 'music', 'book'],
+        tags: (dbCreator.tags as string[]) || [],
+        isDemo: false,
+      }
+    : getCreatorById(creatorId) || CREATORS[0];
+
+  // Determine active subscription
+  const hasActiveSub = userSubscriptions?.some(
+    (sub) => sub.creatorId === dbCreator?.id && sub.status === 'active'
+  );
+
+  // Resolve content (either DB or mock fallback)
+  const content: ContentItem[] = dbCreator
+    ? (dbContent || []).map((item) => {
+        const associatedTier = realTiers?.find(t => t.id === item.tierId);
+        const tierSlug = associatedTier?.slug || 'free';
+        const isFree = !item.tierId || parseFloat(associatedTier?.price || '0') === 0;
+
+        const isSubscribedToThisTier = userSubscriptions?.some(
+          (sub) => sub.creatorId === dbCreator?.id && sub.tierId === item.tierId && sub.status === 'active'
+        );
+        const locked = !isFree && !isSubscribedToThisTier && user?.role !== 'admin';
+
+        return {
+          id: item.id.toString(),
+          creatorId: creatorId,
+          type: (item.type === 'post' ? 'image' : item.type) as any,
+          title: item.title,
+          description: item.description || '',
+          thumbnail: item.thumbnailUrl || '/images/default-thumbnail.jpg',
+          locked: locked,
+          tier: tierSlug as any,
+          likes: 0,
+          comments: 0,
+          publishedAt: new Date(item.createdAt).toISOString().split('T')[0],
+          duration: item.duration || undefined,
+          pages: undefined,
+        };
+      })
+    : getContentByCreatorId(creator.id);
 
   const handlePlayMusic = (item: ContentItem) => {
     playTrack({
@@ -708,7 +795,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
               {creator.bio}
             </p>
             <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
-              {creator.tags.map(tag => (
+              {creator.tags.map((tag: string) => (
                 <span
                   key={tag}
                   style={{

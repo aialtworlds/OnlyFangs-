@@ -85,8 +85,8 @@ import {
   approveAppeal,
   denyAppeal,
 } from "./db";
-import { conversations, messages, creators, notifications } from "../drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { conversations, messages, creators, notifications, content } from "../drizzle/schema";
+import { eq, desc, and } from "drizzle-orm";
 import { storagePut } from "./storage";
 
 export const appRouter = router({
@@ -152,6 +152,22 @@ export const appRouter = router({
       .input(z.object({ creatorId: z.number() }))
       .query(async ({ input }) => {
         return getPublicCreatorTiers(input.creatorId);
+      }),
+    creatorContent: publicProcedure
+      .input(z.object({ creatorId: z.number() }))
+      .query(async ({ input }) => {
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        return db
+          .select()
+          .from(content)
+          .where(
+            and(
+              eq(content.creatorId, input.creatorId),
+              eq(content.moderationStatus, 'approved')
+            )
+          )
+          .orderBy(desc(content.createdAt));
       }),
   }),
 
