@@ -76,32 +76,8 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Sticky wrapper — announcement bar + nav together */}
+      {/* Sticky wrapper — nav */}
       <div className="sticky top-0 z-[1000] w-full">
-        {/* Announcement Bar */}
-        <div
-          style={{
-            background: 'oklch(0.28 0.1 20)',
-            padding: '8px 16px',
-            textAlign: 'center',
-            fontFamily: "'Cinzel', serif",
-            fontSize: '10px',
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'oklch(0.93 0.02 80)',
-            lineHeight: 1.3,
-          }}
-        >
-          <span className="sm:hidden">
-            <span style={{ color: 'oklch(0.82 0.1 78)' }}>✦ Founders</span>
-            {' — Applications open ✦'}
-          </span>
-          <span className="hidden sm:inline">
-            <span style={{ color: 'oklch(0.82 0.1 78)' }}>✦ Founders</span>
-            {' — Applications open for founding creators ✦'}
-          </span>
-        </div>
-
         {/* Main Nav */}
         <nav
           style={{
