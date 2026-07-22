@@ -39,6 +39,8 @@ const tierLabels: Record<string, string> = {
 function ContentCard({ item, onPlayMusic, creatorAlias }: { item: ContentItem; onPlayMusic: (item: ContentItem) => void; creatorAlias: string }) {
   const [hovered, setHovered] = useState(false);
   const [liked, setLiked] = useState(false);
+  const { user } = useAuth();
+  const isLocked = item.locked && user?.role !== 'admin';
 
   return (
     <div
@@ -56,11 +58,11 @@ function ContentCard({ item, onPlayMusic, creatorAlias }: { item: ContentItem; o
             objectFit: 'cover',
             transition: 'transform 0.6s ease',
             transform: hovered ? 'scale(1.05)' : 'scale(1)',
-            filter: item.locked ? 'brightness(0.3) blur(2px)' : 'brightness(0.85)',
+            filter: isLocked ? 'brightness(0.3) blur(2px)' : 'brightness(0.85)',
           }}
         />
 
-        {item.locked && (
+        {isLocked && (
           <div
             style={{
               position: 'absolute',
@@ -104,7 +106,7 @@ function ContentCard({ item, onPlayMusic, creatorAlias }: { item: ContentItem; o
           </div>
         )}
 
-        {item.type === 'music' && !item.locked && (
+        {item.type === 'music' && !isLocked && (
           <div
             style={{
               position: 'absolute',

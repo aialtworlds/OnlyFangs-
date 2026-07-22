@@ -750,6 +750,13 @@ export async function canAccessContent(
 ): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
+
+  // Admin bypass (God Mode / Night Royalty privilege)
+  const user = await getUserById(patronId);
+  if (user && user.role === 'admin') {
+    return true;
+  }
+
   const item = await getContentById(contentId);
   if (!item) return false;
 
