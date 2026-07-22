@@ -36,7 +36,7 @@ const tierLabels: Record<string, string> = {
   'night-royalty': 'Night Royalty',
 };
 
-function ContentCard({ item, onPlayMusic }: { item: ContentItem; onPlayMusic: (item: ContentItem) => void }) {
+function ContentCard({ item, onPlayMusic, creatorAlias }: { item: ContentItem; onPlayMusic: (item: ContentItem) => void; creatorAlias: string }) {
   const [hovered, setHovered] = useState(false);
   const [liked, setLiked] = useState(false);
 
@@ -215,7 +215,29 @@ function ContentCard({ item, onPlayMusic }: { item: ContentItem; onPlayMusic: (i
             </button>
           </div>
           <button
-            onClick={() => toast('Link copied to clipboard')}
+            onClick={async () => {
+              const postUrl = `${window.location.origin}/creator/${item.creatorId}#post-${item.id}`;
+              if (navigator.share) {
+                try {
+                  await navigator.share({
+                    title: item.title,
+                    text: item.description || `Confira este post de ${creatorAlias} no OnlyFangs`,
+                    url: postUrl,
+                  });
+                } catch (err) {
+                  if ((err as Error).name !== 'AbortError') {
+                    toast.error('Erro ao compartilhar');
+                  }
+                }
+              } else {
+                try {
+                  await navigator.clipboard.writeText(postUrl);
+                  toast.success('Link do post copiado!');
+                } catch {
+                  toast.error('Erro ao copiar link');
+                }
+              }
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -611,8 +633,54 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                   )}
                 </div>
               </h1>
-              <div style={{ marginTop: '12px' }}>
+              <div style={{ marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <FollowButton handle={creatorId} />
+                <button
+                  onClick={async () => {
+                    const profileUrl = `${window.location.origin}/creator/${creatorId}`;
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: creator.alias,
+                          text: creator.bio || `Confira a página de ${creator.alias} no OnlyFangs!`,
+                          url: profileUrl,
+                        });
+                      } catch (err) {
+                        if ((err as Error).name !== 'AbortError') {
+                          toast.error('Erro ao compartilhar');
+                        }
+                      }
+                    } else {
+                      try {
+                        await navigator.clipboard.writeText(profileUrl);
+                        toast.success('Link do perfil copiado!');
+                      } catch {
+                        toast.error('Erro ao copiar link');
+                      }
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '8px',
+                    background: 'oklch(0.085 0.015 330 / 90%)',
+                    border: '1px solid oklch(0.72 0.09 75 / 30%)',
+                    color: 'oklch(0.72 0.09 75)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s',
+                    borderRadius: '4px',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = 'oklch(0.72 0.09 75 / 10%)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLElement).style.background = 'oklch(0.085 0.015 330 / 90%)';
+                  }}
+                  title="Compartilhar Perfil"
+                >
+                  <Share2 size={14} />
+                </button>
               </div>
             </div>
             <div
@@ -770,7 +838,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
               }}
             >
               {filteredContent.map((item: any) => (
-                <ContentCard key={item.id} item={item} onPlayMusic={handlePlayMusic} />
+                <ContentCard key={item.id} item={item} onPlayMusic={handlePlayMusic} creatorAlias={creator.alias} />
               ))}
               {filteredContent.length === 0 && (
                 <div
