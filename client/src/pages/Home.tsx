@@ -623,17 +623,6 @@ export default function Home() {
     ? CONTENT_ITEMS
     : CONTENT_ITEMS.filter((c) => c.type === activeCategory);
 
-  const marqueeItems = [
-    '🖼️ Exclusive Images',
-    '📷 Dark Photography',
-    '🎵 Dark Music',
-    '📖 Gothic Literature',
-    '🦇 Verified Creators',
-    '🩸 Premium Content',
-    '👑 Lifetime Access',
-    '✦ Only Fangs',
-  ];
-
   return (
     <div style={{ background: 'oklch(0.04 0.008 285)', minHeight: '100vh' }}>
 
@@ -954,48 +943,6 @@ export default function Home() {
           />
         </div>
       </section>
-
-      {/* ── MARQUEE ──────────────────────────────────────────── */}
-      <div
-        style={{
-          overflow: 'hidden',
-          background: 'oklch(0.06 0.01 285)',
-          borderTop: '1px solid oklch(0.72 0.09 75 / 6%)',
-          borderBottom: '1px solid oklch(0.72 0.09 75 / 6%)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            animation: 'marquee 40s linear infinite',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {[...marqueeItems, ...marqueeItems].map((item, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '10px',
-                fontFamily: "'Cinzel', serif",
-                fontSize: '10px',
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-                color: 'oklch(0.25 0.02 340)',
-                padding: '16px 32px',
-                borderRight: '1px solid oklch(0.72 0.09 75 / 6%)',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <div style={{ width: '3px', height: '3px', background: 'oklch(0.72 0.09 75)', borderRadius: '50%', flexShrink: 0 }} />
-              {item}
-            </div>
-          ))}
-        </div>
-      </div>
-
-
 
       {/* ── FEATURED CREATORS ────────────────────────────────── */}
       <section
