@@ -21,6 +21,11 @@ export default function Navbar() {
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const { user, isAuthenticated, logout } = useAuth();
+  const moderationStats = trpc.moderation.getStats.useQuery(undefined, {
+    enabled: user?.role === 'admin',
+    refetchInterval: 60000,
+  });
+  const pendingModerationCount = (moderationStats.data?.pending ?? 0);
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
       logout();
@@ -71,32 +76,8 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Sticky wrapper — announcement bar + nav together */}
+      {/* Sticky wrapper — nav */}
       <div className="sticky top-0 z-[1000] w-full">
-        {/* Announcement Bar */}
-        <div
-          style={{
-            background: 'oklch(0.28 0.1 20)',
-            padding: '8px 16px',
-            textAlign: 'center',
-            fontFamily: "'Cinzel', serif",
-            fontSize: '10px',
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'oklch(0.93 0.02 80)',
-            lineHeight: 1.3,
-          }}
-        >
-          <span className="sm:hidden">
-            <span style={{ color: 'oklch(0.82 0.1 78)' }}>✦ Founders</span>
-            {' — Applications open ✦'}
-          </span>
-          <span className="hidden sm:inline">
-            <span style={{ color: 'oklch(0.82 0.1 78)' }}>✦ Founders</span>
-            {' — Applications open for founding creators ✦'}
-          </span>
-        </div>
-
         {/* Main Nav */}
         <nav
           style={{
@@ -323,6 +304,13 @@ export default function Navbar() {
                         { icon: <User size={13} />, label: 'My Profile', action: () => setLocation('/profile') },
                         ...(user?.role === 'creator' || user?.role === 'admin' ? [
                           { icon: <User size={13} />, label: 'Creator Admin', action: () => setLocation('/creator-admin') },
+                        ] : []),
+                        ...(user?.role === 'admin' ? [
+                          {
+                            icon: <User size={13} />,
+                            label: pendingModerationCount > 0 ? `Moderation (${pendingModerationCount})` : 'Moderation',
+                            action: () => setLocation('/moderation'),
+                          },
                         ] : []),
                         { icon: <User size={13} />, label: 'Notifications', action: () => setLocation('/notifications') },
                       ].map((item) => (
@@ -606,6 +594,28 @@ export default function Navbar() {
                   }}
                 >
                   Creator Admin
+                </button>
+              )}
+              {user?.role === 'admin' && (
+                <button
+                  onClick={() => { setLocation('/moderation'); setMobileOpen(false); }}
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: '22px',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    color: 'oklch(0.93 0.02 80)',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: '1px solid oklch(1 0 0 / 6%)',
+                    cursor: 'pointer',
+                    padding: '20px 0',
+                    textAlign: 'left',
+                    width: '100%',
+                    transition: 'color 0.2s',
+                  }}
+                >
+                  {pendingModerationCount > 0 ? `Moderation (${pendingModerationCount})` : 'Moderation'}
                 </button>
               )}
               <button

@@ -103,7 +103,7 @@ export default function CreatorAdmin() {
               You need to be a creator to manage tiers and subscriptions.
             </p>
             <Button asChild className="w-full">
-              <a href="/apply">Become a Creator</a>
+              <a href="/complete-signup?role=creator">Become a Creator</a>
             </Button>
           </CardContent>
         </Card>
