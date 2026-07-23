@@ -444,6 +444,7 @@ export async function updateUserProfile(
   data: Partial<{
     displayName: string;
     avatarUrl: string;
+    coverUrl: string;
   }>
 ) {
   const db = await getDb();

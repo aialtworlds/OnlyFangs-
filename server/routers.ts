@@ -139,6 +139,7 @@ export const appRouter = router({
       .input(z.object({
         displayName: z.string().min(1).max(100).optional(),
         avatarUrl: z.string().url().optional(),
+        coverUrl: z.string().url().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await updateUserProfile(ctx.user.id, input);
@@ -190,6 +191,8 @@ export const appRouter = router({
         const ext = input.mimeType.split("/")[1];
         const fileKey = `covers/user-${ctx.user.id}-${Date.now()}.${ext}`;
         const { url } = await storagePut(fileKey, buffer, input.mimeType);
+
+        await updateUserProfile(ctx.user.id, { coverUrl: url });
 
         const creator = await getCreatorByUserId(ctx.user.id);
         if (creator) {

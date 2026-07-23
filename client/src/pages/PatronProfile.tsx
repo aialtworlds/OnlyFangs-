@@ -422,6 +422,7 @@ export default function PatronProfile() {
   const displayName = user?.displayName || user?.name || 'Patron';
   const avatarLetter = displayName.charAt(0).toUpperCase();
   const avatarUrl = user?.avatarUrl;
+  const coverUrl = (user as any)?.coverUrl;
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : '—';
@@ -668,15 +669,15 @@ export default function PatronProfile() {
                 overflow: "hidden",
                 borderRadius: '8px',
                 marginBottom: '24px',
-                background: (isCreatorOrAdmin && creatorProfile?.coverUrl)
-                  ? `url(${creatorProfile.coverUrl}) center/cover no-repeat`
+                background: coverUrl
+                  ? `url(${coverUrl}) center/cover no-repeat`
                   : "linear-gradient(135deg, oklch(0.1 0.05 20) 0%, oklch(0.05 0.01 285) 60%, oklch(0.14 0.07 20) 100%)"
               }}
             >
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, oklch(0.04 0.008 285 / 60%) 100%)" }} />
               
               {/* Banner Upload Trigger */}
-              {isCreatorOrAdmin && (
+              {(true) && (
                 <label
                   style={{
                     position: 'absolute',

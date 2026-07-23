@@ -22,6 +22,7 @@ export const users = mysqlTable("users", {
   role: mysqlEnum("role", ["user", "creator", "admin", "sub_admin", "moderator", "admin_master"]).default("user").notNull(),
   displayName: varchar("displayName", { length: 100 }),
   avatarUrl: text("avatarUrl"),
+  coverUrl: text("coverUrl"),
   loyaltyPoints: int("loyaltyPoints").default(0).notNull(),
   stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
