@@ -382,6 +382,7 @@ export default function PatronProfile() {
   const uploadCoverMutation = trpc.patron.uploadCover.useMutation({
     onSuccess: () => {
       toast.success('Cover banner uploaded successfully');
+      utils.auth.me.invalidate();
       if (isCreatorOrAdmin) {
         utils.creator.myProfile.invalidate();
       }
