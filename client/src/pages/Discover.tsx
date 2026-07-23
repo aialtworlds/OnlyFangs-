@@ -192,8 +192,8 @@ function ContentCard({ content, creator, onPlayMusic }: { content: any; creator:
           </div>
         )}
 
-        {/* Music Play Overlay */}
-        {content.type === 'music' && onPlayMusic && (
+        {/* Music Play Overlay (Only for Free tier) */}
+        {content.type === 'music' && !content.tierId && onPlayMusic && (
           <div
             style={{
               position: 'absolute',
@@ -218,6 +218,38 @@ function ContentCard({ content, creator, onPlayMusic }: { content: any; creator:
             }}
           >
             <Play size={16} fill="oklch(0.04 0.008 285)" style={{ color: 'oklch(0.04 0.008 285)', marginLeft: '2px' }} />
+          </div>
+        )}
+
+        {/* Lock Overlay for Premium content */}
+        {content.tierId && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: 'oklch(0.2 0.03 20 / 80%)',
+              border: '1px solid oklch(0.72 0.09 75 / 30%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              opacity: hovered ? 1 : 0,
+              transition: 'opacity 0.3s',
+              zIndex: 10,
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              toast('Subscription required', {
+                description: `This release is exclusive to subscribers of ${creator?.alias || 'the creator'}.`
+              });
+            }}
+          >
+            <Lock size={16} style={{ color: 'oklch(0.72 0.09 75)' }} />
           </div>
         )}
       </div>
