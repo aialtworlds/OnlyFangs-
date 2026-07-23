@@ -91,7 +91,7 @@ import {
   approveAppeal,
   denyAppeal,
 } from "./db";
-import { conversations, messages, creators, notifications, content } from "../drizzle/schema";
+import { conversations, messages, creators, notifications, content, tiers } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { storagePut } from "./storage";
 
@@ -226,10 +226,10 @@ export const appRouter = router({
       }),
     creatorContent: publicProcedure
       .input(z.object({ creatorId: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ ctx, input }) => {
         const db = await getDb();
         if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
-        return db
+        const items = await db
           .select()
           .from(content)
           .where(
@@ -239,6 +239,34 @@ export const appRouter = router({
             )
           )
           .orderBy(desc(content.createdAt));
+
+        // SECURITY: this is a public, unauthenticated-friendly endpoint (it
+        // powers the public creator profile page, including for anonymous
+        // visitors browsing before signing up). The frontend shows a lock
+        // icon over content the visitor hasn't unlocked, but that's purely
+        // cosmetic — if we returned fileUrl/fileKey (the real, direct S3
+        // link) for every item regardless of access, anyone could read it
+        // straight out of the network response and bypass payment entirely.
+        // So: only include those two fields when the requester can actually
+        // access the item (reusing the same canAccessContent check used
+        // elsewhere, which already handles free tiers, active subscriptions,
+        // and the admin bypass) — otherwise strip them before sending.
+        const results = await Promise.all(
+          items.map(async (item) => {
+            const allowed = ctx.user
+              ? await canAccessContent(ctx.user.id, item.id)
+              : parseFloat(
+                  (await db.select().from(tiers).where(eq(tiers.id, item.tierId)).limit(1))[0]?.price ?? '1'
+                ) === 0;
+
+            if (allowed) return item;
+
+            const { fileUrl: _fileUrl, fileKey: _fileKey, ...safeItem } = item;
+            return safeItem;
+          })
+        );
+
+        return results;
       }),
   }),
 
