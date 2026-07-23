@@ -254,6 +254,48 @@ function FeedPostCard({ item }: { item: any }) {
           <MessageCircle size={14} fill={showComments ? 'oklch(0.72 0.09 75 / 20%)' : 'none'} />
           <span>Whispers</span>
         </button>
+
+        <button
+          onClick={async () => {
+            const postUrl = `${window.location.origin}/creator/${item.creatorHandle}#post-${item.id}`;
+            if (navigator.share) {
+              try {
+                await navigator.share({
+                  title: item.title,
+                  text: item.description || `Confira este post de ${item.creatorAlias} no OnlyFangs`,
+                  url: postUrl,
+                });
+              } catch (err) {
+                if ((err as Error).name !== 'AbortError') {
+                  toast.error('Erro ao compartilhar');
+                }
+              }
+            } else {
+              try {
+                await navigator.clipboard.writeText(postUrl);
+                toast.success('Link do post copiado!');
+              } catch {
+                toast.error('Erro ao copiar link');
+              }
+            }
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'none',
+            border: 'none',
+            color: 'oklch(0.45 0.02 60)',
+            cursor: 'pointer',
+            fontFamily: "'Cinzel', serif",
+            fontSize: '11px',
+            transition: 'color 0.2s',
+            marginLeft: 'auto',
+          }}
+        >
+          <Share2 size={14} />
+          <span>Share</span>
+        </button>
       </div>
 
       {/* Expandable Comments Section */}
