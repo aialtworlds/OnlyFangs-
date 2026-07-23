@@ -19,6 +19,7 @@ import { TierForm } from '@/components/TierForm';
 import { CollectionForm } from '@/components/CollectionForm';
 import { CommentsSection } from '@/components/CommentsSection';
 import { CreatorSettingsForm } from '@/components/CreatorSettingsForm';
+import { ImageCropperModal } from '@/components/ImageCropperModal';
 
 function StatBox({ value, label }: { value: number | string; label: string }) {
   return (
@@ -321,6 +322,16 @@ export default function PatronProfile() {
   const [showCollectionForm, setShowCollectionForm] = useState(false);
   const [dashboardSubMode, setDashboardSubMode] = useState<'feed' | 'activity'>('feed');
 
+  const [cropperState, setCropperState] = useState<{
+    isOpen: boolean;
+    imageSrc: string;
+    cropType: 'avatar' | 'cover';
+  }>({
+    isOpen: false,
+    imageSrc: '',
+    cropType: 'avatar',
+  });
+
   // Queries
   const statsQuery = trpc.patron.stats.useQuery(undefined, { enabled: isAuthenticated });
   const subsQuery = trpc.patron.subscriptions.useQuery(undefined, { enabled: isAuthenticated });
@@ -397,14 +408,15 @@ export default function PatronProfile() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64 = (event.target?.result as string).split(',')[1];
-      await uploadAvatarMutation.mutateAsync({
-        base64,
-        mimeType: file.type,
+    reader.onload = (event) => {
+      setCropperState({
+        isOpen: true,
+        imageSrc: event.target?.result as string,
+        cropType: 'avatar',
       });
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -412,14 +424,38 @@ export default function PatronProfile() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64 = (event.target?.result as string).split(',')[1];
-      await uploadCoverMutation.mutateAsync({
-        base64,
-        mimeType: file.type,
+    reader.onload = (event) => {
+      setCropperState({
+        isOpen: true,
+        imageSrc: event.target?.result as string,
+        cropType: 'cover',
       });
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleCropConfirm = async (croppedBase64: string) => {
+    setCropperState(prev => ({ ...prev, isOpen: false }));
+    if (cropperState.cropType === 'avatar') {
+      try {
+        await uploadAvatarMutation.mutateAsync({
+          base64: croppedBase64,
+          mimeType: 'image/jpeg',
+        });
+      } catch (err) {
+        // Handled by mutation onError
+      }
+    } else {
+      try {
+        await uploadCoverMutation.mutateAsync({
+          base64: croppedBase64,
+          mimeType: 'image/jpeg',
+        });
+      } catch (err) {
+        // Handled by mutation onError
+      }
+    }
   };
 
   const displayName = user?.displayName || user?.name || 'Patron';
@@ -1089,6 +1125,14 @@ export default function PatronProfile() {
           </div>
         )}
 
+      {cropperState.isOpen && (
+        <ImageCropperModal
+          imageSrc={cropperState.imageSrc}
+          cropType={cropperState.cropType}
+          onClose={() => setCropperState(prev => ({ ...prev, isOpen: false }))}
+          onConfirm={handleCropConfirm}
+        />
+      )}
       </div>
     </div>
   );
