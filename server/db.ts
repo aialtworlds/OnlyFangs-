@@ -361,16 +361,18 @@ export async function createCreatorProfile(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
+  const user = await getUserById(data.userId);
   await db.insert(creators).values({
     userId: data.userId,
     alias: data.alias,
     handle: data.handle,
     bio: data.bio ?? null,
     category: data.category ?? null,
+    avatarUrl: user?.avatarUrl ?? null,
+    coverUrl: user?.coverUrl ?? null,
     status: "active",
   });
   // Only promote user role to creator if they are not already an admin
-  const user = await getUserById(data.userId);
   if (user && user.role !== "admin") {
     await db
       .update(users)

@@ -11,7 +11,7 @@ import { getLoginUrl } from '@/const';
 import {
   Edit2, Check, X, BookOpen, Image, Music, Camera, Star, Loader2, ExternalLink,
   User, LayoutDashboard, Crown, Bookmark, MessageCircle, Bell, Settings, Users,
-  Plus, Share2, MapPin, Heart, Compass, History, Play
+  Plus, Share2, MapPin, Heart, Compass, History, Play, CreditCard
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ContentUploadForm } from '@/components/ContentUploadForm';
@@ -20,6 +20,8 @@ import { CollectionForm } from '@/components/CollectionForm';
 import { CommentsSection } from '@/components/CommentsSection';
 import { CreatorSettingsForm } from '@/components/CreatorSettingsForm';
 import { ImageCropperModal } from '@/components/ImageCropperModal';
+import { PayoutsTab } from '@/components/PayoutsTab';
+import { SubscriptionsTable } from '@/components/SubscriptionsTable';
 
 function StatBox({ value, label }: { value: number | string; label: string }) {
   return (
@@ -354,6 +356,10 @@ export default function PatronProfile() {
     enabled: isAuthenticated && isCreatorOrAdmin
   });
 
+  const creatorSubsQuery = trpc.creator.subscriptions.useQuery(undefined, {
+    enabled: isAuthenticated && isCreatorOrAdmin
+  });
+
   const utils = trpc.useUtils();
 
   const cancelSubMutation = trpc.stripe.cancelSubscription.useMutation({
@@ -516,7 +522,7 @@ export default function PatronProfile() {
       { id: "collections", icon: Bookmark, label: "Collections" },
       { id: "tiers", icon: Crown, label: "Tiers" },
       { id: "audience", icon: Users, label: "Audience" },
-      { id: "settings", icon: Settings, label: "Creator Admin" }
+      { id: "payouts", icon: CreditCard, label: "Payouts" }
     ] : [])
   ];
 
@@ -525,8 +531,6 @@ export default function PatronProfile() {
       setLocation("/messages");
     } else if (id === "notifications") {
       setLocation("/notifications");
-    } else if (id === "settings") {
-      setLocation("/creator-admin");
     } else {
       setActiveNav(id);
     }
@@ -1047,10 +1051,21 @@ export default function PatronProfile() {
         {activeNav === 'audience' && isCreatorOrAdmin && (
           <div>
             <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', marginBottom: '24px' }}>My Audience</h2>
-            <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
-              <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
-                Your loyal followers list will appear here as your community grows.
-              </div>
+            <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '24px', borderRadius: '8px' }}>
+              <SubscriptionsTable
+                subscriptions={creatorSubsQuery.data || []}
+                isLoading={creatorSubsQuery.isLoading}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Render Payouts Tab (Creator Only) */}
+        {activeNav === 'payouts' && isCreatorOrAdmin && (
+          <div>
+            <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', marginBottom: '24px' }}>Payouts & Earnings</h2>
+            <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '24px', borderRadius: '8px' }}>
+              <PayoutsTab />
             </div>
           </div>
         )}

@@ -41,7 +41,7 @@ export default function Apply() {
         description: 'Welcome to the circle of creators.',
       });
       // Invalidate the auth session so the frontend realizes the user is now a creator
-      window.location.href = '/creator-dashboard';
+      window.location.href = '/profile';
     },
     onError: (err) => {
       toast.error('Error activating profile', { description: err.message });
@@ -86,7 +86,7 @@ export default function Apply() {
   // Redirect if already creator
   useEffect(() => {
     if (!authLoading && isAuthenticated && user?.role === 'creator') {
-      setLocation('/creator-dashboard');
+      setLocation('/profile');
     }
   }, [authLoading, isAuthenticated, user, setLocation]);
 
@@ -94,7 +94,7 @@ export default function Apply() {
     return (
       <div style={containerStyle}>
         <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', color: 'oklch(0.72 0.09 75)' }} />
-        <p style={{ marginTop: '16px' }}>Consultando o grimório...</p>
+        <p style={{ marginTop: '16px' }}>Consulting the grimoire...</p>
       </div>
     );
   }
@@ -104,13 +104,13 @@ export default function Apply() {
       <div style={containerStyle}>
         <div style={{ fontSize: '48px', marginBottom: '20px' }}>🦇</div>
         <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '24px', color: 'oklch(0.93 0.02 80)', marginBottom: '12px' }}>
-          Junte-se à Escuridão
+          Join the Shadows
         </h2>
         <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '16px', color: 'oklch(0.55 0.03 60)', marginBottom: '32px', maxWidth: '360px' }}>
-          Para se tornar um criador na OnlyFangs, você precisa primeiro criar uma conta.
+          To unlock creator features on OnlyFangs, you must first log in or create an account.
         </p>
         <a href={getLoginUrl()} className="btn-crimson" style={{ padding: '14px 32px', textDecoration: 'none', display: 'inline-block' }}>
-          Criar Conta / Login
+          Sign Up / Log In
         </a>
       </div>
     );
@@ -131,7 +131,7 @@ export default function Apply() {
       >
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 60% 80% at 50% 50%, oklch(0.28 0.1 20 / 15%) 0%, transparent 70%)' }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
-          <span className="tag-label">Torne-se um Criador</span>
+          <span className="tag-label">Creator Upgrade</span>
           <h1
             style={{
               fontFamily: "'Cinzel', serif",
@@ -144,16 +144,16 @@ export default function Apply() {
               marginBottom: '16px',
             }}
           >
-            Abra o Seu Portal<br />
+            Open Your Portal<br />
             <span style={{ color: 'transparent', WebkitTextStroke: '1px oklch(0.72 0.09 75)', fontStyle: 'italic' }}>
-              para a Noite
+              to the Night
             </span>
           </h1>
           <p
             className="font-fell"
             style={{ fontSize: '18px', color: 'oklch(0.55 0.03 60)', maxWidth: '520px', margin: '0 auto', lineHeight: 1.8 }}
           >
-            Crie sua página instantaneamente e comece a reunir o seu círculo de patronos. Sem filas de aprovação, no modelo clássico do Patreon.
+            Upgrade your account instantly and start gathering your circle of patrons. No waiting queue, classic Patreon model.
           </p>
         </div>
       </div>
@@ -166,12 +166,12 @@ export default function Apply() {
             
             <div style={{ marginBottom: '24px' }}>
               <label style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'oklch(0.55 0.03 60)', display: 'block', marginBottom: '8px' }}>
-                Nome Artístico ou Pseudônimo *
+                Stage Name or Alias *
               </label>
               <input
                 className="input-dark"
                 type="text"
-                placeholder="Ex: Lady Carmilla"
+                placeholder="e.g. Lady Carmilla"
                 required
                 value={form.alias}
                 onChange={(e) => setForm({ ...form, alias: e.target.value })}
@@ -180,7 +180,7 @@ export default function Apply() {
 
             <div style={{ marginBottom: '24px' }}>
               <label style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'oklch(0.55 0.03 60)', display: 'block', marginBottom: '8px' }}>
-                Link da sua Página (Handle) *
+                Your Page Link (Handle) *
               </label>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', color: 'oklch(0.45 0.02 60)', marginRight: '8px' }}>
@@ -189,7 +189,7 @@ export default function Apply() {
                 <input
                   className="input-dark"
                   type="text"
-                  placeholder="ex: carmilla"
+                  placeholder="e.g. carmilla"
                   required
                   value={form.handle}
                   onChange={(e) => {
@@ -203,7 +203,7 @@ export default function Apply() {
 
             <div style={{ marginBottom: '24px' }}>
               <label style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'oklch(0.55 0.03 60)', display: 'block', marginBottom: '8px' }}>
-                Categoria *
+                Category *
               </label>
               <select
                 className="input-dark"
@@ -212,7 +212,7 @@ export default function Apply() {
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
                 style={{ background: 'oklch(0.085 0.015 330)' }}
               >
-                <option value="" disabled>Escolha sua categoria...</option>
+                <option value="" disabled>Choose your category...</option>
                 {categories.map((c) => (
                   <option key={c} value={c} style={{ background: 'oklch(0.085 0.015 330)' }}>{c}</option>
                 ))}
@@ -221,12 +221,12 @@ export default function Apply() {
 
             <div style={{ marginBottom: '32px' }}>
               <label style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'oklch(0.55 0.03 60)', display: 'block', marginBottom: '8px' }}>
-                Sobre Você e sua Arte (Bio)
+                About You and Your Art (Bio)
               </label>
               <textarea
                 className="input-dark"
                 rows={4}
-                placeholder="Conte sobre suas obras e sua conexão com a noite..."
+                placeholder="Tell us about your works and your creative vision..."
                 value={form.bio}
                 onChange={(e) => setForm({ ...form, bio: e.target.value })}
                 style={{ resize: 'vertical' }}
