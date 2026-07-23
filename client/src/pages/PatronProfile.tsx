@@ -349,7 +349,7 @@ export default function PatronProfile() {
 
                 {(user?.role === 'creator' || user?.role === 'admin') && (
                   <button
-                    onClick={() => setLocation('/creator-dashboard')}
+                    onClick={() => setLocation('/creator-admin')}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
