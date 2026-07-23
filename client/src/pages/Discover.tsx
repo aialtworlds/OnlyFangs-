@@ -245,8 +245,11 @@ function ContentCard({ content, creator, onPlayMusic }: { content: any; creator:
             onClick={(e) => {
               e.stopPropagation();
               toast('Subscription required', {
-                description: `This release is exclusive to subscribers of ${creator?.alias || 'the creator'}.`
+                description: `This ${content.type || 'release'} is exclusive to subscribers. Redirecting to ${creator?.alias || 'creator'}'s profile...`
               });
+              setTimeout(() => {
+                setLocation(`/creator/${content.creatorId}`);
+              }, 1200);
             }}
           >
             <Lock size={16} style={{ color: 'oklch(0.72 0.09 75)' }} />
