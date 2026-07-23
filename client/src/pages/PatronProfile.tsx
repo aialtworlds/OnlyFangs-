@@ -3,7 +3,7 @@
 // Victorian Occult Luxury · Dark Creator Platform
 // ═══════════════════════════════════════════════════════════
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
@@ -309,6 +309,8 @@ function FeedPostCard({ item }: { item: any }) {
 
 export default function PatronProfile() {
   const [, setLocation] = useLocation();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
   const { user, isAuthenticated, loading } = useAuth();
   const [activeNav, setActiveNav] = useState('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -679,7 +681,8 @@ export default function PatronProfile() {
               
               {/* Banner Upload Trigger */}
               {(true) && (
-                <label
+                <button
+                  onClick={() => coverInputRef.current?.click()}
                   style={{
                     position: 'absolute',
                     bottom: '12px',
@@ -695,16 +698,20 @@ export default function PatronProfile() {
                     color: 'oklch(0.82 0.03 75)',
                     cursor: 'pointer',
                     transition: 'all 0.2s',
+                    zIndex: 50,
                   }}
+                  onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'oklch(0.085 0.015 330 / 95%)'; }}
+                  onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'oklch(0.085 0.015 330 / 80%)'; }}
                 >
                   Change Cover
                   <input
+                    ref={coverInputRef}
                     type="file"
                     accept="image/*"
                     onChange={handleCoverUpload}
                     style={{ display: 'none' }}
                   />
-                </label>
+                </button>
               )}
             </div>
 
@@ -722,7 +729,8 @@ export default function PatronProfile() {
                   )}
                   
                   {/* Avatar Upload Trigger */}
-                  <label
+                  <button
+                    onClick={() => avatarInputRef.current?.click()}
                     style={{
                       position: 'absolute',
                       inset: 0,
@@ -734,6 +742,8 @@ export default function PatronProfile() {
                       cursor: 'pointer',
                       transition: 'opacity 0.2s',
                       opacity: 0,
+                      border: 'none',
+                      zIndex: 50,
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
                     onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
@@ -742,12 +752,13 @@ export default function PatronProfile() {
                       Upload
                     </span>
                     <input
+                      ref={avatarInputRef}
                       type="file"
                       accept="image/*"
                       onChange={handleAvatarUpload}
                       style={{ display: 'none' }}
                     />
-                  </label>
+                  </button>
                 </div>
 
                 <div style={{ flex: 1, minWidth: '200px', paddingTop: '68px' }}>
