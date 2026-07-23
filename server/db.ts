@@ -256,11 +256,36 @@ export async function getCreatorReleases(creatorId: number, limit = 20) {
 export async function getCreatorTiers(creatorId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db
+  
+  const creatorTiers = await db
     .select()
     .from(tiers)
     .where(eq(tiers.creatorId, creatorId))
     .orderBy(tiers.sortOrder);
+
+  // If there is no free tier (price = '0.00'), create one dynamically
+  const hasFree = creatorTiers.some((t) => parseFloat(t.price) === 0);
+  if (!hasFree) {
+    await db.insert(tiers).values({
+      creatorId,
+      name: "Free",
+      slug: "free",
+      description: "Access to free content and public updates",
+      price: "0.00",
+      currency: "USD",
+      perks: [],
+      featured: false,
+      sortOrder: 0
+    });
+    // Fetch again
+    return db
+      .select()
+      .from(tiers)
+      .where(eq(tiers.creatorId, creatorId))
+      .orderBy(tiers.sortOrder);
+  }
+
+  return creatorTiers;
 }
 
 export async function getCreatorByHandle(handle: string) {
@@ -275,13 +300,7 @@ export async function getCreatorByHandle(handle: string) {
 }
 
 export async function getPublicCreatorTiers(creatorId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  return db
-    .select()
-    .from(tiers)
-    .where(eq(tiers.creatorId, creatorId))
-    .orderBy(tiers.sortOrder);
+  return getCreatorTiers(creatorId);
 }
 
 export async function followCreator(followerId: number, creatorId: number) {
@@ -760,6 +779,12 @@ export async function canAccessContent(
 
   const item = await getContentById(contentId);
   if (!item) return false;
+
+  // If the required tier is free (price = '0.00'), anyone can access it!
+  const [tier] = await db.select().from(tiers).where(eq(tiers.id, item.tierId)).limit(1);
+  if (tier && parseFloat(tier.price) === 0) {
+    return true;
+  }
 
   // Check if patron has active subscription to the required tier
   const subscription = await db

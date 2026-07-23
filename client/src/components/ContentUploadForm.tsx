@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,17 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
 
   // Fetch creator's tiers
   const { data: tiers = [] } = trpc.creator.myTiers.useQuery();
+
+  useEffect(() => {
+    if (tiers.length > 0 && !formData.tierId) {
+      const freeTier = tiers.find((t: any) => parseFloat(t.price) === 0);
+      if (freeTier) {
+        setFormData((prev) => ({ ...prev, tierId: freeTier.id.toString() }));
+      } else {
+        setFormData((prev) => ({ ...prev, tierId: tiers[0].id.toString() }));
+      }
+    }
+  }, [tiers]);
 
   // Upload mutation
   const uploadMutation = trpc.content.upload.useMutation({
