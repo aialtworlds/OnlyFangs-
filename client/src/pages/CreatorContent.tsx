@@ -178,7 +178,7 @@ export default function CreatorContent() {
                     {/* CTA */}
                     {hasAccess ? (
                       <Button size="sm" className="w-full">
-                        Ver Conteúdo
+                        View Content
                       </Button>
                     ) : (
                       <Button
@@ -191,7 +191,7 @@ export default function CreatorContent() {
                         }}
                       >
                         <Lock className="w-3 h-3 mr-1" />
-                        Fazer Login
+                        Log In
                       </Button>
                     )}
                   </CardContent>

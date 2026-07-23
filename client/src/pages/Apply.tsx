@@ -37,14 +37,14 @@ export default function Apply() {
 
   const createProfile = trpc.creator.createProfile.useMutation({
     onSuccess: () => {
-      toast.success('Perfil de criador ativado!', {
-        description: 'Bem-vindo ao círculo dos criadores.',
+      toast.success('Creator profile activated!', {
+        description: 'Welcome to the circle of creators.',
       });
       // Invalidate the auth session so the frontend realizes the user is now a creator
       window.location.href = '/creator-dashboard';
     },
     onError: (err) => {
-      toast.error('Erro ao ativar perfil', { description: err.message });
+      toast.error('Error activating profile', { description: err.message });
     },
   });
 
@@ -59,7 +59,7 @@ export default function Apply() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.alias || !form.handle) {
-      toast.error('Nome e link (handle) são obrigatórios.');
+      toast.error('Name and handle link are required.');
       return;
     }
     createProfile.mutate({
@@ -242,10 +242,10 @@ export default function Apply() {
               {createProfile.isPending ? (
                 <>
                   <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                  Ativando Perfil...
+                  Activating Profile...
                 </>
               ) : (
-                'Iniciar Página de Criador'
+                'Launch Creator Page'
               )}
             </button>
           </form>

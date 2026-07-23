@@ -232,20 +232,20 @@ function ContentCard({ item, onPlayMusic, creatorAlias }: { item: ContentItem; o
                 try {
                   await navigator.share({
                     title: item.title,
-                    text: item.description || `Confira este post de ${creatorAlias} no OnlyFangs`,
+                    text: item.description || `Check out this post by ${creatorAlias} on OnlyFangs`,
                     url: postUrl,
                   });
                 } catch (err) {
                   if ((err as Error).name !== 'AbortError') {
-                    toast.error('Erro ao compartilhar');
+                    toast.error('Error sharing post');
                   }
                 }
               } else {
                 try {
                   await navigator.clipboard.writeText(postUrl);
-                  toast.success('Link do post copiado!');
+                  toast.success('Post link copied!');
                 } catch {
-                  toast.error('Erro ao copiar link');
+                  toast.error('Error copying link');
                 }
               }
             }}
@@ -758,20 +758,20 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                       try {
                         await navigator.share({
                           title: creator.alias,
-                          text: creator.bio || `Confira a página de ${creator.alias} no OnlyFangs!`,
+                          text: creator.bio || `Check out ${creator.alias}'s page on OnlyFangs!`,
                           url: profileUrl,
                         });
                       } catch (err) {
                         if ((err as Error).name !== 'AbortError') {
-                          toast.error('Erro ao compartilhar');
+                          toast.error('Error sharing profile');
                         }
                       }
                     } else {
                       try {
                         await navigator.clipboard.writeText(profileUrl);
-                        toast.success('Link do perfil copiado!');
+                        toast.success('Profile link copied!');
                       } catch {
-                        toast.error('Erro ao copiar link');
+                        toast.error('Error copying link');
                       }
                     }
                   }}
@@ -793,7 +793,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                   onMouseLeave={(e) => {
                     (e.currentTarget as HTMLElement).style.background = 'oklch(0.085 0.015 330 / 90%)';
                   }}
-                  title="Compartilhar Perfil"
+                  title="Share Profile"
                 >
                   <Share2 size={14} />
                 </button>

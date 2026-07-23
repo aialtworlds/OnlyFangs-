@@ -292,25 +292,25 @@ export default function CreatorDashboard() {
                 try {
                   await navigator.share({
                     title: profile?.alias || 'My Profile',
-                    text: profile?.bio || 'Confira minha página no OnlyFangs!',
+                    text: profile?.bio || 'Check out my page on OnlyFangs!',
                     url: profileUrl,
                   });
                 } catch (err) {
                   if ((err as Error).name !== 'AbortError') {
-                    toast.error('Erro ao compartilhar');
+                    toast.error('Error sharing profile');
                   }
                 }
               } else {
                 try {
                   await navigator.clipboard.writeText(profileUrl);
-                  toast.success('Link do perfil copiado!');
+                  toast.success('Profile link copied!');
                 } catch {
-                  toast.error('Erro ao copiar link');
+                  toast.error('Error copying link');
                 }
               }
             }}
             style={{ position: "absolute", top: "52px", right: "16px", padding: "8px", background: "oklch(0.04 0.008 285 / 80%)", border: "1px solid oklch(1 0 0 / 20%)", backdropFilter: "blur(8px)", color: "oklch(0.55 0.03 60)", cursor: "pointer", borderRadius: "4px" }}
-            title="Compartilhar Perfil"
+            title="Share Profile"
           >
             <Share2 size={14} />
           </button>

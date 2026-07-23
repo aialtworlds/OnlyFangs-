@@ -1047,7 +1047,7 @@ export default function Home() {
       >
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <span className="tag-label">Como Funciona</span>
+            <span className="tag-label">How It Works</span>
             <h2
               style={{
                 fontFamily: "'Cinzel', serif",

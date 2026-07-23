@@ -264,20 +264,20 @@ function FeedPostCard({ item }: { item: any }) {
               try {
                 await navigator.share({
                   title: item.title,
-                  text: item.description || `Confira este post de ${item.creatorAlias} no OnlyFangs`,
+                  text: item.description || `Check out this post by ${item.creatorAlias} on OnlyFangs`,
                   url: postUrl,
                 });
               } catch (err) {
                 if ((err as Error).name !== 'AbortError') {
-                  toast.error('Erro ao compartilhar');
+                  toast.error('Error sharing post');
                 }
               }
             } else {
               try {
                 await navigator.clipboard.writeText(postUrl);
-                toast.success('Link do post copiado!');
+                toast.success('Post link copied!');
               } catch {
-                toast.error('Erro ao copiar link');
+                toast.error('Error copying link');
               }
             }
           }}

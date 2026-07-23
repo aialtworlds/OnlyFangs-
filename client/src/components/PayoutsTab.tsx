@@ -24,11 +24,11 @@ export function PayoutsTab() {
       if (result.url) {
         window.location.href = result.url;
       } else {
-        toast.error("Não foi possível gerar a URL de onboarding da Stripe.");
+        toast.error("Could not generate Stripe onboarding URL.");
       }
     } catch (error) {
       console.error("Error setting up Connect:", error);
-      toast.error("Ocorreu um erro ao configurar o Stripe Connect.");
+      toast.error("An error occurred while setting up Stripe Connect.");
     } finally {
       setLoading(false);
     }
@@ -41,11 +41,11 @@ export function PayoutsTab() {
       if (result.url) {
         window.open(result.url, "_blank");
       } else {
-        toast.error("Não foi possível gerar o link de login da Stripe.");
+        toast.error("Could not generate Stripe login link.");
       }
     } catch (error) {
       console.error("Error getting login link:", error);
-      toast.error("Ocorreu um erro ao abrir a dashboard do Stripe.");
+      toast.error("An error occurred while opening the Stripe dashboard.");
     } finally {
       setLoading(false);
     }

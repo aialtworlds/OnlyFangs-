@@ -129,7 +129,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("Erro ao fazer upload do arquivo");
+        throw new Error("Error uploading file");
       }
 
       const { url, key } = await uploadResponse.json();
@@ -148,7 +148,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
       });
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Erro ao fazer upload do arquivo");
+      toast.error("Error uploading file");
     } finally {
       setIsLoading(false);
     }
