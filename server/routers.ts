@@ -46,6 +46,8 @@ import {
   getContentById,
   canAccessContent,
   deleteContent,
+  getRecentContent,
+  getRecentSubscriptions,
   createCollection,
   getCreatorCollections,
   getCollectionById,
@@ -267,6 +269,16 @@ export const appRouter = router({
         );
 
         return results;
+      }),
+    recentContent: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(50).optional() }).optional())
+      .query(async ({ input }) => {
+        return getRecentContent(input?.limit ?? 12);
+      }),
+    recentSubscriptions: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(20).optional() }).optional())
+      .query(async ({ input }) => {
+        return getRecentSubscriptions(input?.limit ?? 5);
       }),
   }),
 

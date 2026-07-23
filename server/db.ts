@@ -2191,3 +2191,57 @@ export async function getPatronHomeFeed(userId: number) {
 
   return feedItems;
 }
+
+export async function getRecentContent(limit: number = 12) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: content.id,
+      creatorId: content.creatorId,
+      tierId: content.tierId,
+      collectionId: content.collectionId,
+      title: content.title,
+      description: content.description,
+      type: content.type,
+      fileUrl: content.fileUrl,
+      fileKey: content.fileKey,
+      mimeType: content.mimeType,
+      fileSize: content.fileSize,
+      duration: content.duration,
+      thumbnailUrl: content.thumbnailUrl,
+      createdAt: content.createdAt,
+      creatorAlias: creators.alias,
+      creatorAvatarUrl: creators.avatarUrl,
+      creatorHandle: creators.handle,
+    })
+    .from(content)
+    .innerJoin(creators, eq(content.creatorId, creators.id))
+    .where(eq(content.moderationStatus, 'approved'))
+    .orderBy(desc(content.createdAt))
+    .limit(limit);
+}
+
+export async function getRecentSubscriptions(limit: number = 5) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: subscriptions.id,
+      createdAt: subscriptions.createdAt,
+      creatorAlias: creators.alias,
+      creatorHandle: creators.handle,
+      userName: users.name,
+      userDisplayName: users.displayName,
+      tierName: tiers.name,
+    })
+    .from(subscriptions)
+    .innerJoin(creators, eq(subscriptions.creatorId, creators.id))
+    .innerJoin(users, eq(subscriptions.patronId, users.id))
+    .leftJoin(tiers, eq(subscriptions.tierId, tiers.id))
+    .where(eq(subscriptions.status, 'active'))
+    .orderBy(desc(subscriptions.createdAt))
+    .limit(limit);
+}
