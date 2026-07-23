@@ -499,6 +499,8 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
   const [, setLocation] = useLocation();
   const { playTrack } = useMusicPlayer();
   const [activeTab, setActiveTab] = useState<'all' | 'image' | 'photo' | 'music' | 'book'>('all');
+  const [viewMode, setViewMode] = useState<'releases' | 'collections'>('releases');
+  const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
 
   const { isAuthenticated, user } = useAuth();
 
@@ -516,6 +518,12 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
 
   // Fetch real tiers if database creator exists
   const { data: realTiers } = trpc.public.creatorTiers.useQuery(
+    { creatorId: dbCreator?.id ?? 0 },
+    { enabled: !!dbCreator?.id, retry: false }
+  );
+
+  // Fetch real collections if database creator exists
+  const { data: creatorCollections = [] } = trpc.public.creatorCollections.useQuery(
     { creatorId: dbCreator?.id ?? 0 },
     { enabled: !!dbCreator?.id, retry: false }
   );
@@ -585,6 +593,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
           publishedAt: new Date(item.createdAt).toISOString().split('T')[0],
           duration: item.duration || undefined,
           pages: undefined,
+          collectionId: item.collectionId ?? undefined,
         };
       })
     : getContentByCreatorId(creator.id);
@@ -600,14 +609,20 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
     });
   };
 
-  const filteredContent = activeTab === 'all' ? content : content.filter(c => c.type === activeTab);
+  const contentFilteredByCollection = selectedCollectionId
+    ? content.filter(item => (item as any).collectionId === selectedCollectionId)
+    : content;
+
+  const filteredContent = activeTab === 'all'
+    ? contentFilteredByCollection
+    : contentFilteredByCollection.filter(c => c.type === activeTab);
 
   const tabs = [
-    { id: 'all', label: 'All', count: content.length },
+    { id: 'all', label: 'All', count: contentFilteredByCollection.length },
     ...creator.contentTypes.map(type => ({
       id: type,
       label: { image: 'Images', photo: 'Photos', music: 'Music', book: 'Books' }[type] || type,
-      count: content.filter(c => c.type === type).length,
+      count: contentFilteredByCollection.filter(c => c.type === type).length,
     })),
   ];
 
@@ -884,79 +899,203 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
         >
           {/* Content Feed */}
           <div>
-            {/* Tabs */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '2px',
-                marginBottom: '32px',
-                borderBottom: '1px solid oklch(1 0 0 / 8%)',
-              }}
-            >
-              {tabs.map(tab => (
+            {/* View Mode Toggle */}
+            <div style={{ display: 'flex', gap: '24px', marginBottom: '24px', borderBottom: '1px solid oklch(1 0 0 / 6%)', paddingBottom: '12px' }}>
+              <button
+                onClick={() => { setViewMode('releases'); setSelectedCollectionId(null); }}
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '12px',
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  background: 'none',
+                  border: 'none',
+                  color: viewMode === 'releases' ? 'oklch(0.72 0.09 75)' : 'oklch(0.45 0.02 60)',
+                  cursor: 'pointer',
+                  fontWeight: viewMode === 'releases' ? 700 : 400,
+                  transition: 'color 0.2s',
+                  position: 'relative'
+                }}
+              >
+                Releases
+                {viewMode === 'releases' && (
+                  <span style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', background: 'oklch(0.72 0.09 75)' }} />
+                )}
+              </button>
+              {creatorCollections.length > 0 && (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                  onClick={() => setViewMode('collections')}
                   style={{
                     fontFamily: "'Cinzel', serif",
-                    fontSize: '10px',
-                    letterSpacing: '0.2em',
+                    fontSize: '12px',
+                    letterSpacing: '0.15em',
                     textTransform: 'uppercase',
-                    padding: '12px 20px',
                     background: 'none',
                     border: 'none',
-                    borderBottom: `2px solid ${activeTab === tab.id ? 'oklch(0.72 0.09 75)' : 'transparent'}`,
-                    color: activeTab === tab.id ? 'oklch(0.72 0.09 75)' : 'oklch(0.55 0.03 60)',
+                    color: viewMode === 'collections' ? 'oklch(0.72 0.09 75)' : 'oklch(0.45 0.02 60)',
                     cursor: 'pointer',
-                    transition: 'all 0.3s',
-                    marginBottom: '-1px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
+                    fontWeight: viewMode === 'collections' ? 700 : 400,
+                    transition: 'color 0.2s',
+                    position: 'relative'
                   }}
                 >
-                  {tab.label}
-                  <span
-                    style={{
-                      background: 'oklch(0.12 0.02 330)',
-                      padding: '2px 6px',
-                      fontSize: '8px',
-                      color: 'oklch(0.35 0.02 60)',
-                    }}
-                  >
-                    {tab.count}
-                  </span>
+                  Collections ({creatorCollections.length})
+                  {viewMode === 'collections' && (
+                    <span style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', background: 'oklch(0.72 0.09 75)' }} />
+                  )}
                 </button>
-              ))}
-            </div>
-
-            {/* Grid */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                gap: '2px',
-              }}
-            >
-              {filteredContent.map((item: any) => (
-                <ContentCard key={item.id} item={item} onPlayMusic={handlePlayMusic} creatorAlias={creator.alias} />
-              ))}
-              {filteredContent.length === 0 && (
-                <div
-                  style={{
-                    gridColumn: '1/-1',
-                    textAlign: 'center',
-                    padding: '60px 20px',
-                    color: 'oklch(0.35 0.02 60)',
-                    fontFamily: "'IM Fell English', serif",
-                    fontStyle: 'italic',
-                    fontSize: '18px',
-                  }}
-                >
-                  No content in this category yet.
-                </div>
               )}
             </div>
+
+            {viewMode === 'releases' ? (
+              <div>
+                {/* Collection Filter active banner */}
+                {selectedCollectionId && (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'oklch(0.08 0.02 330)', border: '1px solid oklch(0.72 0.09 75 / 20%)', padding: '12px 18px', borderRadius: '6px', marginBottom: '24px' }}>
+                    <span style={{ fontFamily: "'Cinzel', serif", fontSize: '11px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.04em' }}>
+                      Viewing Collection: <strong style={{ color: 'oklch(0.72 0.09 75)' }}>{creatorCollections.find(c => c.id === selectedCollectionId)?.title || 'Selected'}</strong>
+                    </span>
+                    <button
+                      onClick={() => setSelectedCollectionId(null)}
+                      style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', color: 'oklch(0.75 0.14 20)', border: 'none', cursor: 'pointer' }}
+                    >
+                      Clear Filter [X]
+                    </button>
+                  </div>
+                )}
+
+                {/* Tabs */}
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '2px',
+                    marginBottom: '32px',
+                    borderBottom: '1px solid oklch(1 0 0 / 8%)',
+                  }}
+                >
+                  {tabs.map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                      style={{
+                        fontFamily: "'Cinzel', serif",
+                        fontSize: '10px',
+                        letterSpacing: '0.2em',
+                        textTransform: 'uppercase',
+                        padding: '12px 20px',
+                        background: 'none',
+                        border: 'none',
+                        borderBottom: `2px solid ${activeTab === tab.id ? 'oklch(0.72 0.09 75)' : 'transparent'}`,
+                        color: activeTab === tab.id ? 'oklch(0.72 0.09 75)' : 'oklch(0.55 0.03 60)',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s',
+                        marginBottom: '-1px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      {tab.label}
+                      <span
+                        style={{
+                          background: 'oklch(0.12 0.02 330)',
+                          padding: '2px 6px',
+                          fontSize: '8px',
+                          color: 'oklch(0.35 0.02 60)',
+                        }}
+                      >
+                        {tab.count}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Grid */}
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                    gap: '2px',
+                  }}
+                >
+                  {filteredContent.map((item: any) => (
+                    <ContentCard key={item.id} item={item} onPlayMusic={handlePlayMusic} creatorAlias={creator.alias} />
+                  ))}
+                  {filteredContent.length === 0 && (
+                    <div
+                      style={{
+                        gridColumn: '1/-1',
+                        textAlign: 'center',
+                        padding: '60px 20px',
+                        color: 'oklch(0.35 0.02 60)',
+                        fontFamily: "'IM Fell English', serif",
+                        fontStyle: 'italic',
+                        fontSize: '18px',
+                      }}
+                    >
+                      No content in this category yet.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
+                  {creatorCollections.map((collection) => (
+                    <div
+                      key={collection.id}
+                      onClick={() => {
+                        setSelectedCollectionId(collection.id);
+                        setViewMode('releases');
+                      }}
+                      style={{
+                        background: 'oklch(0.06 0.01 285)',
+                        border: '1px solid oklch(1 0 0 / 6%)',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        cursor: 'pointer',
+                        transition: 'transform 0.2s, border-color 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-4px)';
+                        e.currentTarget.style.borderColor = 'oklch(0.72 0.09 75 / 30%)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.borderColor = 'oklch(1 0 0 / 6%)';
+                      }}
+                    >
+                      {/* Cover Art */}
+                      <div style={{ height: '160px', overflow: 'hidden', background: 'oklch(0.1 0.02 285)', position: 'relative' }}>
+                        {collection.coverUrl ? (
+                          <img src={collection.coverUrl} alt={collection.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'oklch(0.45 0.02 60)', fontSize: '40px' }}>
+                            🖤
+                          </div>
+                        )}
+                      </div>
+                      {/* Details */}
+                      <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'oklch(0.72 0.09 75)', marginBottom: '6px' }}>
+                          {collection.type}
+                        </span>
+                        <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: '14px', color: 'oklch(0.93 0.02 80)', margin: '0 0 6px 0', letterSpacing: '0.04em', fontWeight: 600 }}>
+                          {collection.title}
+                        </h3>
+                        {collection.description && (
+                          <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.55 0.03 60)', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {collection.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar — Tiers */}

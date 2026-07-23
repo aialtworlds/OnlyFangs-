@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { ContentUploadForm } from '@/components/ContentUploadForm';
 import { TierForm } from '@/components/TierForm';
 import { CollectionForm } from '@/components/CollectionForm';
+import { CommentsSection } from '@/components/CommentsSection';
 
 function StatBox({ value, label }: { value: number | string; label: string }) {
   return (
@@ -100,6 +101,169 @@ function NavItem({
   );
 }
 
+function FeedPostCard({ item }: { item: any }) {
+  const [liked, setLiked] = useState(false);
+  const [showComments, setShowComments] = useState(false);
+  
+  return (
+    <div
+      style={{
+        background: 'oklch(0.06 0.01 285)',
+        border: '1px solid oklch(1 0 0 / 6%)',
+        borderRadius: '8px',
+        padding: '24px',
+        marginBottom: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '16px',
+      }}
+    >
+      {/* Header: Creator Info */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        {item.creatorAvatarUrl ? (
+          <img
+            src={item.creatorAvatarUrl}
+            alt=""
+            style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+          />
+        ) : (
+          <div
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              background: 'oklch(0.28 0.1 20)',
+              color: 'oklch(0.93 0.02 80)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: "'Cinzel', serif",
+              fontSize: '16px',
+              fontWeight: 700,
+            }}
+          >
+            {item.creatorAlias.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div>
+          <a
+            href={`/creator/${item.creatorHandle}`}
+            style={{
+              fontFamily: "'Cinzel', serif",
+              fontSize: '14px',
+              fontWeight: 700,
+              color: 'oklch(0.93 0.02 80)',
+              textDecoration: 'none',
+              letterSpacing: '0.04em',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = 'oklch(0.72 0.09 75)')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = 'oklch(0.93 0.02 80)')}
+          >
+            {item.creatorAlias}
+          </a>
+          <div
+            style={{
+              fontFamily: "'IM Fell English', serif",
+              fontStyle: 'italic',
+              fontSize: '11px',
+              color: 'oklch(0.45 0.02 60)',
+              marginTop: '2px',
+            }}
+          >
+            {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+          </div>
+        </div>
+      </div>
+
+      {/* Body: Title & Description */}
+      <div>
+        <h3
+          style={{
+            fontFamily: "'Cinzel', serif",
+            fontSize: '18px',
+            color: 'oklch(0.93 0.02 80)',
+            margin: '0 0 8px 0',
+            letterSpacing: '0.04em',
+          }}
+        >
+          {item.title}
+        </h3>
+        {item.description && (
+          <p
+            style={{
+              fontFamily: "'IM Fell English', serif",
+              fontStyle: 'italic',
+              fontSize: '14px',
+              color: 'oklch(0.65 0.02 60)',
+              margin: 0,
+              lineHeight: 1.6,
+            }}
+          >
+            {item.description}
+          </p>
+        )}
+      </div>
+
+      {/* Media Preview (if applicable) */}
+      {item.thumbnailUrl && (
+        <div style={{ position: 'relative', borderRadius: '6px', overflow: 'hidden', maxHeight: '360px', background: 'oklch(0.04 0.008 285)' }}>
+          <img
+            src={item.thumbnailUrl}
+            alt={item.title}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', maxHeight: '360px' }}
+          />
+        </div>
+      )}
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: '20px', borderTop: '1px solid oklch(1 0 0 / 4%)', paddingTop: '16px' }}>
+        <button
+          onClick={() => setLiked(!liked)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'none',
+            border: 'none',
+            color: liked ? 'oklch(0.42 0.16 20)' : 'oklch(0.45 0.02 60)',
+            cursor: 'pointer',
+            fontFamily: "'Cinzel', serif",
+            fontSize: '11px',
+            transition: 'color 0.2s',
+          }}
+        >
+          <Heart size={14} fill={liked ? 'oklch(0.42 0.16 20)' : 'none'} />
+          <span>Like</span>
+        </button>
+
+        <button
+          onClick={() => setShowComments(!showComments)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            background: 'none',
+            border: 'none',
+            color: showComments ? 'oklch(0.72 0.09 75)' : 'oklch(0.45 0.02 60)',
+            cursor: 'pointer',
+            fontFamily: "'Cinzel', serif",
+            fontSize: '11px',
+            transition: 'color 0.2s',
+          }}
+        >
+          <MessageCircle size={14} fill={showComments ? 'oklch(0.72 0.09 75 / 20%)' : 'none'} />
+          <span>Whispers</span>
+        </button>
+      </div>
+
+      {/* Expandable Comments Section */}
+      {showComments && (
+        <CommentsSection contentId={item.id} />
+      )}
+    </div>
+  );
+}
+
 export default function PatronProfile() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading } = useAuth();
@@ -110,11 +274,13 @@ export default function PatronProfile() {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [showTierForm, setShowTierForm] = useState(false);
   const [showCollectionForm, setShowCollectionForm] = useState(false);
+  const [dashboardSubMode, setDashboardSubMode] = useState<'feed' | 'activity'>('feed');
 
   // Queries
   const statsQuery = trpc.patron.stats.useQuery(undefined, { enabled: isAuthenticated });
   const subsQuery = trpc.patron.subscriptions.useQuery(undefined, { enabled: isAuthenticated });
   const activityQuery = trpc.patron.activity.useQuery(undefined, { enabled: isAuthenticated });
+  const homeFeedQuery = trpc.patron.homeFeed.useQuery(undefined, { enabled: isAuthenticated });
   const unreadQuery = trpc.patron.unreadCounts.useQuery(undefined, { enabled: isAuthenticated });
   const creatorProfileQuery = trpc.creator.myProfile.useQuery(undefined, { enabled: isAuthenticated });
   
@@ -200,6 +366,7 @@ export default function PatronProfile() {
   const releases = creatorReleasesQuery.data ?? [];
   const tiers = creatorTiersQuery.data ?? [];
   const myCollections = myCollectionsQuery.data ?? [];
+  const homeFeed = homeFeedQuery.data ?? [];
 
   // Sidebar Menu Configuration
   const navItems = [
@@ -287,44 +454,110 @@ export default function PatronProfile() {
               <StatBox value={stats?.loyaltyPoints ?? 0} label="Loyalty Pts" />
             </div>
 
-            {/* Recent Activity / Feed */}
-            <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: '12px', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'oklch(0.72 0.09 75)', marginBottom: '20px', borderBottom: '1px solid oklch(0.72 0.09 75 / 15%)', paddingBottom: '12px' }}>
-              Recent Activity Feed
-            </h3>
+            {/* Dashboard Sub-mode Selector */}
+            <div style={{ display: 'flex', gap: '24px', marginBottom: '28px', borderBottom: '1px solid oklch(1 0 0 / 6%)', paddingBottom: '12px' }}>
+              <button
+                onClick={() => setDashboardSubMode('feed')}
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '11px',
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  background: 'none',
+                  border: 'none',
+                  color: dashboardSubMode === 'feed' ? 'oklch(0.72 0.09 75)' : 'oklch(0.45 0.02 60)',
+                  cursor: 'pointer',
+                  fontWeight: dashboardSubMode === 'feed' ? 700 : 400,
+                  transition: 'color 0.2s',
+                  position: 'relative'
+                }}
+              >
+                Nocturnal Feed
+                {dashboardSubMode === 'feed' && (
+                  <span style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', background: 'oklch(0.72 0.09 75)' }} />
+                )}
+              </button>
+              <button
+                onClick={() => setDashboardSubMode('activity')}
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '11px',
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  background: 'none',
+                  border: 'none',
+                  color: dashboardSubMode === 'activity' ? 'oklch(0.72 0.09 75)' : 'oklch(0.45 0.02 60)',
+                  cursor: 'pointer',
+                  fontWeight: dashboardSubMode === 'activity' ? 700 : 400,
+                  transition: 'color 0.2s',
+                  position: 'relative'
+                }}
+              >
+                Ritual Logs
+                {dashboardSubMode === 'activity' && (
+                  <span style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', background: 'oklch(0.72 0.09 75)' }} />
+                )}
+              </button>
+            </div>
 
-            {activityQuery.isLoading ? (
-              <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', color: 'oklch(0.45 0.02 60)', fontSize: '14px' }}>
-                Reading the omens...
-              </div>
-            ) : activity.length === 0 ? (
-              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
-                <div style={{ fontSize: '32px', marginBottom: '12px' }}>🩸</div>
-                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
-                  The chronicles are empty. Your story begins when you subscribe to a creator.
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {activity.map((item) => (
-                  <div key={item.id} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    {item.creatorAvatarUrl ? (
-                      <img src={item.creatorAvatarUrl} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                    ) : (
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'oklch(0.12 0.02 285)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'oklch(0.55 0.03 60)', flexShrink: 0 }}>
-                        <ContentTypeIcon type={item.type.replace('new_', '')} />
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: '12px', color: 'oklch(0.82 0.03 75)', letterSpacing: '0.04em', marginBottom: '2px' }}>
-                        {item.message || item.type.replace(/_/g, ' ')}
-                      </div>
-                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.40 0.02 60)' }}>
-                        {item.creatorAlias && `${item.creatorAlias} · `}
-                        {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </div>
+            {dashboardSubMode === 'feed' ? (
+              <div>
+                {homeFeedQuery.isLoading ? (
+                  <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', color: 'oklch(0.45 0.02 60)', fontSize: '14px' }}>
+                    Summoning your feed...
+                  </div>
+                ) : homeFeed.length === 0 ? (
+                  <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '12px' }}>🦇</div>
+                    <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)', maxWidth: '380px', margin: '0 auto' }}>
+                      Your feed is silent. Follow or subscribe to creators to receive their updates here.
                     </div>
                   </div>
-                ))}
+                ) : (
+                  <div>
+                    {homeFeed.map((item) => (
+                      <FeedPostCard key={item.id} item={item} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                {activityQuery.isLoading ? (
+                  <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', color: 'oklch(0.45 0.02 60)', fontSize: '14px' }}>
+                    Reading the omens...
+                  </div>
+                ) : activity.length === 0 ? (
+                  <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '32px', marginBottom: '12px' }}>🩸</div>
+                    <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
+                      The chronicles are empty. Your story begins when you subscribe to a creator.
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {activity.map((item) => (
+                      <div key={item.id} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        {item.creatorAvatarUrl ? (
+                          <img src={item.creatorAvatarUrl} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                        ) : (
+                          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'oklch(0.12 0.02 285)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'oklch(0.55 0.03 60)', flexShrink: 0 }}>
+                            <ContentTypeIcon type={item.type.replace('new_', '')} />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: "'Cinzel', serif", fontSize: '12px', color: 'oklch(0.82 0.03 75)', letterSpacing: '0.04em', marginBottom: '2px' }}>
+                            {item.message || item.type.replace(/_/g, ' ')}
+                          </div>
+                          <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.40 0.02 60)' }}>
+                            {item.creatorAlias && `${item.creatorAlias} · `}
+                            {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>

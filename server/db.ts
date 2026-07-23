@@ -2129,3 +2129,64 @@ export async function getContentComments(contentId: number) {
     .where(eq(comments.contentId, contentId))
     .orderBy(desc(comments.createdAt));
 }
+
+export async function getPatronHomeFeed(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Get followed creators
+  const followed = await db
+    .select({ creatorId: follows.creatorId })
+    .from(follows)
+    .where(eq(follows.followerId, userId));
+
+  // Get subscribed creators
+  const subscribed = await db
+    .select({ creatorId: subscriptions.creatorId })
+    .from(subscriptions)
+    .where(and(eq(subscriptions.patronId, userId), eq(subscriptions.status, 'active')));
+
+  const creatorIds = Array.from(
+    new Set([
+      ...followed.map(f => f.creatorId),
+      ...subscribed.map(s => s.creatorId)
+    ])
+  );
+
+  if (creatorIds.length === 0) return [];
+
+  // Fetch approved content from these creators
+  const { inArray } = await import("drizzle-orm");
+  const feedItems = await db
+    .select({
+      id: content.id,
+      creatorId: content.creatorId,
+      tierId: content.tierId,
+      collectionId: content.collectionId,
+      title: content.title,
+      description: content.description,
+      type: content.type,
+      fileUrl: content.fileUrl,
+      fileKey: content.fileKey,
+      mimeType: content.mimeType,
+      fileSize: content.fileSize,
+      duration: content.duration,
+      thumbnailUrl: content.thumbnailUrl,
+      createdAt: content.createdAt,
+      creatorAlias: creators.alias,
+      creatorAvatarUrl: creators.avatarUrl,
+      creatorHandle: creators.handle,
+    })
+    .from(content)
+    .innerJoin(creators, eq(content.creatorId, creators.id))
+    .where(
+      and(
+        inArray(content.creatorId, creatorIds),
+        eq(content.moderationStatus, 'approved')
+      )
+    )
+    .orderBy(desc(content.createdAt))
+    .limit(20);
+
+  return feedItems;
+}

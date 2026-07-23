@@ -18,6 +18,7 @@ import {
   getPatronStats,
   getPatronSubscriptions,
   getPatronActivity,
+  getPatronHomeFeed,
   getUnreadMessageCount,
   getUnreadNotificationCount,
   getDiscoverCreators,
@@ -115,6 +116,9 @@ export const appRouter = router({
     }),
     activity: protectedProcedure.query(async ({ ctx }) => {
       return getPatronActivity(ctx.user.id);
+    }),
+    homeFeed: protectedProcedure.query(async ({ ctx }) => {
+      return getPatronHomeFeed(ctx.user.id);
     }),
     unreadCounts: protectedProcedure.query(async ({ ctx }) => {
       const [messages, notifications] = await Promise.all([
