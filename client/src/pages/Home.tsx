@@ -922,7 +922,7 @@ export default function Home() {
           <div style={{ textAlign: 'center', marginTop: '48px' }}>
             <button
               className="btn-outline"
-              onClick={() => setLocation('/creators')}
+              onClick={() => setLocation('/discover')}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}
             >
               View All Creators

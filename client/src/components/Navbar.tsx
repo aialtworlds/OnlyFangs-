@@ -60,8 +60,6 @@ export default function Navbar() {
 
   const navLinks = [
     { id: 'discover', label: 'Discover', path: '/discover' },
-    { id: 'creators', label: 'Creators', path: '/creators' },
-    { id: 'categories', label: 'Categories', path: '/discover' },
     { id: 'plans', label: 'Plans', path: '/#pricing' },
   ];
 

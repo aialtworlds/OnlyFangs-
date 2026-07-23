@@ -15,7 +15,6 @@ import CreatorDashboard from "./pages/CreatorDashboard";
 import PatronDashboard from "./pages/PatronDashboard";
 import Apply from "./pages/Apply";
 import Discover from "./pages/Discover";
-import Creators from "./pages/Creators";
 import CreatorProfile from "./pages/CreatorProfile";
 import NotFound from "./pages/NotFound";
 import PatronProfile from "./pages/PatronProfile";
@@ -39,7 +38,7 @@ function AppLayout() {
         <Route path="/patron-dashboard" component={PatronProfile} />
         <Route path="/apply" component={Apply} />
         <Route path="/discover" component={Discover} />
-        <Route path="/creators" component={Creators} />
+        <Route path="/creators" component={Discover} />
         <Route path="/creator/:id/content" component={CreatorContent} />
         <Route path="/creator/:id">{(params) => <CreatorProfile creatorId={params.id || ''} />}</Route>
         <Route path="/profile" component={PatronProfile} />

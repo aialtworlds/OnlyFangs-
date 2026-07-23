@@ -638,7 +638,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
         }}
       >
         <button
-          onClick={() => setLocation('/creators')}
+          onClick={() => setLocation('/discover')}
           style={{
             display: 'flex',
             alignItems: 'center',
