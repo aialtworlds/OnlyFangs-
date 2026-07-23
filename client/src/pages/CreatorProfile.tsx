@@ -14,6 +14,7 @@ import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
 import { VerificationBadge } from '@/components/VerificationBadge';
 import { FollowButton } from '@/components/FollowButton';
+import { CommentsSection } from '@/components/CommentsSection';
 
 interface CreatorProfileProps {
   creatorId: string;
@@ -39,6 +40,7 @@ const tierLabels: Record<string, string> = {
 function ContentCard({ item, onPlayMusic, creatorAlias }: { item: ContentItem; onPlayMusic: (item: ContentItem) => void; creatorAlias: string }) {
   const [hovered, setHovered] = useState(false);
   const [liked, setLiked] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const { user } = useAuth();
   const isLocked = item.locked && user?.role !== 'admin';
 
@@ -199,20 +201,27 @@ function ContentCard({ item, onPlayMusic, creatorAlias }: { item: ContentItem; o
               {item.likes + (liked ? 1 : 0)}
             </button>
             <button
-              onClick={() => toast('Comments coming soon')}
+              onClick={() => {
+                if (isLocked) {
+                  toast('Subscribe to unlock comments', { description: `Requires ${tierLabels[item.tier]} tier or higher.` });
+                } else {
+                  setShowComments(!showComments);
+                }
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
                 background: 'none',
                 border: 'none',
-                color: 'oklch(0.35 0.02 60)',
+                color: showComments ? 'oklch(0.72 0.09 75)' : 'oklch(0.35 0.02 60)',
                 cursor: 'pointer',
                 fontFamily: "'Cinzel', serif",
                 fontSize: '11px',
+                transition: 'color 0.3s',
               }}
             >
-              <MessageCircle size={13} />
+              <MessageCircle size={13} fill={showComments ? 'oklch(0.72 0.09 75 / 20%)' : 'none'} />
               {item.comments}
             </button>
           </div>
@@ -254,6 +263,9 @@ function ContentCard({ item, onPlayMusic, creatorAlias }: { item: ContentItem; o
             <Share2 size={13} />
           </button>
         </div>
+        {showComments && !isLocked && (
+          <CommentsSection contentId={parseInt(item.id)} />
+        )}
       </div>
     </div>
   );

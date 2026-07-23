@@ -45,6 +45,11 @@ import {
   getContentById,
   canAccessContent,
   deleteContent,
+  createCollection,
+  getCreatorCollections,
+  getCollectionById,
+  addComment,
+  getContentComments,
   getOrCreateConversation,
   getConversations,
   getMessages,
@@ -152,6 +157,11 @@ export const appRouter = router({
       .input(z.object({ creatorId: z.number() }))
       .query(async ({ input }) => {
         return getPublicCreatorTiers(input.creatorId);
+      }),
+    creatorCollections: publicProcedure
+      .input(z.object({ creatorId: z.number() }))
+      .query(async ({ input }) => {
+        return getCreatorCollections(input.creatorId);
       }),
     creatorContent: publicProcedure
       .input(z.object({ creatorId: z.number() }))
@@ -324,6 +334,23 @@ export const appRouter = router({
       if (!creator) return [];
       return getCreatorTiers(creator.id);
     }),
+    myCollections: creatorProcedure.query(async ({ ctx }) => {
+      const creator = await getCreatorByUserId(ctx.user.id);
+      if (!creator) return [];
+      return getCreatorCollections(creator.id);
+    }),
+    createCollection: creatorProcedure
+      .input(z.object({
+        title: z.string().min(1).max(255),
+        description: z.string().max(1000).optional(),
+        coverUrl: z.string().url().optional(),
+        type: z.enum(["album", "gallery", "playlist", "anthology"])
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new Error("Creator profile not found");
+        return createCollection({ creatorId: creator.id, ...input });
+      }),
     createTier: creatorProcedure
       .input(z.object({
         name: z.string().min(1).max(100),
@@ -504,6 +531,7 @@ export const appRouter = router({
     upload: creatorProcedure
       .input(z.object({
         tierId: z.number(),
+        collectionId: z.number().optional(),
         title: z.string().min(1).max(255),
         description: z.string().max(1000).optional(),
         type: z.enum(["image", "photo", "music", "book", "video", "post"]),
@@ -528,7 +556,8 @@ export const appRouter = router({
           input.mimeType,
           input.fileSize,
           input.duration,
-          input.thumbnailUrl
+          input.thumbnailUrl,
+          input.collectionId
         );
         return { success: true };
       }),
@@ -575,6 +604,23 @@ export const appRouter = router({
       }))
       .query(async ({ input }) => {
         return searchContent(input.query, input.limit);
+      }),
+    addComment: protectedProcedure
+      .input(z.object({
+        contentId: z.number(),
+        text: z.string().min(1).max(1000)
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return addComment({
+          contentId: input.contentId,
+          userId: ctx.user.id,
+          text: input.text
+        });
+      }),
+    getComments: publicProcedure
+      .input(z.object({ contentId: z.number() }))
+      .query(async ({ input }) => {
+        return getContentComments(input.contentId);
       }),
   }),
 

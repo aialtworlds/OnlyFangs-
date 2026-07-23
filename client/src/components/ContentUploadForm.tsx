@@ -20,16 +20,21 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
     title: string;
     description: string;
     tierId: string;
+    collectionId: string;
     type: "image" | "photo" | "music" | "book" | "video" | "post";
   }>({
     title: "",
     description: "",
     tierId: "",
+    collectionId: "",
     type: "image",
   });
 
   // Fetch creator's tiers
   const { data: tiers = [] } = trpc.creator.myTiers.useQuery();
+
+  // Fetch creator's collections
+  const { data: collections = [] } = trpc.creator.myCollections.useQuery();
 
   useEffect(() => {
     if (tiers.length > 0 && !formData.tierId) {
@@ -46,7 +51,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
   const uploadMutation = trpc.content.upload.useMutation({
     onSuccess: () => {
       toast.success("Content uploaded successfully!");
-      setFormData({ title: "", description: "", tierId: "", type: "image" });
+      setFormData({ title: "", description: "", tierId: "", collectionId: "", type: "image" });
       setSelectedFile(null);
       setFilePreview(null);
       onSuccess?.();
@@ -132,6 +137,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
       // Create content record via tRPC
       await uploadMutation.mutateAsync({
         tierId: parseInt(formData.tierId),
+        collectionId: formData.collectionId && formData.collectionId !== "none_selected" ? parseInt(formData.collectionId) : undefined,
         title: formData.title,
         description: formData.description || undefined,
         type: formData.type,
@@ -255,6 +261,28 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
               </Select>
             )}
           </div>
+
+          {/* Collection Selection (Optional) */}
+          {collections.length > 0 && (
+            <div className="space-y-2">
+              <label htmlFor="collection" className="text-sm font-medium">
+                Collection / Album (Optional)
+              </label>
+              <Select value={formData.collectionId} onValueChange={(value) => setFormData((prev) => ({ ...prev, collectionId: value }))}>
+                <SelectTrigger id="collection" disabled={isLoading}>
+                  <SelectValue placeholder="No collection (Single release)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none_selected">No collection (Single release)</SelectItem>
+                  {collections.map((coll: any) => (
+                    <SelectItem key={coll.id} value={coll.id.toString()}>
+                      {coll.title} ({coll.type})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Submit Button */}
           <Button

@@ -182,6 +182,7 @@ export const content = mysqlTable("content", {
   id: int("id").autoincrement().primaryKey(),
   creatorId: int("creatorId").notNull(),
   tierId: int("tierId").notNull(), // Tier required to access this content
+  collectionId: int("collectionId"), // Optional collection/album ID
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
   type: mysqlEnum("type", ["image", "photo", "music", "book", "video", "post"]).notNull(),
@@ -410,3 +411,29 @@ export const adminPermissions = mysqlTable(
 
 export type AdminPermission = typeof adminPermissions.$inferSelect;
 export type InsertAdminPermission = typeof adminPermissions.$inferInsert;
+
+// ── Media Collections ─────────────────────────────────────────
+export const collections = mysqlTable("collections", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  coverUrl: text("coverUrl"),
+  type: mysqlEnum("type", ["album", "gallery", "playlist", "anthology"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Collection = typeof collections.$inferSelect;
+export type InsertCollection = typeof collections.$inferInsert;
+
+// ── Comments ──────────────────────────────────────────────────
+export const comments = mysqlTable("comments", {
+  id: int("id").autoincrement().primaryKey(),
+  contentId: int("contentId").notNull(),
+  userId: int("userId").notNull(),
+  text: text("text").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Comment = typeof comments.$inferSelect;
+export type InsertComment = typeof comments.$inferInsert;

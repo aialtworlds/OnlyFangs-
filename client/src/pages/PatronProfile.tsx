@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import { ContentUploadForm } from '@/components/ContentUploadForm';
 import { TierForm } from '@/components/TierForm';
+import { CollectionForm } from '@/components/CollectionForm';
 
 function StatBox({ value, label }: { value: number | string; label: string }) {
   return (
@@ -108,6 +109,7 @@ export default function PatronProfile() {
   const [nameInput, setNameInput] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [showTierForm, setShowTierForm] = useState(false);
+  const [showCollectionForm, setShowCollectionForm] = useState(false);
 
   // Queries
   const statsQuery = trpc.patron.stats.useQuery(undefined, { enabled: isAuthenticated });
@@ -123,6 +125,10 @@ export default function PatronProfile() {
   });
   
   const creatorTiersQuery = trpc.creator.tiers.useQuery(undefined, {
+    enabled: isAuthenticated && isCreatorOrAdmin
+  });
+
+  const myCollectionsQuery = trpc.creator.myCollections.useQuery(undefined, {
     enabled: isAuthenticated && isCreatorOrAdmin
   });
 
@@ -193,6 +199,7 @@ export default function PatronProfile() {
   const creatorProfile = creatorProfileQuery.data;
   const releases = creatorReleasesQuery.data ?? [];
   const tiers = creatorTiersQuery.data ?? [];
+  const myCollections = myCollectionsQuery.data ?? [];
 
   // Sidebar Menu Configuration
   const navItems = [
@@ -205,6 +212,7 @@ export default function PatronProfile() {
     // Creator Section
     ...(isCreatorOrAdmin ? [
       { id: "releases", icon: Image, label: "Nocturnal Releases" },
+      { id: "collections", icon: Bookmark, label: "Collections" },
       { id: "tiers", icon: Crown, label: "Tiers" },
       { id: "audience", icon: Users, label: "Audience" },
       { id: "settings", icon: Settings, label: "Creator Admin" }
@@ -589,6 +597,76 @@ export default function PatronProfile() {
                 Your loyal followers list will appear here as your community grows.
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Render Collections Tab (Creator Only) */}
+        {activeNav === 'collections' && isCreatorOrAdmin && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', margin: 0 }}>My Collections</h2>
+              <button
+                onClick={() => setShowCollectionForm(!showCollectionForm)}
+                style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'oklch(0.38 0.14 20)', color: 'white', border: 'none', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Plus size={12} /> {showCollectionForm ? 'Close Form' : 'New Collection'}
+              </button>
+            </div>
+
+            {showCollectionForm && (
+              <div style={{ marginBottom: '32px' }}>
+                <CollectionForm onSuccess={() => setShowCollectionForm(false)} />
+              </div>
+            )}
+
+            {myCollections.length === 0 ? (
+              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
+                  No collections created yet. Build a series, album, or gallery to group your dark art!
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                {myCollections.map((collection) => (
+                  <div
+                    key={collection.id}
+                    style={{
+                      background: 'oklch(0.06 0.01 285)',
+                      border: '1px solid oklch(1 0 0 / 6%)',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      flexDirection: 'column',
+                    }}
+                  >
+                    {/* Cover Art */}
+                    <div style={{ height: '160px', overflow: 'hidden', background: 'oklch(0.1 0.02 285)' }}>
+                      {collection.coverUrl ? (
+                        <img src={collection.coverUrl} alt={collection.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'oklch(0.45 0.02 60)', fontSize: '40px' }}>
+                          🖤
+                        </div>
+                      )}
+                    </div>
+                    {/* Details */}
+                    <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', color: 'oklch(0.72 0.09 75)', marginBottom: '6px' }}>
+                        {collection.type}
+                      </span>
+                      <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: '15px', color: 'oklch(0.93 0.02 80)', margin: '0 0 6px 0', letterSpacing: '0.04em' }}>
+                        {collection.title}
+                      </h3>
+                      {collection.description && (
+                        <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '13px', color: 'oklch(0.55 0.03 60)', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {collection.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

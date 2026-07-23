@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
   releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
-  moderationQueue, moderationLogs, contentFlags, appeals,
+  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -670,7 +670,8 @@ export async function uploadContent(
   mimeType?: string,
   fileSize?: number,
   duration?: string,
-  thumbnailUrl?: string
+  thumbnailUrl?: string,
+  collectionId?: number
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -679,6 +680,7 @@ export async function uploadContent(
   const result = await db.insert(content).values({
     creatorId,
     tierId,
+    collectionId: collectionId ?? null,
     title,
     description: description ?? null,
     type: type as any,
@@ -2052,4 +2054,78 @@ export async function denyAppeal(
     console.error("[Appeals] Error denying appeal:", error);
     throw error;
   }
+}
+
+// ── Media Collections & Comments Functions ────────────────────
+export async function createCollection(data: {
+  creatorId: number;
+  title: string;
+  description?: string;
+  coverUrl?: string;
+  type: "album" | "gallery" | "playlist" | "anthology";
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(collections).values({
+    creatorId: data.creatorId,
+    title: data.title,
+    description: data.description ?? null,
+    coverUrl: data.coverUrl ?? null,
+    type: data.type
+  });
+  const insertId = (result as any).insertId;
+  return { id: insertId, ...data };
+}
+
+export async function getCreatorCollections(creatorId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(collections)
+    .where(eq(collections.creatorId, creatorId))
+    .orderBy(desc(collections.createdAt));
+}
+
+export async function getCollectionById(collectionId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(collections)
+    .where(eq(collections.id, collectionId))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function addComment(data: {
+  contentId: number;
+  userId: number;
+  text: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(comments).values(data);
+  const insertId = (result as any).insertId;
+  return { id: insertId, ...data, createdAt: new Date() };
+}
+
+export async function getContentComments(contentId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: comments.id,
+      contentId: comments.contentId,
+      userId: comments.userId,
+      text: comments.text,
+      createdAt: comments.createdAt,
+      userName: users.name,
+      userDisplayName: users.displayName,
+      userAvatarUrl: users.avatarUrl
+    })
+    .from(comments)
+    .innerJoin(users, eq(comments.userId, users.id))
+    .where(eq(comments.contentId, contentId))
+    .orderBy(desc(comments.createdAt));
 }
