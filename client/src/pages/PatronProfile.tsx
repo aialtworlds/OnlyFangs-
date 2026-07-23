@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════
-// ONLY FANGS — Patron Profile Page
-// Shows the logged-in patron's profile, subscriptions & activity
+// ONLY FANGS — Unified Personal Space (Profile & Dashboard)
+// Victorian Occult Luxury · Dark Creator Platform
 // ═══════════════════════════════════════════════════════════
 
 import { useState } from 'react';
@@ -8,8 +8,14 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { trpc } from '@/lib/trpc';
 import { getLoginUrl } from '@/const';
-import { Edit2, Check, X, BookOpen, Image, Music, Camera, Star, Loader2, ExternalLink } from 'lucide-react';
+import {
+  Edit2, Check, X, BookOpen, Image, Music, Camera, Star, Loader2, ExternalLink,
+  User, LayoutDashboard, Crown, Bookmark, MessageCircle, Bell, Settings, Users,
+  Plus, Share2, MapPin, Heart, Compass, History, Play
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { ContentUploadForm } from '@/components/ContentUploadForm';
+import { TierForm } from '@/components/TierForm';
 
 function StatBox({ value, label }: { value: number | string; label: string }) {
   return (
@@ -60,15 +66,66 @@ function ContentTypeIcon({ type }: { type: string }) {
   return <>{icons[type] || <Star size={12} />}</>;
 }
 
+function NavItem({
+  icon: Icon, label, active, badge, onClick,
+}: {
+  icon: React.ElementType; label: string; active?: boolean; badge?: number; onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center", gap: "12px", width: "100%",
+        padding: "10px 16px", borderRadius: "6px",
+        background: active ? "oklch(0.38 0.14 20 / 15%)" : "transparent",
+        border: "none", cursor: "pointer",
+        color: active ? "oklch(0.75 0.14 20)" : "oklch(0.65 0.02 60)",
+        fontFamily: "'Cinzel', serif", fontSize: "12px", letterSpacing: "0.06em",
+        textAlign: "left", transition: "all 0.2s", position: "relative",
+      }}
+      onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "oklch(1 0 0 / 4%)"; }}
+      onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+    >
+      <Icon size={16} />
+      <span>{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span style={{
+          marginLeft: "auto", background: "oklch(0.38 0.14 20)", color: "white",
+          fontSize: "10px", fontFamily: "sans-serif", borderRadius: "999px",
+          padding: "1px 7px", minWidth: "18px", textAlign: "center",
+        }}>{badge}</span>
+      )}
+    </button>
+  );
+}
+
 export default function PatronProfile() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, loading } = useAuth();
+  const [activeNav, setActiveNav] = useState('dashboard');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
+  const [showUploadForm, setShowUploadForm] = useState(false);
+  const [showTierForm, setShowTierForm] = useState(false);
 
+  // Queries
   const statsQuery = trpc.patron.stats.useQuery(undefined, { enabled: isAuthenticated });
   const subsQuery = trpc.patron.subscriptions.useQuery(undefined, { enabled: isAuthenticated });
   const activityQuery = trpc.patron.activity.useQuery(undefined, { enabled: isAuthenticated });
+  const unreadQuery = trpc.patron.unreadCounts.useQuery(undefined, { enabled: isAuthenticated });
+  const creatorProfileQuery = trpc.creator.myProfile.useQuery(undefined, { enabled: isAuthenticated });
+  
+  const isCreatorOrAdmin = user?.role === 'creator' || user?.role === 'admin';
+  
+  const creatorReleasesQuery = trpc.creator.releases.useQuery(undefined, {
+    enabled: isAuthenticated && isCreatorOrAdmin
+  });
+  
+  const creatorTiersQuery = trpc.creator.tiers.useQuery(undefined, {
+    enabled: isAuthenticated && isCreatorOrAdmin
+  });
+
   const utils = trpc.useUtils();
 
   const cancelSubMutation = trpc.stripe.cancelSubscription.useMutation({
@@ -103,27 +160,11 @@ export default function PatronProfile() {
     ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : '—';
 
-  // Not logged in
+  // Redirect to login if unauthenticated
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: '60vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'oklch(0.04 0.008 285)',
-        }}
-      >
-        <div
-          style={{
-            fontFamily: "'Cinzel', serif",
-            fontSize: '10px',
-            letterSpacing: '0.3em',
-            color: 'oklch(0.45 0.02 60)',
-            textTransform: 'uppercase',
-          }}
-        >
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'oklch(0.04 0.008 285)' }}>
+        <div style={{ fontFamily: "'Cinzel', serif", fontSize: '10px', letterSpacing: '0.3em', color: 'oklch(0.45 0.02 60)', textTransform: 'uppercase' }}>
           Summoning your profile...
         </div>
       </div>
@@ -132,56 +173,13 @@ export default function PatronProfile() {
 
   if (!isAuthenticated) {
     return (
-      <div
-        style={{
-          minHeight: '60vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'oklch(0.04 0.008 285)',
-          textAlign: 'center',
-          padding: '40px 24px',
-        }}
-      >
+      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'oklch(0.04 0.008 285)', textAlign: 'center', padding: '40px 24px' }}>
         <div style={{ fontSize: '48px', marginBottom: '20px' }}>🦇</div>
-        <h2
-          style={{
-            fontFamily: "'Cinzel', serif",
-            fontSize: '24px',
-            color: 'oklch(0.93 0.02 80)',
-            marginBottom: '12px',
-          }}
-        >
-          You Are Not a Patron
-        </h2>
-        <p
-          style={{
-            fontFamily: "'IM Fell English', serif",
-            fontStyle: 'italic',
-            fontSize: '16px',
-            color: 'oklch(0.55 0.03 60)',
-            marginBottom: '32px',
-            maxWidth: '360px',
-          }}
-        >
+        <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '24px', color: 'oklch(0.93 0.02 80)', marginBottom: '12px' }}>You Are Not a Patron</h2>
+        <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '16px', color: 'oklch(0.55 0.03 60)', marginBottom: '32px', maxWidth: '360px' }}>
           Sign up to access your profile, follow creators, and unlock exclusive content.
         </p>
-        <a
-          href={getLoginUrl()}
-          style={{
-            fontFamily: "'Cinzel', serif",
-            fontSize: '10px',
-            letterSpacing: '0.2em',
-            textTransform: 'uppercase',
-            background: 'oklch(0.72 0.09 75)',
-            color: 'oklch(0.04 0.008 285)',
-            padding: '14px 32px',
-            textDecoration: 'none',
-            display: 'inline-block',
-            transition: 'background 0.25s',
-          }}
-        >
+        <a href={getLoginUrl()} style={{ fontFamily: "'Cinzel', serif", fontSize: '10px', letterSpacing: '0.2em', textTransform: 'uppercase', background: 'oklch(0.72 0.09 75)', color: 'oklch(0.04 0.008 285)', padding: '14px 32px', textDecoration: 'none', display: 'inline-block', transition: 'background 0.25s' }}>
           Sign Up
         </a>
       </div>
@@ -191,486 +189,409 @@ export default function PatronProfile() {
   const stats = statsQuery.data;
   const subscriptions = subsQuery.data ?? [];
   const activity = activityQuery.data ?? [];
+  const unread = unreadQuery.data;
+  const creatorProfile = creatorProfileQuery.data;
+  const releases = creatorReleasesQuery.data ?? [];
+  const tiers = creatorTiersQuery.data ?? [];
 
-  return (
-    <div style={{ background: 'oklch(0.04 0.008 285)', minHeight: '100vh' }}>
-      {/* Profile Header */}
-      <div
-        style={{
-          background: 'linear-gradient(180deg, oklch(0.08 0.02 330) 0%, oklch(0.04 0.008 285) 100%)',
-          borderBottom: '1px solid oklch(1 0 0 / 6%)',
-          padding: 'clamp(32px, 6vw, 64px) clamp(16px, 5vw, 48px) 40px',
-        }}
-      >
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', flexWrap: 'wrap' }}>
-            {/* Avatar */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={displayName}
-                  style={{
-                    width: '88px',
-                    height: '88px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '2px solid oklch(0.72 0.09 75 / 40%)',
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: '88px',
-                    height: '88px',
-                    borderRadius: '50%',
-                    background: 'oklch(0.28 0.1 20)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: '32px',
-                    color: 'oklch(0.93 0.02 80)',
-                    fontWeight: 700,
-                    border: '2px solid oklch(0.72 0.09 75 / 40%)',
-                  }}
-                >
-                  {avatarLetter}
-                </div>
-              )}
-            </div>
+  // Sidebar Menu Configuration
+  const navItems = [
+    { id: "dashboard", icon: LayoutDashboard, label: "Feed / Dashboard" },
+    { id: "profile", icon: User, label: "My Profile" },
+    { id: "subscriptions", icon: Crown, label: "Subscriptions" },
+    { id: "messages", icon: MessageCircle, label: "Messages", badge: unread?.messages },
+    { id: "notifications", icon: Bell, label: "Notifications", badge: unread?.notifications },
+    
+    // Creator Section
+    ...(isCreatorOrAdmin ? [
+      { id: "releases", icon: Image, label: "Nocturnal Releases" },
+      { id: "tiers", icon: Crown, label: "Tiers" },
+      { id: "audience", icon: Users, label: "Audience" },
+      { id: "settings", icon: Settings, label: "Creator Admin" }
+    ] : [])
+  ];
 
-            {/* Name + info */}
-            <div style={{ flex: 1, minWidth: '200px' }}>
-              {/* Editable display name */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                {editingName ? (
-                  <>
-                    <input
-                      autoFocus
-                      value={nameInput}
-                      onChange={(e) => setNameInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') updateProfileMutation.mutate({ displayName: nameInput });
-                        if (e.key === 'Escape') setEditingName(false);
-                      }}
-                      style={{
-                        fontFamily: "'Cinzel', serif",
-                        fontSize: '22px',
-                        color: 'oklch(0.93 0.02 80)',
-                        background: 'oklch(0.06 0.01 285)',
-                        border: '1px solid oklch(0.72 0.09 75 / 40%)',
-                        padding: '4px 10px',
-                        outline: 'none',
-                        letterSpacing: '0.04em',
-                        maxWidth: '280px',
-                        width: '100%',
-                      }}
-                    />
-                    <button
-                      onClick={() => updateProfileMutation.mutate({ displayName: nameInput })}
-                      disabled={updateProfileMutation.isPending}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'oklch(0.72 0.09 75)', padding: '4px' }}
-                    >
-                      <Check size={16} />
-                    </button>
-                    <button
-                      onClick={() => setEditingName(false)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'oklch(0.45 0.02 60)', padding: '4px' }}
-                    >
-                      <X size={16} />
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <h1
-                      style={{
-                        fontFamily: "'Cinzel', serif",
-                        fontSize: 'clamp(18px, 4vw, 26px)',
-                        color: 'oklch(0.93 0.02 80)',
-                        letterSpacing: '0.06em',
-                        margin: 0,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {displayName}
-                    </h1>
-                    <button
-                      onClick={() => { setNameInput(displayName); setEditingName(true); }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: 'oklch(0.45 0.02 60)',
-                        padding: '4px',
-                        transition: 'color 0.2s',
-                      }}
-                      title="Edit display name"
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = 'oklch(0.72 0.09 75)'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'oklch(0.45 0.02 60)'; }}
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                  </>
-                )}
-              </div>
+  const handleNav = (id: string) => {
+    if (id === "messages") {
+      setLocation("/messages");
+    } else if (id === "notifications") {
+      setLocation("/notifications");
+    } else if (id === "settings") {
+      setLocation("/creator-admin");
+    } else {
+      setActiveNav(id);
+    }
+    setMobileMenuOpen(false);
+  };
 
-              <div
-                style={{
-                  fontFamily: "'IM Fell English', serif",
-                  fontStyle: 'italic',
-                  fontSize: '14px',
-                  color: 'oklch(0.45 0.02 60)',
-                  marginBottom: '8px',
-                }}
-              >
-                Patron · Member since {memberSince}
-              </div>
-
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', marginTop: '6px' }}>
-                <div
-                  style={{
-                    display: 'inline-block',
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: '8px',
-                    letterSpacing: '0.25em',
-                    textTransform: 'uppercase',
-                    color: 'oklch(0.72 0.09 75)',
-                    border: '1px solid oklch(0.72 0.09 75 / 30%)',
-                    padding: '4px 12px',
-                  }}
-                >
-                  {user?.role === 'admin'
-                    ? 'Admin Master'
-                    : user?.role === 'creator'
-                    ? 'Creator'
-                    : 'Patron'}
-                </div>
-
-                {(user?.role === 'creator' || user?.role === 'admin') && (
-                  <button
-                    onClick={() => setLocation('/creator-admin')}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      fontFamily: "'Cinzel', serif",
-                      fontSize: '8px',
-                      letterSpacing: '0.15em',
-                      textTransform: 'uppercase',
-                      color: 'white',
-                      background: 'oklch(0.38 0.14 20)',
-                      border: 'none',
-                      padding: '5px 12px',
-                      cursor: 'pointer',
-                      borderRadius: '2px',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = 'oklch(0.48 0.16 20)';
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.background = 'oklch(0.38 0.14 20)';
-                    }}
-                  >
-                    Go to Dashboard
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Stats row */}
-          <div style={{ display: 'flex', gap: '2px', marginTop: '32px', flexWrap: 'wrap' }}>
-            <StatBox value={stats?.activeSubscriptions ?? 0} label="Subscriptions" />
-            <StatBox value={stats?.followingCreators ?? 0} label="Following" />
-            <StatBox value={stats?.savedContentCount ?? 0} label="Saved" />
-            <StatBox value={stats?.loyaltyPoints ?? 0} label="Loyalty Pts" />
-          </div>
+  const SidebarContent = () => (
+    <>
+      <div style={{ padding: "24px 20px 20px", borderBottom: "1px solid oklch(1 0 0 / 6%)", cursor: "pointer" }} onClick={() => setLocation("/")}>
+        <div style={{ fontFamily: "'Cinzel', serif", fontSize: "18px", letterSpacing: "0.12em", color: "oklch(0.93 0.02 80)" }}>
+          ONLY <span style={{ color: "oklch(0.75 0.14 20)", fontWeight: 900 }}>FANGS</span>
         </div>
       </div>
-
-      {/* Content area */}
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: 'clamp(24px, 4vw, 48px) clamp(16px, 5vw, 48px)' }}>
-
-        {/* Active Subscriptions */}
-        <section style={{ marginBottom: '48px' }}>
-          <div
-            style={{
-              fontFamily: "'Cinzel', serif",
-              fontSize: '10px',
-              letterSpacing: '0.3em',
-              textTransform: 'uppercase',
-              color: 'oklch(0.72 0.09 75)',
-              marginBottom: '20px',
-              borderBottom: '1px solid oklch(0.72 0.09 75 / 15%)',
-              paddingBottom: '12px',
-            }}
+      <nav style={{ padding: "16px 12px", flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
+        {navItems.map((item) => (
+          <NavItem key={item.id} icon={item.icon} label={item.label}
+            active={activeNav === item.id} badge={item.badge} onClick={() => handleNav(item.id)} />
+        ))}
+      </nav>
+      {user?.role === 'admin' && (
+        <div style={{ margin: "0 12px 12px", padding: "12px 16px", background: "oklch(0.08 0.02 330)", border: "1px solid oklch(0.38 0.14 20 / 20%)", borderRadius: "8px" }}>
+          <button
+            onClick={() => setLocation('/moderation')}
+            style={{ width: "100%", padding: "8px", border: "1px solid oklch(0.38 0.14 20 / 40%)", background: "transparent", color: "oklch(0.72 0.09 75)", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px" }}
           >
-            Active Subscriptions
-          </div>
+            Moderation Panel
+          </button>
+        </div>
+      )}
+    </>
+  );
 
-          {subsQuery.isLoading ? (
-            <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', color: 'oklch(0.45 0.02 60)', fontSize: '14px' }}>
-              Consulting the grimoire...
+  return (
+    <div style={{ minHeight: "100vh", background: "oklch(0.04 0.008 285)", display: "flex", paddingTop: "68px" }}>
+      
+      {/* Desktop Sidebar */}
+      <div style={{ width: "240px", flexShrink: 0, background: "oklch(0.055 0.012 330)", borderRight: "1px solid oklch(1 0 0 / 6%)", display: "flex", flexDirection: "column", height: "calc(100vh - 68px)", position: "sticky", top: "68px", overflowY: "auto" }}>
+        <SidebarContent />
+      </div>
+
+      {/* Main Content Area */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowX: "hidden", padding: "clamp(20px, 4vw, 40px)" }}>
+        
+        {/* Render Feed/Dashboard Tab */}
+        {activeNav === 'dashboard' && (
+          <div>
+            <div style={{ marginBottom: "32px" }}>
+              <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "14px", color: "oklch(0.55 0.03 60)", marginBottom: "6px" }}>Welcome back,</div>
+              <div style={{ fontFamily: "'Cinzel', serif", fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 700, color: "oklch(0.93 0.02 80)", letterSpacing: "0.04em", display: "flex", alignItems: "center", gap: "12px" }}>
+                {displayName} <span style={{ fontSize: "20px" }}>✦</span>
+              </div>
             </div>
-          ) : subscriptions.length === 0 ? (
-            <div
-              style={{
-                background: 'oklch(0.085 0.015 330)',
-                border: '1px solid oklch(1 0 0 / 8%)',
-                padding: '32px',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontSize: '32px', marginBottom: '12px' }}>🩸</div>
-              <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.75 0.03 75)', marginBottom: '8px' }}>
-                No Active Subscriptions
-              </div>
-              <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '13px', color: 'oklch(0.45 0.02 60)', marginBottom: '20px' }}>
-                Discover creators and subscribe to unlock their exclusive content.
-              </div>
-              <button
-                onClick={() => setLocation('/discover')}
-                style={{
-                  fontFamily: "'Cinzel', serif",
-                  fontSize: '9px',
-                  letterSpacing: '0.2em',
-                  textTransform: 'uppercase',
-                  background: 'oklch(0.72 0.09 75)',
-                  color: 'oklch(0.04 0.008 285)',
-                  border: 'none',
-                  padding: '10px 24px',
-                  cursor: 'pointer',
-                }}
-              >
-                Discover Creators
-              </button>
+
+            {/* Stats Row */}
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '40px', flexWrap: 'wrap' }}>
+              <StatBox value={stats?.activeSubscriptions ?? 0} label="Subscriptions" />
+              <StatBox value={stats?.followingCreators ?? 0} label="Following" />
+              <StatBox value={stats?.savedContentCount ?? 0} label="Saved" />
+              <StatBox value={stats?.loyaltyPoints ?? 0} label="Loyalty Pts" />
             </div>
-          ) : (
-            <>
-<div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={() => billingPortalMutation.mutate({ origin: window.location.origin })}
-                  disabled={billingPortalMutation.isPending}
-                  style={{
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: '8px',
-                    letterSpacing: '0.2em',
-                    textTransform: 'uppercase',
-                    background: 'transparent',
-                    color: 'oklch(0.72 0.09 75)',
-                    border: '1px solid oklch(0.72 0.09 75 / 30%)',
-                    padding: '8px 16px',
-                    cursor: billingPortalMutation.isPending ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    opacity: billingPortalMutation.isPending ? 0.7 : 1,
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  {billingPortalMutation.isPending ? (
-                    <Loader2 size={10} style={{ animation: 'spin 1s linear infinite' }} />
-                  ) : (
-                    <ExternalLink size={10} />
-                  )}
-                  Manage Billing
-                </button>
+
+            {/* Recent Activity / Feed */}
+            <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: '12px', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'oklch(0.72 0.09 75)', marginBottom: '20px', borderBottom: '1px solid oklch(0.72 0.09 75 / 15%)', paddingBottom: '12px' }}>
+              Recent Activity Feed
+            </h3>
+
+            {activityQuery.isLoading ? (
+              <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', color: 'oklch(0.45 0.02 60)', fontSize: '14px' }}>
+                Reading the omens...
               </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '2px' }}>
-              {subscriptions.map((sub) => (
-                <div
-                  key={sub.subId}
-                  style={{
-                    background: 'oklch(0.085 0.015 330)',
-                    border: '1px solid oklch(1 0 0 / 8%)',
-                    padding: '18px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
-                    transition: 'border-color 0.2s',
-                  }}
-                >
-                  <div
-                    style={{ display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer' }}
-                    onClick={() => setLocation(`/creator/${sub.creatorHandle}`)}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.opacity = '0.85'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
-                  >
-                    {sub.creatorAvatarUrl ? (
-                      <img
-                        src={sub.creatorAvatarUrl}
-                        alt={sub.creatorAlias}
-                        style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                      />
+            ) : activity.length === 0 ? (
+              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontSize: '32px', marginBottom: '12px' }}>🩸</div>
+                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
+                  The chronicles are empty. Your story begins when you subscribe to a creator.
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {activity.map((item) => (
+                  <div key={item.id} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    {item.creatorAvatarUrl ? (
+                      <img src={item.creatorAvatarUrl} alt="" style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                     ) : (
-                      <div
-                        style={{
-                          width: '44px',
-                          height: '44px',
-                          borderRadius: '50%',
-                          background: 'oklch(0.28 0.1 20)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontFamily: "'Cinzel', serif",
-                          fontSize: '16px',
-                          color: 'oklch(0.93 0.02 80)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {sub.creatorAlias.charAt(0)}
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'oklch(0.12 0.02 285)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'oklch(0.55 0.03 60)', flexShrink: 0 }}>
+                        <ContentTypeIcon type={item.type.replace('new_', '')} />
                       </div>
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: '12px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.04em', marginBottom: '2px' }}>
-                        {sub.creatorAlias}
-                        {sub.creatorVerified && (
-                          <span style={{ marginLeft: '6px', color: 'oklch(0.72 0.09 75)', fontSize: '9px' }}>✦</span>
-                        )}
+                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: '12px', color: 'oklch(0.82 0.03 75)', letterSpacing: '0.04em', marginBottom: '2px' }}>
+                        {item.message || item.type.replace(/_/g, ' ')}
                       </div>
-                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.45 0.02 60)' }}>
-                        {sub.creatorCategory || 'Dark Creator'}
+                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.40 0.02 60)' }}>
+                        {item.creatorAlias && `${item.creatorAlias} · `}
+                        {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: "'Cinzel', serif",
-                        fontSize: '8px',
-                        letterSpacing: '0.15em',
-                        textTransform: 'uppercase',
-                        color: sub.status === 'active' ? 'oklch(0.65 0.12 145)' : 'oklch(0.55 0.04 20)',
-                        border: `1px solid ${sub.status === 'active' ? 'oklch(0.65 0.12 145 / 30%)' : 'oklch(0.55 0.04 20 / 30%)'}`,
-                        padding: '3px 8px',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {sub.status}
                     </div>
                   </div>
-                  {sub.status === 'active' && (
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Cancel subscription to ${sub.creatorAlias}?`)) {
-                          cancelSubMutation.mutate({ subscriptionId: sub.subId });
-                        }
-                      }}
-                      disabled={cancelSubMutation.isPending && cancelSubMutation.variables?.subscriptionId === sub.subId}
-                      style={{
-                        fontFamily: "'Cinzel', serif",
-                        fontSize: '8px',
-                        letterSpacing: '0.15em',
-                        textTransform: 'uppercase',
-                        background: 'transparent',
-                        color: 'oklch(0.55 0.04 20)',
-                        border: '1px solid oklch(0.55 0.04 20 / 30%)',
-                        padding: '6px 12px',
-                        cursor: 'pointer',
-                        alignSelf: 'flex-start',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      {cancelSubMutation.isPending && cancelSubMutation.variables?.subscriptionId === sub.subId ? (
-                        <Loader2 size={9} style={{ animation: 'spin 1s linear infinite' }} />
-                      ) : null}
-                      Cancel Subscription
-                    </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Render Profile Tab */}
+        {activeNav === 'profile' && (
+          <div>
+            {/* Cover Banner */}
+            <div style={{ position: "relative", height: "200px", overflow: "hidden", borderRadius: '8px', marginBottom: '24px' }}>
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, oklch(0.1 0.05 20) 0%, oklch(0.05 0.01 285) 60%, oklch(0.14 0.07 20) 100%)" }} />
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, oklch(0.04 0.008 285 / 60%) 100%)" }} />
+            </div>
+
+            {/* Profile Info */}
+            <div style={{ padding: "0 12px", position: "relative", marginBottom: '40px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', flexWrap: 'wrap', marginTop: '-60px' }}>
+                {/* Avatar */}
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={displayName} style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid oklch(0.04 0.008 285)', background: 'oklch(0.1 0.025 330)' }} />
+                  ) : (
+                    <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'oklch(0.28 0.1 20)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cinzel', serif", fontSize: '36px', color: 'oklch(0.93 0.02 80)', fontWeight: 700, border: '3px solid oklch(0.04 0.008 285)' }}>
+                      {avatarLetter}
+                    </div>
                   )}
                 </div>
-              ))}
-            </div>
-            </>
-          )}
-        </section>
 
-        {/* Recent Activity */}
-        <section>
-          <div
-            style={{
-              fontFamily: "'Cinzel', serif",
-              fontSize: '10px',
-              letterSpacing: '0.3em',
-              textTransform: 'uppercase',
-              color: 'oklch(0.72 0.09 75)',
-              marginBottom: '20px',
-              borderBottom: '1px solid oklch(0.72 0.09 75 / 15%)',
-              paddingBottom: '12px',
-            }}
-          >
-            Recent Activity
-          </div>
-
-          {activityQuery.isLoading ? (
-            <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', color: 'oklch(0.45 0.02 60)', fontSize: '14px' }}>
-              Reading the omens...
-            </div>
-          ) : activity.length === 0 ? (
-            <div
-              style={{
-                background: 'oklch(0.085 0.015 330)',
-                border: '1px solid oklch(1 0 0 / 8%)',
-                padding: '32px',
-                textAlign: 'center',
-              }}
-            >
-              <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
-                The chronicles are empty. Your story begins when you subscribe to a creator.
+                <div style={{ flex: 1, minWidth: '200px', paddingTop: '68px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    {editingName ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          autoFocus
+                          value={nameInput}
+                          onChange={(e) => setNameInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') updateProfileMutation.mutate({ displayName: nameInput });
+                            if (e.key === 'Escape') setEditingName(false);
+                          }}
+                          style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', background: 'oklch(0.06 0.01 285)', border: '1px solid oklch(0.72 0.09 75 / 40%)', padding: '4px 10px', outline: 'none', letterSpacing: '0.04em' }}
+                        />
+                        <button onClick={() => updateProfileMutation.mutate({ displayName: nameInput })} disabled={updateProfileMutation.isPending} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'oklch(0.72 0.09 75)' }}><Check size={16} /></button>
+                        <button onClick={() => setEditingName(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'oklch(0.45 0.02 60)' }}><X size={16} /></button>
+                      </div>
+                    ) : (
+                      <>
+                        <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: 'clamp(20px, 3vw, 28px)', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.04em', margin: 0 }}>
+                          {displayName}
+                        </h2>
+                        <button onClick={() => { setNameInput(displayName); setEditingName(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'oklch(0.45 0.02 60)', padding: '4px' }}><Edit2 size={14} /></button>
+                      </>
+                    )}
+                  </div>
+                  <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)', marginBottom: '8px' }}>
+                    Member since {memberSince}
+                  </div>
+                  <div style={{ display: 'inline-block', fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'oklch(0.72 0.09 75)', border: '1px solid oklch(0.72 0.09 75 / 30%)', padding: '4px 12px' }}>
+                    {user?.role === 'admin' ? 'Admin Master' : user?.role === 'creator' ? 'Creator' : 'Patron'}
+                  </div>
+                </div>
               </div>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              {activity.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    background: 'oklch(0.085 0.015 330)',
-                    border: '1px solid oklch(1 0 0 / 8%)',
-                    padding: '14px 18px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '14px',
-                  }}
-                >
-                  {item.creatorAvatarUrl ? (
-                    <img
-                      src={item.creatorAvatarUrl}
-                      alt=""
-                      style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        background: 'oklch(0.12 0.02 285)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'oklch(0.55 0.03 60)',
-                        flexShrink: 0,
-                      }}
-                    >
-                      <ContentTypeIcon type={item.type.replace('new_', '')} />
-                    </div>
-                  )}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: '11px', color: 'oklch(0.82 0.03 75)', letterSpacing: '0.04em', marginBottom: '2px' }}>
-                      {item.message || item.type.replace(/_/g, ' ')}
-                    </div>
-                    <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.4 0.02 60)' }}>
-                      {item.creatorAlias && `${item.creatorAlias} · `}
-                      {new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+
+            {/* Profile Tabs based on Role */}
+            <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: '12px', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'oklch(0.72 0.09 75)', marginBottom: '20px', borderBottom: '1px solid oklch(0.72 0.09 75 / 15%)', paddingBottom: '12px' }}>
+              My Subscriptions
+            </h3>
+            
+            {subscriptions.length === 0 ? (
+              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '32px', textAlign: 'center' }}>
+                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '13px', color: 'oklch(0.45 0.02 60)' }}>
+                  You are not subscribed to any creators yet.
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '8px' }}>
+                {subscriptions.map((sub) => (
+                  <div key={sub.subId} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', cursor: 'pointer' }} onClick={() => setLocation(`/creator/${sub.creatorHandle}`)}>
+                      {sub.creatorAvatarUrl ? (
+                        <img src={sub.creatorAvatarUrl} alt="" style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'oklch(0.28 0.1 20)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cinzel', serif", fontSize: '16px', color: 'oklch(0.93 0.02 80)' }}>
+                          {sub.creatorAlias.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: '12px', color: 'oklch(0.93 0.02 80)' }}>
+                          {sub.creatorAlias}
+                        </div>
+                        <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.45 0.02 60)' }}>
+                          {sub.creatorCategory || 'Dark Creator'}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Render Subscriptions Tab */}
+        {activeNav === 'subscriptions' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', margin: 0 }}>Active Memberships</h2>
+              <button
+                onClick={() => billingPortalMutation.mutate({ origin: window.location.origin })}
+                disabled={billingPortalMutation.isPending}
+                style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'transparent', color: 'oklch(0.72 0.09 75)', border: '1px solid oklch(0.72 0.09 75 / 30%)', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {billingPortalMutation.isPending ? <Loader2 size={10} style={{ animation: 'spin 1s linear infinite' }} /> : <ExternalLink size={10} />}
+                Manage Billing
+              </button>
             </div>
-          )}
-        </section>
+
+            {subscriptions.length === 0 ? (
+              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)', marginBottom: '20px' }}>
+                  No active subscriptions. Explore our creators to join their tiers.
+                </div>
+                <button onClick={() => setLocation('/discover')} style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', background: 'oklch(0.72 0.09 75)', color: 'oklch(0.04 0.008 285)', border: 'none', padding: '10px 24px', cursor: 'pointer' }}>
+                  Discover Creators
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {subscriptions.map((sub) => (
+                  <div key={sub.subId} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      {sub.creatorAvatarUrl ? (
+                        <img src={sub.creatorAvatarUrl} alt="" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'oklch(0.28 0.1 20)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cinzel', serif", fontSize: '18px', color: 'oklch(0.93 0.02 80)' }}>
+                          {sub.creatorAlias.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: '14px', color: 'oklch(0.93 0.02 80)' }}>{sub.creatorAlias}</div>
+                        <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.45 0.02 60)' }}>{sub.creatorCategory || 'Dark Creator'}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <span style={{ fontFamily: "'Cinzel', serif", fontSize: '10px', color: 'oklch(0.65 0.12 145)', border: '1px solid oklch(0.65 0.12 145 / 30%)', padding: '4px 10px' }}>
+                        {sub.status.toUpperCase()}
+                      </span>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Cancel subscription to ${sub.creatorAlias}?`)) {
+                            cancelSubMutation.mutate({ subscriptionId: sub.subId });
+                          }
+                        }}
+                        disabled={cancelSubMutation.isPending}
+                        style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'transparent', color: 'oklch(0.55 0.04 20)', border: '1px solid oklch(0.55 0.04 20 / 30%)', padding: '8px 16px', cursor: 'pointer' }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Render Releases Tab (Creator Only) */}
+        {activeNav === 'releases' && isCreatorOrAdmin && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', margin: 0 }}>My Releases</h2>
+              <button
+                onClick={() => setShowUploadForm(!showUploadForm)}
+                style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'oklch(0.38 0.14 20)', color: 'white', border: 'none', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Plus size={12} /> {showUploadForm ? 'Close Form' : 'New Release'}
+              </button>
+            </div>
+
+            {showUploadForm && (
+              <div style={{ background: 'oklch(0.055 0.012 330)', border: '1px solid oklch(1 0 0 / 6%)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
+                <ContentUploadForm onSuccess={() => {
+                  toast.success('Content published and sent for review!');
+                  setShowUploadForm(false);
+                  utils.creator.releases.invalidate();
+                }} />
+              </div>
+            )}
+
+            {releases.length === 0 ? (
+              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
+                  You have not uploaded any releases yet. Publish your first content!
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+                {releases.map((release) => (
+                  <div key={release.id} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', borderRadius: '6px', overflow: 'hidden' }}>
+                    <div style={{ height: '140px', background: 'oklch(0.05 0.01 285)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {release.thumbnailUrl ? (
+                        <img src={release.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ fontSize: '24px' }}>🦇</div>
+                      )}
+                    </div>
+                    <div style={{ padding: '14px' }}>
+                      <h4 style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', margin: '0 0 4px 0' }}>{release.title}</h4>
+                      <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.45 0.02 60)', margin: 0 }}>{release.type.toUpperCase()}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Render Tiers Tab (Creator Only) */}
+        {activeNav === 'tiers' && isCreatorOrAdmin && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', margin: 0 }}>Membership Tiers</h2>
+              <button
+                onClick={() => setShowTierForm(!showTierForm)}
+                style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'oklch(0.38 0.14 20)', color: 'white', border: 'none', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Plus size={12} /> {showTierForm ? 'Close Form' : 'New Tier'}
+              </button>
+            </div>
+
+            {showTierForm && (
+              <div style={{ background: 'oklch(0.055 0.012 330)', border: '1px solid oklch(1 0 0 / 6%)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
+                <TierForm onSuccess={() => {
+                  toast.success('Tier created successfully!');
+                  setShowTierForm(false);
+                  utils.creator.tiers.invalidate();
+                }} onCancel={() => setShowTierForm(false)} />
+              </div>
+            )}
+
+            {tiers.length === 0 ? (
+              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
+                  No tiers configured. Create tiers to start offering subscription access!
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+                {tiers.map((tier) => (
+                  <div key={tier.id} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(0.38 0.14 20 / 20%)', borderRadius: '8px', padding: '20px' }}>
+                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: '14px', color: 'oklch(0.93 0.02 80)', marginBottom: '4px' }}>{tier.name}</div>
+                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', fontWeight: 700, color: 'oklch(0.75 0.14 20)', marginBottom: '8px' }}>
+                      {parseFloat(tier.price) === 0 ? 'Free' : `$${tier.price}/mo`}
+                    </div>
+                    {tier.description && <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.45 0.02 60)' }}>{tier.description}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Render Audience Tab (Creator Only) */}
+        {activeNav === 'audience' && isCreatorOrAdmin && (
+          <div>
+            <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', marginBottom: '24px' }}>My Audience</h2>
+            <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
+              <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
+                Your loyal followers list will appear here as your community grows.
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

@@ -34,9 +34,9 @@ function AppLayout() {
       <Navbar />
       <Switch>
         <Route path="/" component={Home} />
-        <Route path="/creator-dashboard" component={CreatorDashboard} />
+        <Route path="/creator-dashboard" component={PatronProfile} />
         <Route path="/creator-admin" component={CreatorAdmin} />
-        <Route path="/patron-dashboard" component={PatronDashboard} />
+        <Route path="/patron-dashboard" component={PatronProfile} />
         <Route path="/apply" component={Apply} />
         <Route path="/discover" component={Discover} />
         <Route path="/creators" component={Creators} />
