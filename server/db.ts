@@ -2196,7 +2196,7 @@ export async function getRecentContent(limit: number = 12) {
   const db = await getDb();
   if (!db) return [];
 
-  return db
+  const rows = await db
     .select({
       id: content.id,
       creatorId: content.creatorId,
@@ -2215,12 +2215,26 @@ export async function getRecentContent(limit: number = 12) {
       creatorAlias: creators.alias,
       creatorAvatarUrl: creators.avatarUrl,
       creatorHandle: creators.handle,
+      tierPrice: tiers.price,
     })
     .from(content)
     .innerJoin(creators, eq(content.creatorId, creators.id))
+    .leftJoin(tiers, eq(content.tierId, tiers.id))
     .where(eq(content.moderationStatus, 'approved'))
     .orderBy(desc(content.createdAt))
     .limit(limit);
+
+  // SECURITY: same reasoning as public.creatorContent — this feeds the
+  // Discover page's preview carousels, including for anonymous visitors.
+  // A row's fileUrl/fileKey is the real, direct link to the stored file;
+  // it must never go out for content the requester hasn't unlocked, no
+  // matter what the current frontend does or doesn't do with it yet.
+  return rows.map((row) => {
+    const isFree = row.tierPrice !== undefined && row.tierPrice !== null && parseFloat(row.tierPrice) === 0;
+    if (isFree) return { ...row, isFree: true };
+    const { fileUrl: _fileUrl, fileKey: _fileKey, ...safeRow } = row;
+    return { ...safeRow, isFree: false };
+  });
 }
 
 export async function getRecentSubscriptions(limit: number = 5) {

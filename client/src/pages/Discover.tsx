@@ -192,8 +192,8 @@ function ContentCard({ content, creator, onPlayMusic }: { content: any; creator:
           </div>
         )}
 
-        {/* Music Play Overlay (Only for Free tier) */}
-        {content.type === 'music' && !content.tierId && onPlayMusic && (
+        {/* Music Play Overlay (Only for Free tier — fileUrl is only present when accessible) */}
+        {content.type === 'music' && content.fileUrl && onPlayMusic && (
           <div
             style={{
               position: 'absolute',
@@ -221,8 +221,8 @@ function ContentCard({ content, creator, onPlayMusic }: { content: any; creator:
           </div>
         )}
 
-        {/* Lock Overlay for Premium content */}
-        {content.tierId && (
+        {/* Lock Overlay for Premium content (no fileUrl means it wasn't unlocked) */}
+        {!content.fileUrl && (
           <div
             style={{
               position: 'absolute',
