@@ -144,6 +144,60 @@ export const appRouter = router({
         await updateUserProfile(ctx.user.id, input);
         return { success: true };
       }),
+    uploadAvatar: protectedProcedure
+      .input(z.object({
+        base64: z.string(),
+        mimeType: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const buffer = Buffer.from(input.base64, "base64");
+        const fileSizeInMB = buffer.length / (1024 * 1024);
+        if (fileSizeInMB > 5) throw new Error("File size exceeds 5MB limit");
+
+        const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+        if (!allowedMimes.includes(input.mimeType)) {
+          throw new Error("Invalid file type. Only JPEG, PNG, and WebP are allowed");
+        }
+
+        const ext = input.mimeType.split("/")[1];
+        const fileKey = `avatars/user-${ctx.user.id}-${Date.now()}.${ext}`;
+        const { url } = await storagePut(fileKey, buffer, input.mimeType);
+
+        await updateUserProfile(ctx.user.id, { avatarUrl: url });
+
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (creator) {
+          await updateCreatorProfile(creator.id, { avatarUrl: url });
+        }
+
+        return { success: true, avatarUrl: url };
+      }),
+    uploadCover: protectedProcedure
+      .input(z.object({
+        base64: z.string(),
+        mimeType: z.string(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const buffer = Buffer.from(input.base64, "base64");
+        const fileSizeInMB = buffer.length / (1024 * 1024);
+        if (fileSizeInMB > 5) throw new Error("File size exceeds 5MB limit");
+
+        const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+        if (!allowedMimes.includes(input.mimeType)) {
+          throw new Error("Invalid file type. Only JPEG, PNG, and WebP are allowed");
+        }
+
+        const ext = input.mimeType.split("/")[1];
+        const fileKey = `covers/user-${ctx.user.id}-${Date.now()}.${ext}`;
+        const { url } = await storagePut(fileKey, buffer, input.mimeType);
+
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (creator) {
+          await updateCreatorProfile(creator.id, { coverUrl: url });
+        }
+
+        return { success: true, coverUrl: url };
+      }),
   }),
 
   public: router({

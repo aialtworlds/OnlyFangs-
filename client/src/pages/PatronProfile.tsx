@@ -18,6 +18,7 @@ import { ContentUploadForm } from '@/components/ContentUploadForm';
 import { TierForm } from '@/components/TierForm';
 import { CollectionForm } from '@/components/CollectionForm';
 import { CommentsSection } from '@/components/CommentsSection';
+import { CreatorSettingsForm } from '@/components/CreatorSettingsForm';
 
 function StatBox({ value, label }: { value: number | string; label: string }) {
   return (
@@ -367,6 +368,57 @@ export default function PatronProfile() {
     onError: () => toast.error('Failed to update profile'),
   });
 
+  const uploadAvatarMutation = trpc.patron.uploadAvatar.useMutation({
+    onSuccess: () => {
+      toast.success('Avatar uploaded successfully');
+      utils.auth.me.invalidate();
+      if (isCreatorOrAdmin) {
+        utils.creator.myProfile.invalidate();
+      }
+    },
+    onError: (err) => toast.error('Avatar upload failed', { description: err.message }),
+  });
+
+  const uploadCoverMutation = trpc.patron.uploadCover.useMutation({
+    onSuccess: () => {
+      toast.success('Cover banner uploaded successfully');
+      if (isCreatorOrAdmin) {
+        utils.creator.myProfile.invalidate();
+      }
+    },
+    onError: (err) => toast.error('Cover upload failed', { description: err.message }),
+  });
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = (event.target?.result as string).split(',')[1];
+      await uploadAvatarMutation.mutateAsync({
+        base64,
+        mimeType: file.type,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = (event.target?.result as string).split(',')[1];
+      await uploadCoverMutation.mutateAsync({
+        base64,
+        mimeType: file.type,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const displayName = user?.displayName || user?.name || 'Patron';
   const avatarLetter = displayName.charAt(0).toUpperCase();
   const avatarUrl = user?.avatarUrl;
@@ -609,16 +661,56 @@ export default function PatronProfile() {
         {activeNav === 'profile' && (
           <div>
             {/* Cover Banner */}
-            <div style={{ position: "relative", height: "200px", overflow: "hidden", borderRadius: '8px', marginBottom: '24px' }}>
-              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, oklch(0.1 0.05 20) 0%, oklch(0.05 0.01 285) 60%, oklch(0.14 0.07 20) 100%)" }} />
+            <div
+              style={{
+                position: "relative",
+                height: "200px",
+                overflow: "hidden",
+                borderRadius: '8px',
+                marginBottom: '24px',
+                background: (isCreatorOrAdmin && creatorProfile?.coverUrl)
+                  ? `url(${creatorProfile.coverUrl}) center/cover no-repeat`
+                  : "linear-gradient(135deg, oklch(0.1 0.05 20) 0%, oklch(0.05 0.01 285) 60%, oklch(0.14 0.07 20) 100%)"
+              }}
+            >
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, oklch(0.04 0.008 285 / 60%) 100%)" }} />
+              
+              {/* Banner Upload Trigger */}
+              {isCreatorOrAdmin && (
+                <label
+                  style={{
+                    position: 'absolute',
+                    bottom: '12px',
+                    right: '12px',
+                    background: 'oklch(0.085 0.015 330 / 80%)',
+                    border: '1px solid oklch(1 0 0 / 12%)',
+                    borderRadius: '4px',
+                    padding: '6px 12px',
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: '9px',
+                    letterSpacing: '0.15em',
+                    textTransform: 'uppercase',
+                    color: 'oklch(0.82 0.03 75)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  Change Cover
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCoverUpload}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+              )}
             </div>
 
             {/* Profile Info */}
             <div style={{ padding: "0 12px", position: "relative", marginBottom: '40px' }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', flexWrap: 'wrap', marginTop: '-60px' }}>
                 {/* Avatar */}
-                <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div style={{ position: 'relative', flexShrink: 0, group: 'true' as any } as any}>
                   {avatarUrl ? (
                     <img src={avatarUrl} alt={displayName} style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid oklch(0.04 0.008 285)', background: 'oklch(0.1 0.025 330)' }} />
                   ) : (
@@ -626,6 +718,34 @@ export default function PatronProfile() {
                       {avatarLetter}
                     </div>
                   )}
+                  
+                  {/* Avatar Upload Trigger */}
+                  <label
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: '50%',
+                      background: 'oklch(0 0 0 / 60%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'opacity 0.2s',
+                      opacity: 0,
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
+                  >
+                    <span style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'oklch(0.93 0.02 80)' }}>
+                      Upload
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleAvatarUpload}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
                 </div>
 
                 <div style={{ flex: 1, minWidth: '200px', paddingTop: '68px' }}>
@@ -698,6 +818,17 @@ export default function PatronProfile() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {isCreatorOrAdmin && creatorProfile && (
+              <div style={{ marginTop: '48px' }}>
+                <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: '12px', letterSpacing: '0.25em', textTransform: 'uppercase', color: 'oklch(0.72 0.09 75)', marginBottom: '20px', borderBottom: '1px solid oklch(0.72 0.09 75 / 15%)', paddingBottom: '12px' }}>
+                  Creator Profile Settings
+                </h3>
+                <div style={{ background: 'oklch(0.06 0.01 285)', border: '1px solid oklch(1 0 0 / 6%)', padding: '24px', borderRadius: '8px' }}>
+                  <CreatorSettingsForm profile={creatorProfile} onSuccess={() => { utils.creator.myProfile.invalidate(); utils.auth.me.invalidate(); }} />
+                </div>
               </div>
             )}
           </div>
