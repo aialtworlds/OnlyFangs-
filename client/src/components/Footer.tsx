@@ -63,7 +63,7 @@ export default function Footer() {
                 marginBottom: '24px',
               }}
             >
-              The platform for creatures of darkness. Where exclusive content is a ritual, not a transaction.
+              The premium platform for dark aesthetics and exclusive art. Where support is a connection, not a transaction.
             </p>
             <div style={{ display: 'flex', gap: '12px' }}>
               {['Instagram', 'Twitter', 'Discord'].map((social) => (

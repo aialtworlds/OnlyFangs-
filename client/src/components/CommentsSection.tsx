@@ -145,7 +145,7 @@ export function CommentsSection({ contentId }: CommentsSectionProps) {
               margin: '0 0 10px 0',
             }}
           >
-            You must join the ritual to share your thoughts.
+            You must log in to share your thoughts.
           </p>
           <a
             href={getLoginUrl()}

@@ -515,7 +515,7 @@ export default function Navbar() {
           >
             <input
               autoFocus
-              placeholder="Search creators, works, rituals..."
+              placeholder="Search creators, releases, collections..."
               style={{
                 maxWidth: '600px',
                 width: '100%',

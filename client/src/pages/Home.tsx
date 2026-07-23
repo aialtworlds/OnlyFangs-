@@ -1056,7 +1056,7 @@ export default function Home() {
                 color: 'oklch(0.93 0.02 80)',
               }}
             >
-              The Initiation Ritual
+              The Journey
             </h2>
             <div className="ornament" style={{ margin: '18px auto' }}>
               <span style={{ color: 'oklch(0.72 0.09 75)' }}>✦</span>
@@ -1087,10 +1087,10 @@ export default function Home() {
                 For Patrons
               </div>
               {[
-                { n: '01', title: 'Discover Creators', desc: 'Explore the catalog of verified dark creators. Filter by content type, category or tier.' },
-                { n: '02', title: 'Choose Your Tier', desc: 'Select the access level you desire. From Fledgling (free) to Night Royalty (full access).' },
-                { n: '03', title: 'Access the Content', desc: 'Unlock exclusive images, photos, books and music. Your personal grimoire.' },
-                { n: '04', title: 'Support the Darkness', desc: 'Each subscription goes directly to the creator. You sustain the art you love.' },
+                { n: '01', title: 'Discover Creators', desc: 'Explore the catalog of verified creators. Filter by content type, category or tier.' },
+                { n: '02', title: 'Choose Your Tier', desc: 'Select the access level you desire, from free tiers to exclusive premium access.' },
+                { n: '03', title: 'Access the Content', desc: 'Unlock exclusive images, photos, books and music. Your personal library.' },
+                { n: '04', title: 'Support Creators', desc: 'Each subscription goes directly to the creator. You sustain the art you love.' },
               ].map((step) => (
                 <div
                   key={step.n}

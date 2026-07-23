@@ -512,7 +512,7 @@ export default function PatronProfile() {
     
     // Creator Section
     ...(isCreatorOrAdmin ? [
-      { id: "releases", icon: Image, label: "Nocturnal Releases" },
+      { id: "releases", icon: Image, label: "My Releases" },
       { id: "collections", icon: Bookmark, label: "Collections" },
       { id: "tiers", icon: Crown, label: "Tiers" },
       { id: "audience", icon: Users, label: "Audience" },
@@ -606,7 +606,7 @@ export default function PatronProfile() {
                   position: 'relative'
                 }}
               >
-                Nocturnal Feed
+                Home Feed
                 {dashboardSubMode === 'feed' && (
                   <span style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', background: 'oklch(0.72 0.09 75)' }} />
                 )}
@@ -627,7 +627,7 @@ export default function PatronProfile() {
                   position: 'relative'
                 }}
               >
-                Ritual Logs
+                Recent Activity
                 {dashboardSubMode === 'activity' && (
                   <span style={{ position: 'absolute', bottom: '-13px', left: 0, right: 0, height: '2px', background: 'oklch(0.72 0.09 75)' }} />
                 )}

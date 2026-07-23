@@ -122,7 +122,7 @@ export default function CreatorDashboard() {
 
   const navItems = [
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
-    { id: "releases", icon: Moon, label: "Nocturnal Releases" },
+    { id: "releases", icon: Moon, label: "My Releases" },
     { id: "messages", icon: MessageCircle, label: "Messages", badge: unread?.messages },
     { id: "audience", icon: Users, label: "Audience" },
     { id: "insights", icon: BarChart2, label: "Insights" },
@@ -388,7 +388,7 @@ export default function CreatorDashboard() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                       <Moon size={16} style={{ color: "oklch(0.55 0.03 60)" }} />
-                      <span style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>Nocturnal Releases</span>
+                      <span style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>My Releases</span>
                     </div>
                     <button style={{ padding: "6px 14px", background: "oklch(0.07 0.012 330)", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.65 0.02 60)", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", cursor: "pointer", borderRadius: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
                       Recent <ChevronRight size={10} />
