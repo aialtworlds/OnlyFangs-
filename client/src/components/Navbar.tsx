@@ -34,6 +34,26 @@ export default function Navbar() {
     },
   });
 
+  const utils = trpc.useUtils();
+  const { data: dbUsers = [] } = trpc.auth.listUsers.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+  const devLoginMutation = trpc.auth.devLogin.useMutation();
+
+  const handleDevLogin = async (userId: number) => {
+    try {
+      await devLoginMutation.mutateAsync({ userId });
+      toast.success("Switched account successfully");
+      await utils.auth.me.invalidate();
+      setUserMenuOpen(false);
+      setLocation('/profile');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to switch account");
+    }
+  };
+
+  const switchableUsers = dbUsers.filter(u => u.id !== user?.id);
+
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -346,6 +366,54 @@ export default function Navbar() {
                           {item.label}
                         </button>
                       ))}
+
+                      {/* Account Switcher Section */}
+                      {switchableUsers.length > 0 && (
+                        <>
+                          <div style={{ height: '1px', background: 'oklch(1 0 0 / 6%)', margin: '4px 0' }} />
+                          <div style={{ padding: '8px 16px 4px', fontFamily: "'Cinzel', serif", fontSize: '7px', letterSpacing: '0.2em', color: 'oklch(0.45 0.02 60)', textTransform: 'uppercase' }}>
+                            Switch Account
+                          </div>
+                          <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                            {switchableUsers.map(u => (
+                              <button
+                                key={u.id}
+                                onClick={() => handleDevLogin(u.id)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  width: '100%',
+                                  padding: '8px 16px',
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                  transition: 'background 0.2s',
+                                }}
+                                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'oklch(0.72 0.09 75 / 6%)'; }}
+                                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'none'; }}
+                              >
+                                {u.avatarUrl ? (
+                                  <img src={u.avatarUrl} alt={u.displayName || u.name || ""} style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'cover' }} />
+                                ) : (
+                                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'oklch(0.25 0.08 20)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cinzel', serif", fontSize: '9px', color: 'oklch(0.93 0.02 80)', fontWeight: 700 }}>
+                                    {(u.displayName || u.name || 'P').charAt(0).toUpperCase()}
+                                  </div>
+                                )}
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', color: 'oklch(0.82 0.03 75)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                                    {u.displayName || u.name}
+                                  </div>
+                                  <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '8px', color: 'oklch(0.45 0.02 60)', textTransform: 'capitalize' }}>
+                                    {u.role}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
 
                       {/* Divider */}
                       <div style={{ height: '1px', background: 'oklch(1 0 0 / 6%)', margin: '4px 0' }} />

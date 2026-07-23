@@ -1,6 +1,7 @@
 import { Buffer } from "buffer";
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { sdk } from "./_core/sdk";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router, creatorProcedure } from "./_core/trpc";
 import { TRPCError } from "@trpc/server";
@@ -93,9 +94,11 @@ import {
   approveAppeal,
   denyAppeal,
 } from "./db";
-import { conversations, messages, creators, notifications, content, tiers } from "../drizzle/schema";
+import { conversations, messages, creators, notifications, content, tiers, users } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { storagePut } from "./storage";
+
+const LOCAL_APP_ID = "onlyfangs";
 
 export const appRouter = router({
   system: systemRouter,
@@ -107,6 +110,38 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    listUsers: publicProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return [];
+      return db
+        .select({
+          id: users.id,
+          name: users.name,
+          displayName: users.displayName,
+          role: users.role,
+          avatarUrl: users.avatarUrl,
+        })
+        .from(users)
+        .limit(50);
+    }),
+    devLogin: publicProcedure
+      .input(z.object({ userId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const targetUser = await getUserById(input.userId);
+        if (!targetUser) {
+          throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
+        }
+
+        const openId = targetUser.openId;
+        const sessionToken = await sdk.signSession(
+          { openId, appId: LOCAL_APP_ID, name: targetUser.name || "" },
+          { expiresInMs: ONE_YEAR_MS }
+        );
+
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        return { success: true, user: targetUser };
+      }),
   }),
 
   patron: router({
