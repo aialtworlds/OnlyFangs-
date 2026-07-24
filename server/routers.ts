@@ -123,38 +123,6 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
-    listUsers: publicProcedure.query(async () => {
-      const db = await getDb();
-      if (!db) return [];
-      return db
-        .select({
-          id: users.id,
-          name: users.name,
-          displayName: users.displayName,
-          role: users.role,
-          avatarUrl: users.avatarUrl,
-        })
-        .from(users)
-        .limit(50);
-    }),
-    devLogin: publicProcedure
-      .input(z.object({ userId: z.number() }))
-      .mutation(async ({ ctx, input }) => {
-        const targetUser = await getUserById(input.userId);
-        if (!targetUser) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
-        }
-
-        const openId = targetUser.openId;
-        const sessionToken = await sdk.signSession(
-          { openId, appId: LOCAL_APP_ID, name: targetUser.name || "" },
-          { expiresInMs: ONE_YEAR_MS }
-        );
-
-        const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        return { success: true, user: targetUser };
-      }),
   }),
 
   patron: router({
