@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
   releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
-  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments,
+  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -2272,4 +2272,305 @@ export async function getRecentSubscriptions(limit: number = 5) {
     .where(eq(subscriptions.status, 'active'))
     .orderBy(desc(subscriptions.createdAt))
     .limit(limit);
+}
+
+// ── Coven Helper Functions ────────────────────────────────────
+
+export async function getCovens() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: covens.id,
+      creatorId: covens.creatorId,
+      tierId: covens.tierId,
+      name: covens.name,
+      slug: covens.slug,
+      description: covens.description,
+      avatarUrl: covens.avatarUrl,
+      coverUrl: covens.coverUrl,
+      createdAt: covens.createdAt,
+      creatorAlias: creators.alias,
+      creatorHandle: creators.handle,
+      tierName: tiers.name,
+      tierPrice: tiers.price,
+    })
+    .from(covens)
+    .leftJoin(creators, eq(covens.creatorId, creators.id))
+    .leftJoin(tiers, eq(covens.tierId, tiers.id));
+}
+
+export async function getCovenBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db
+    .select({
+      id: covens.id,
+      creatorId: covens.creatorId,
+      tierId: covens.tierId,
+      name: covens.name,
+      slug: covens.slug,
+      description: covens.description,
+      avatarUrl: covens.avatarUrl,
+      coverUrl: covens.coverUrl,
+      createdAt: covens.createdAt,
+      creatorAlias: creators.alias,
+      creatorHandle: creators.handle,
+      tierName: tiers.name,
+      tierPrice: tiers.price,
+    })
+    .from(covens)
+    .leftJoin(creators, eq(covens.creatorId, creators.id))
+    .leftJoin(tiers, eq(covens.tierId, tiers.id))
+    .where(eq(covens.slug, slug))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+export async function canAccessCoven(userId: number, covenId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const [coven] = await db.select().from(covens).where(eq(covens.id, covenId)).limit(1);
+  if (!coven) return false;
+
+  // 1. If public (no tier), anyone can access
+  if (!coven.tierId) return true;
+
+  // 2. Check user role
+  const user = await getUserById(userId);
+  if (user && user.role === "admin") return true;
+
+  // 3. Check if user is the hosting creator
+  if (coven.creatorId) {
+    const creator = await getCreatorByUserId(userId);
+    if (creator && creator.id === coven.creatorId) return true;
+  }
+
+  // 4. Check if user has active subscription to the required tier
+  const activeSub = await db
+    .select({ id: subscriptions.id })
+    .from(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.patronId, userId),
+        eq(subscriptions.tierId, coven.tierId),
+        eq(subscriptions.status, "active")
+      )
+    )
+    .limit(1);
+
+  return activeSub.length > 0;
+}
+
+export async function joinCoven(userId: number, covenId: number, role: "member" | "moderator" | "owner" = "member") {
+  const db = await getDb();
+  if (!db) return;
+
+  // Verify access first
+  const allowed = await canAccessCoven(userId, covenId);
+  if (!allowed) throw new Error("Subscription required to join this coven");
+
+  const existing = await db
+    .select({ id: covenMembers.id })
+    .from(covenMembers)
+    .where(and(eq(covenMembers.userId, userId), eq(covenMembers.covenId, covenId)))
+    .limit(1);
+
+  if (existing.length > 0) return; // already a member
+
+  await db.insert(covenMembers).values({
+    userId,
+    covenId,
+    role,
+  });
+}
+
+export async function leaveCoven(userId: number, covenId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .delete(covenMembers)
+    .where(and(eq(covenMembers.userId, userId), eq(covenMembers.covenId, covenId)));
+}
+
+export async function isCovenMember(userId: number, covenId: number) {
+  const db = await getDb();
+  if (!db) return false;
+
+  const existing = await db
+    .select({ id: covenMembers.id })
+    .from(covenMembers)
+    .where(and(eq(covenMembers.userId, userId), eq(covenMembers.covenId, covenId)))
+    .limit(1);
+
+  return existing.length > 0;
+}
+
+export async function getCovenMembersCount(covenId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+
+  const result = await db
+    .select({ count: count() })
+    .from(covenMembers)
+    .where(eq(covenMembers.covenId, covenId));
+
+  return result[0]?.count ?? 0;
+}
+
+export async function getCovenPosts(covenId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: covenPosts.id,
+      covenId: covenPosts.covenId,
+      userId: covenPosts.userId,
+      title: covenPosts.title,
+      content: covenPosts.content,
+      createdAt: covenPosts.createdAt,
+      userDisplayName: users.displayName,
+      userName: users.name,
+      userAvatarUrl: users.avatarUrl,
+      userRole: users.role,
+    })
+    .from(covenPosts)
+    .innerJoin(users, eq(covenPosts.userId, users.id))
+    .where(eq(covenPosts.covenId, covenId))
+    .orderBy(desc(covenPosts.createdAt));
+}
+
+export async function getCovenPostById(postId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db
+    .select({
+      id: covenPosts.id,
+      covenId: covenPosts.covenId,
+      userId: covenPosts.userId,
+      title: covenPosts.title,
+      content: covenPosts.content,
+      createdAt: covenPosts.createdAt,
+      userDisplayName: users.displayName,
+      userName: users.name,
+      userAvatarUrl: users.avatarUrl,
+      userRole: users.role,
+    })
+    .from(covenPosts)
+    .innerJoin(users, eq(covenPosts.userId, users.id))
+    .where(eq(covenPosts.id, postId))
+    .limit(1);
+
+  return result[0] || null;
+}
+
+export async function createCovenPost(userId: number, covenId: number, title: string, contentStr: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Verify access first
+  const allowed = await canAccessCoven(userId, covenId);
+  if (!allowed) throw new Error("Access denied to this coven");
+
+  await db.insert(covenPosts).values({
+    userId,
+    covenId,
+    title,
+    content: contentStr,
+  });
+
+  const [created] = await db
+    .select()
+    .from(covenPosts)
+    .where(and(eq(covenPosts.covenId, covenId), eq(covenPosts.userId, userId), eq(covenPosts.title, title)))
+    .orderBy(desc(covenPosts.createdAt))
+    .limit(1);
+
+  return created;
+}
+
+export async function getCovenComments(postId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: covenComments.id,
+      postId: covenComments.postId,
+      userId: covenComments.userId,
+      content: covenComments.content,
+      createdAt: covenComments.createdAt,
+      userDisplayName: users.displayName,
+      userName: users.name,
+      userAvatarUrl: users.avatarUrl,
+      userRole: users.role,
+    })
+    .from(covenComments)
+    .innerJoin(users, eq(covenComments.userId, users.id))
+    .where(eq(covenComments.postId, postId))
+    .orderBy(covenComments.createdAt);
+}
+
+export async function createCovenComment(userId: number, postId: number, contentStr: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [post] = await db.select().from(covenPosts).where(eq(covenPosts.id, postId)).limit(1);
+  if (!post) throw new Error("Post not found");
+
+  const allowed = await canAccessCoven(userId, post.covenId);
+  if (!allowed) throw new Error("Access denied");
+
+  await db.insert(covenComments).values({
+    userId,
+    postId,
+    content: contentStr,
+  });
+
+  const [created] = await db
+    .select()
+    .from(covenComments)
+    .where(and(eq(covenComments.postId, postId), eq(covenComments.userId, userId)))
+    .orderBy(desc(covenComments.createdAt))
+    .limit(1);
+
+  return created;
+}
+
+export async function createCoven(data: {
+  creatorId?: number;
+  tierId?: number;
+  name: string;
+  slug: string;
+  description?: string;
+  avatarUrl?: string;
+  coverUrl?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(covens).values({
+    creatorId: data.creatorId ?? null,
+    tierId: data.tierId ?? null,
+    name: data.name,
+    slug: data.slug,
+    description: data.description ?? null,
+    avatarUrl: data.avatarUrl ?? null,
+    coverUrl: data.coverUrl ?? null,
+  });
+
+  const [created] = await db
+    .select()
+    .from(covens)
+    .where(eq(covens.slug, data.slug))
+    .limit(1);
+
+  return created;
 }

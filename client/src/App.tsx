@@ -23,6 +23,9 @@ import ModerationDashboard from "./pages/ModerationDashboard";
 import SignupPage from "./pages/SignupPage";
 import CompleteSignup from "./pages/CompleteSignup";
 import Messages from "./pages/Messages";
+import Covens from "./pages/Covens";
+import CovenDetail from "./pages/CovenDetail";
+import CovenPostDetail from "./pages/CovenPostDetail";
 
 function AppLayout() {
   const { currentTrack, closePlayer } = useMusicPlayer();
@@ -36,6 +39,9 @@ function AppLayout() {
         <Route path="/patron-dashboard" component={PatronProfile} />
         <Route path="/apply" component={Apply} />
         <Route path="/discover" component={Discover} />
+        <Route path="/covens" component={Covens} />
+        <Route path="/coven/:slug" component={CovenDetail} />
+        <Route path="/coven/:slug/post/:id" component={CovenPostDetail} />
         <Route path="/creators" component={Discover} />
         <Route path="/creator/:id/content" component={CreatorContent} />
         <Route path="/creator/:id">{(params) => <CreatorProfile creatorId={params.id || ''} />}</Route>

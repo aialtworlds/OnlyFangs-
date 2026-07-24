@@ -515,6 +515,7 @@ export default function PatronProfile() {
     { id: "subscriptions", icon: Crown, label: "Subscriptions" },
     { id: "messages", icon: MessageCircle, label: "Messages", badge: unread?.messages },
     { id: "notifications", icon: Bell, label: "Notifications", badge: unread?.notifications },
+    { id: "covens", icon: BookOpen, label: "Covens" },
     
     // Creator Section
     ...(isCreatorOrAdmin ? [
@@ -531,6 +532,8 @@ export default function PatronProfile() {
       setLocation("/messages");
     } else if (id === "notifications") {
       setLocation("/notifications");
+    } else if (id === "covens") {
+      setLocation("/covens");
     } else {
       setActiveNav(id);
     }

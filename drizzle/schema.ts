@@ -438,3 +438,56 @@ export const comments = mysqlTable("comments", {
 
 export type Comment = typeof comments.$inferSelect;
 export type InsertComment = typeof comments.$inferInsert;
+
+// ── Covens (Communities) ──────────────────────────────────────
+export const covens = mysqlTable("covens", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId"), // null if global/admin community
+  tierId: int("tierId"), // null if public, otherwise only active sub to this tier (or creator/admin) can access
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  description: varchar("description", { length: 1000 }),
+  avatarUrl: text("avatarUrl"),
+  coverUrl: text("coverUrl"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Coven = typeof covens.$inferSelect;
+export type InsertCoven = typeof covens.$inferInsert;
+
+// ── Coven Members ──────────────────────────────────────────────
+export const covenMembers = mysqlTable("coven_members", {
+  id: int("id").autoincrement().primaryKey(),
+  covenId: int("covenId").notNull(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", ["member", "moderator", "owner"]).default("member").notNull(),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+});
+
+export type CovenMember = typeof covenMembers.$inferSelect;
+export type InsertCovenMember = typeof covenMembers.$inferInsert;
+
+// ── Coven Posts (Threads) ───────────────────────────────────────
+export const covenPosts = mysqlTable("coven_posts", {
+  id: int("id").autoincrement().primaryKey(),
+  covenId: int("covenId").notNull(),
+  userId: int("userId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CovenPost = typeof covenPosts.$inferSelect;
+export type InsertCovenPost = typeof covenPosts.$inferInsert;
+
+// ── Coven Comments (Thread Replies) ─────────────────────────────
+export const covenComments = mysqlTable("coven_comments", {
+  id: int("id").autoincrement().primaryKey(),
+  postId: int("postId").notNull(),
+  userId: int("userId").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CovenComment = typeof covenComments.$inferSelect;
+export type InsertCovenComment = typeof covenComments.$inferInsert;

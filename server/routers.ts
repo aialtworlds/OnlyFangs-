@@ -93,8 +93,21 @@ import {
   getPendingAppeals,
   approveAppeal,
   denyAppeal,
+  getCovens,
+  getCovenBySlug,
+  canAccessCoven,
+  joinCoven,
+  leaveCoven,
+  isCovenMember,
+  getCovenMembersCount,
+  getCovenPosts,
+  getCovenPostById,
+  createCovenPost,
+  getCovenComments,
+  createCovenComment,
+  createCoven
 } from "./db";
-import { conversations, messages, creators, notifications, content, tiers, users } from "../drizzle/schema";
+import { conversations, messages, creators, notifications, content, tiers, users, covens, covenMembers, covenPosts, covenComments } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { storagePut } from "./storage";
 
@@ -1084,6 +1097,114 @@ export const appRouter = router({
           throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can deny appeals' });
         }
         return denyAppeal(input.appealId, ctx.user.id, input.adminResponse);
+      }),
+  }),
+  coven: router({
+    list: protectedProcedure.query(async () => {
+      return getCovens();
+    }),
+    bySlug: protectedProcedure
+      .input(z.object({ slug: z.string() }))
+      .query(async ({ ctx, input }) => {
+        const coven = await getCovenBySlug(input.slug);
+        if (!coven) throw new TRPCError({ code: "NOT_FOUND", message: "Coven not found" });
+
+        const allowed = await canAccessCoven(ctx.user.id, coven.id);
+        const isMember = await isCovenMember(ctx.user.id, coven.id);
+        const memberCount = await getCovenMembersCount(coven.id);
+
+        return {
+          ...coven,
+          allowed,
+          isMember,
+          memberCount,
+        };
+      }),
+    join: protectedProcedure
+      .input(z.object({ covenId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await joinCoven(ctx.user.id, input.covenId);
+        return { success: true };
+      }),
+    leave: protectedProcedure
+      .input(z.object({ covenId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await leaveCoven(ctx.user.id, input.covenId);
+        return { success: true };
+      }),
+    create: creatorProcedure
+      .input(z.object({
+        name: z.string().min(3).max(100),
+        slug: z.string().min(3).max(100).regex(/^[a-z0-9-]+$/),
+        description: z.string().max(1000).optional(),
+        tierId: z.number().optional(),
+        avatarUrl: z.string().optional(),
+        coverUrl: z.string().optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getCreatorByUserId(ctx.user.id);
+        if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
+
+        const coven = await createCoven({
+          creatorId: creator.id,
+          tierId: input.tierId,
+          name: input.name,
+          slug: input.slug,
+          description: input.description,
+          avatarUrl: input.avatarUrl,
+          coverUrl: input.coverUrl,
+        });
+
+        // The creator automatically joins their own coven as owner
+        await joinCoven(ctx.user.id, coven.id, "owner");
+
+        return coven;
+      }),
+    posts: protectedProcedure
+      .input(z.object({ covenId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const allowed = await canAccessCoven(ctx.user.id, input.covenId);
+        if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Subscription required to access this coven" });
+        return getCovenPosts(input.covenId);
+      }),
+    createPost: protectedProcedure
+      .input(z.object({
+        covenId: z.number(),
+        title: z.string().min(3).max(255),
+        content: z.string().min(10),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return createCovenPost(ctx.user.id, input.covenId, input.title, input.content);
+      }),
+    postDetail: protectedProcedure
+      .input(z.object({ postId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const post = await getCovenPostById(input.postId);
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
+
+        const allowed = await canAccessCoven(ctx.user.id, post.covenId);
+        if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+
+        return post;
+      }),
+    comments: protectedProcedure
+      .input(z.object({ postId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const post = await getCovenPostById(input.postId);
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
+
+        const allowed = await canAccessCoven(ctx.user.id, post.covenId);
+        if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+
+        return getCovenComments(input.postId);
+      }),
+    createComment: protectedProcedure
+      .input(z.object({
+        postId: z.number(),
+        content: z.string().min(1),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        return createCovenComment(ctx.user.id, input.postId, input.content);
       }),
   }),
 });
