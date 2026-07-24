@@ -341,6 +341,7 @@ export default function PatronProfile() {
   const homeFeedQuery = trpc.patron.homeFeed.useQuery(undefined, { enabled: isAuthenticated });
   const unreadQuery = trpc.patron.unreadCounts.useQuery(undefined, { enabled: isAuthenticated });
   const creatorProfileQuery = trpc.creator.myProfile.useQuery(undefined, { enabled: isAuthenticated });
+  const myCovensQuery = trpc.coven.myCovens.useQuery(undefined, { enabled: isAuthenticated });
   
   const isCreatorOrAdmin = user?.role === 'creator' || user?.role === 'admin';
   
@@ -516,6 +517,8 @@ export default function PatronProfile() {
     { id: "messages", icon: MessageCircle, label: "Messages", badge: unread?.messages },
     { id: "notifications", icon: Bell, label: "Notifications", badge: unread?.notifications },
     { id: "covens", icon: BookOpen, label: "Covens" },
+    { id: "my_covens", icon: Crown, label: "My Covens" },
+    { id: "joined_covens", icon: Users, label: "Covens I'm member" },
     
     // Creator Section
     ...(isCreatorOrAdmin ? [
@@ -1135,6 +1138,125 @@ export default function PatronProfile() {
                           {collection.description}
                         </p>
                       )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Render My Covens Tab */}
+        {activeNav === 'my_covens' && (
+          <div>
+            <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', marginBottom: '24px' }}>My Covens (Created & Moderated)</h2>
+            {myCovensQuery.isLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', color: 'oklch(0.72 0.09 75)' }} />
+              </div>
+            ) : (myCovensQuery.data?.filter(c => c.role === 'owner' || c.role === 'moderator') || []).length === 0 ? (
+              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
+                  You have not established or moderated any covens yet.
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                {(myCovensQuery.data?.filter(c => c.role === 'owner' || c.role === 'moderator') || []).map((coven) => (
+                  <div
+                    key={coven.id}
+                    onClick={() => setLocation(`/coven/${coven.slug}`)}
+                    style={{
+                      background: 'oklch(0.06 0.01 285)',
+                      border: '1px solid oklch(1 0 0 / 6%)',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'border 0.2s',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.border = '1px solid oklch(0.72 0.09 75 / 30%)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.border = '1px solid oklch(1 0 0 / 6%)')}
+                  >
+                    <div style={{ height: '100px', background: coven.coverUrl ? `url(${coven.coverUrl}) center/cover` : 'oklch(0.08 0.02 330)', position: 'relative' }}>
+                      <div style={{ position: 'absolute', bottom: '-15px', left: '15px', width: '36px', height: '36px', borderRadius: '6px', background: coven.avatarUrl ? `url(${coven.avatarUrl}) center/cover` : 'oklch(0.12 0.04 20)', border: '2px solid oklch(0.06 0.01 285)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>
+                        {!coven.avatarUrl && "🔮"}
+                      </div>
+                    </div>
+                    <div style={{ padding: '24px 16px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: '14px', color: 'oklch(0.93 0.02 80)', margin: 0 }}>
+                            {coven.name}
+                          </h3>
+                          <span style={{ fontSize: '8px', background: 'oklch(0.38 0.14 20 / 20%)', color: 'oklch(0.75 0.14 20)', padding: '1px 4px', borderRadius: '2px' }}>
+                            {coven.role.toUpperCase()}
+                          </span>
+                        </div>
+                        <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.55 0.03 60)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: '0 0 12px 0' }}>
+                          {coven.description || "No description provided."}
+                        </p>
+                      </div>
+                      <span style={{ fontSize: '10px', color: 'oklch(0.72 0.09 75)' }}>Enter Forum &rarr;</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Render Joined Covens Tab */}
+        {activeNav === 'joined_covens' && (
+          <div>
+            <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', marginBottom: '24px' }}>Covens I'm Member</h2>
+            {myCovensQuery.isLoading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                <Loader2 size={24} style={{ animation: 'spin 1s linear infinite', color: 'oklch(0.72 0.09 75)' }} />
+              </div>
+            ) : (myCovensQuery.data?.filter(c => c.role === 'member') || []).length === 0 ? (
+              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
+                  You have not joined any covens as a member yet. Go to <a href="/covens" style={{ color: 'oklch(0.72 0.09 75)', textDecoration: 'underline' }}>Covens Explorer</a> to find one!
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                {(myCovensQuery.data?.filter(c => c.role === 'member') || []).map((coven) => (
+                  <div
+                    key={coven.id}
+                    onClick={() => setLocation(`/coven/${coven.slug}`)}
+                    style={{
+                      background: 'oklch(0.06 0.01 285)',
+                      border: '1px solid oklch(1 0 0 / 6%)',
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      transition: 'border 0.2s',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.border = '1px solid oklch(0.72 0.09 75 / 30%)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.border = '1px solid oklch(1 0 0 / 6%)')}
+                  >
+                    <div style={{ height: '100px', background: coven.coverUrl ? `url(${coven.coverUrl}) center/cover` : 'oklch(0.08 0.02 330)', position: 'relative' }}>
+                      <div style={{ position: 'absolute', bottom: '-15px', left: '15px', width: '36px', height: '36px', borderRadius: '6px', background: coven.avatarUrl ? `url(${coven.avatarUrl}) center/cover` : 'oklch(0.12 0.04 20)', border: '2px solid oklch(0.06 0.01 285)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>
+                        {!coven.avatarUrl && "🔮"}
+                      </div>
+                    </div>
+                    <div style={{ padding: '24px 16px 16px 16px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: '14px', color: 'oklch(0.93 0.02 80)', margin: 0 }}>
+                            {coven.name}
+                          </h3>
+                        </div>
+                        <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.55 0.03 60)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', margin: '0 0 12px 0' }}>
+                          {coven.description || "No description provided."}
+                        </p>
+                      </div>
+                      <span style={{ fontSize: '10px', color: 'oklch(0.72 0.09 75)' }}>Enter Forum &rarr;</span>
                     </div>
                   </div>
                 ))}

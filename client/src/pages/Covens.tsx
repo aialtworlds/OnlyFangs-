@@ -18,11 +18,18 @@ export default function Covens() {
 
   const isCreatorOrAdmin = user?.role === "creator" || user?.role === "admin";
 
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Queries
   const { data: covensList = [], isLoading, refetch } = trpc.coven.list.useQuery();
   const { data: myTiers = [] } = trpc.creator.myTiers.useQuery(undefined, {
     enabled: isCreatorOrAdmin,
   });
+
+  const filteredCovens = covensList.filter((c) =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.description && c.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   // Mutations
   const createCovenMutation = trpc.coven.create.useMutation({
@@ -78,6 +85,18 @@ export default function Covens() {
           )}
         </div>
 
+        {/* Search Bar */}
+        <div style={{ marginBottom: "32px", maxWidth: "480px" }}>
+          <input
+            className="input-dark"
+            type="text"
+            placeholder="Search covens by name or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{ width: "100%", padding: "12px 16px", fontSize: "14px", fontFamily: "'IM Fell English', serif", fontStyle: "italic" }}
+          />
+        </div>
+
         {/* Explorer Grid */}
         {isLoading ? (
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center", padding: "80px 0" }}>
@@ -91,9 +110,17 @@ export default function Covens() {
               No covens have been established in the directory yet. Creators can spawn new coven rooms to house their circle's discussions.
             </p>
           </div>
+        ) : filteredCovens.length === 0 ? (
+          <div style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 15%)", padding: "60px 20px", textAlign: "center", borderRadius: "8px" }}>
+            <div style={{ fontSize: "40px", marginBottom: "16px" }}>🔍</div>
+            <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "18px", color: "oklch(0.82 0.03 75)", marginBottom: "8px" }}>No Matching Covens</h3>
+            <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", color: "oklch(0.45 0.02 60)", maxWidth: "480px", margin: "0 auto" }}>
+              No covens match the query "{searchQuery}". Try searching for something else.
+            </p>
+          </div>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "24px" }}>
-            {covensList.map((coven) => (
+            {filteredCovens.map((coven) => (
               <div
                 key={coven.id}
                 onClick={() => setLocation(`/coven/${coven.slug}`)}
