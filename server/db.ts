@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
   releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
-  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments, covenBans, covenWarnings,
+  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments, covenBans, covenWarnings, covenReports,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -2955,4 +2955,140 @@ export async function getCovenBans(covenId: number) {
     .innerJoin(users, eq(covenBans.userId, users.id))
     .where(eq(covenBans.covenId, covenId))
     .orderBy(desc(covenBans.createdAt));
+}
+
+export async function reportCovenContent(
+  reporterId: number,
+  covenId: number,
+  postId: number,
+  commentId: number | null,
+  reason: "spam" | "harassment" | "other",
+  description?: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Figure out who authored the reported post/comment, so staff never
+  // see (and can't quietly dismiss) a report against themselves or a
+  // friend — those always escalate to the platform admin queue instead.
+  let reportedUserId: number;
+  if (commentId) {
+    const [comment] = await db.select().from(covenComments).where(eq(covenComments.id, commentId)).limit(1);
+    if (!comment) throw new Error("Comment not found");
+    reportedUserId = comment.userId;
+  } else {
+    const [post] = await db.select().from(covenPosts).where(eq(covenPosts.id, postId)).limit(1);
+    if (!post) throw new Error("Post not found");
+    reportedUserId = post.userId;
+  }
+
+  const targetRole = await getCovenRole(reportedUserId, covenId);
+  const escalated = reason === "harassment" || targetRole === "owner" || targetRole === "moderator";
+
+  const result = await db.insert(covenReports).values({
+    covenId,
+    postId,
+    commentId,
+    reportedUserId,
+    reportedBy: reporterId,
+    reason,
+    description: description || null,
+    escalated,
+  });
+
+  if (escalated) {
+    try {
+      const admins = await db.select().from(users).where(eq(users.role, "admin"));
+      for (const admin of admins) {
+        await db.insert(notifications).values({
+          userId: admin.id,
+          type: "moderation",
+          title: "Escalated Coven Report",
+          message: `A ${reason} report in a coven needs platform review${targetRole ? ` (reported user is a coven ${targetRole})` : ""}.`,
+          read: false,
+        });
+      }
+    } catch (notifyError) {
+      console.error("[Coven] Error notifying admins of escalated report:", notifyError);
+    }
+  }
+
+  return { success: true, reportId: (result as any).insertId || 0, escalated };
+}
+
+// Non-escalated pending reports for a specific coven's own staff queue.
+export async function getCovenReports(covenId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: covenReports.id,
+      postId: covenReports.postId,
+      commentId: covenReports.commentId,
+      reason: covenReports.reason,
+      description: covenReports.description,
+      status: covenReports.status,
+      createdAt: covenReports.createdAt,
+      reportedUserId: covenReports.reportedUserId,
+      reportedBy: covenReports.reportedBy,
+    })
+    .from(covenReports)
+    .where(
+      and(
+        eq(covenReports.covenId, covenId),
+        eq(covenReports.escalated, false),
+        eq(covenReports.status, "pending")
+      )
+    )
+    .orderBy(desc(covenReports.createdAt));
+}
+
+// All escalated pending reports across every coven — platform admin only.
+export async function getEscalatedCovenReports() {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: covenReports.id,
+      covenId: covenReports.covenId,
+      postId: covenReports.postId,
+      commentId: covenReports.commentId,
+      reason: covenReports.reason,
+      description: covenReports.description,
+      status: covenReports.status,
+      createdAt: covenReports.createdAt,
+      reportedUserId: covenReports.reportedUserId,
+      reportedBy: covenReports.reportedBy,
+      covenName: covens.name,
+      covenSlug: covens.slug,
+    })
+    .from(covenReports)
+    .innerJoin(covens, eq(covenReports.covenId, covens.id))
+    .where(and(eq(covenReports.escalated, true), eq(covenReports.status, "pending")))
+    .orderBy(desc(covenReports.createdAt));
+}
+
+export async function resolveCovenReport(resolverId: number, reportId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const [report] = await db.select().from(covenReports).where(eq(covenReports.id, reportId)).limit(1);
+  if (!report) throw new Error("Report not found");
+
+  // Escalated reports are platform-admin business only — coven staff never
+  // gets to resolve (or even see) those, regardless of their role.
+  if (report.escalated) {
+    const user = await getUserById(resolverId);
+    if (!user || user.role !== "admin") throw new Error("Permission denied");
+  } else {
+    const isStaffUser = await isCovenStaff(resolverId, report.covenId);
+    if (!isStaffUser) throw new Error("Permission denied");
+  }
+
+  await db
+    .update(covenReports)
+    .set({ status: "resolved", resolvedBy: resolverId, resolvedAt: new Date() })
+    .where(eq(covenReports.id, reportId));
 }

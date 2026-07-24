@@ -5,6 +5,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Loader2, ArrowLeft, MessageSquare, Send, Check, Pin, Trash, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { ReportCovenButton } from "@/components/ReportCovenButton";
 
 export default function CovenPostDetail() {
   const [, params] = useRoute("/coven/:slug/post/:id");
@@ -191,6 +192,12 @@ export default function CovenPostDetail() {
           <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "16px", color: "oklch(0.85 0.02 75)", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>
             {post.content}
           </p>
+
+          {post.userId !== user?.id && (
+            <div style={{ marginTop: "12px" }}>
+              <ReportCovenButton covenId={post.covenId} postId={post.id} />
+            </div>
+          )}
         </div>
 
         {/* Comments Section */}
@@ -249,6 +256,11 @@ export default function CovenPostDetail() {
                   <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "14px", color: "oklch(0.75 0.02 60)", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
                     {comment.content}
                   </p>
+                  {comment.userId !== user?.id && (
+                    <div style={{ marginTop: "8px" }}>
+                      <ReportCovenButton covenId={post.covenId} postId={post.id} commentId={comment.id} />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

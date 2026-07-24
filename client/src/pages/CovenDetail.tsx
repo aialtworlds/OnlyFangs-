@@ -14,6 +14,7 @@ export default function CovenDetail() {
 
   const [showPostModal, setShowPostModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
+  const [showReportsModal, setShowReportsModal] = useState(false);
   const [newPost, setNewPost] = useState({ title: "", content: "" });
 
   // Queries
@@ -84,6 +85,21 @@ export default function CovenDetail() {
     { covenId: coven?.id || 0 },
     { enabled: !!coven?.id && showMembersModal }
   );
+
+  const { data: reports = [], refetch: refetchReports } = trpc.coven.reports.useQuery(
+    { covenId: coven?.id || 0 },
+    { enabled: !!coven?.id && isStaff }
+  );
+
+  const resolveReportMutation = trpc.coven.resolveReport.useMutation({
+    onSuccess: () => {
+      toast.success("Report resolved.");
+      refetchReports();
+    },
+    onError: (err) => {
+      toast.error(`Error resolving report: ${err.message}`);
+    },
+  });
 
   const updateRoleMutation = trpc.coven.updateMemberRole.useMutation({
     onSuccess: () => {
@@ -449,6 +465,16 @@ export default function CovenDetail() {
                 Manage Members
               </button>
             )}
+            {isStaff && (
+              <button
+                onClick={() => setShowReportsModal(true)}
+                style={{ width: "100%", marginTop: "10px", fontFamily: "'Cinzel', serif", fontSize: "9.5px", letterSpacing: "0.15em", textTransform: "uppercase", background: "transparent", color: "oklch(0.72 0.09 75)", border: "1px solid oklch(0.72 0.09 75 / 30%)", padding: "10px", cursor: "pointer", transition: "all 0.2s", display: "block" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(0.72 0.09 75 / 10%)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                {reports.length > 0 ? `View Reports (${reports.length})` : "View Reports"}
+              </button>
+            )}
           </div>
 
         </div>
@@ -634,6 +660,72 @@ export default function CovenDetail() {
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <button
                   onClick={() => setShowMembersModal(false)}
+                  style={{ fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", background: "oklch(0.38 0.14 20)", color: "white", border: "none", padding: "10px 20px", cursor: "pointer" }}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReportsModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "oklch(0.02 0.005 285 / 85%)", backdropFilter: "blur(4px)" }}>
+          <div style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 30%)", width: "100%", maxWidth: "500px", borderRadius: "8px", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, oklch(0.72 0.09 75), transparent)" }} />
+            <div style={{ padding: "24px 30px" }}>
+              <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "20px", color: "oklch(0.93 0.02 80)", margin: "0 0 8px 0" }}>Coven Reports</h2>
+              <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.45 0.02 60)", margin: "0 0 24px 0" }}>
+                Reports about harassment, or against this coven's own owner/moderators, go straight to the platform admin instead of appearing here.
+              </p>
+
+              <div style={{ maxHeight: "350px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px", marginBottom: "24px", paddingRight: "6px" }}>
+                {reports.length === 0 ? (
+                  <div style={{ padding: "20px", textAlign: "center", color: "oklch(0.45 0.02 60)", fontStyle: "italic", fontFamily: "'IM Fell English', serif" }}>
+                    No pending reports for this coven.
+                  </div>
+                ) : (
+                  reports.map((report) => (
+                    <div
+                      key={report.id}
+                      style={{ background: "oklch(0.08 0.015 330)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "6px", padding: "14px" }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                        <span style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "oklch(0.72 0.09 75)" }}>
+                          {report.reason}
+                        </span>
+                        <span style={{ fontSize: "10px", color: "oklch(0.45 0.02 60)" }}>
+                          {format(new Date(report.createdAt), "MMM d, yyyy")}
+                        </span>
+                      </div>
+                      {report.description && (
+                        <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.75 0.02 60)", margin: "0 0 10px 0" }}>
+                          {report.description}
+                        </p>
+                      )}
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          onClick={() => setLocation(`/coven/${slug}/post/${report.postId}`)}
+                          style={{ fontSize: "9px", fontFamily: "'Cinzel', serif", background: "transparent", color: "oklch(0.72 0.09 75)", border: "1px solid oklch(0.72 0.09 75 / 30%)", padding: "4px 8px", cursor: "pointer" }}
+                        >
+                          View
+                        </button>
+                        <button
+                          onClick={() => resolveReportMutation.mutate({ reportId: report.id })}
+                          style={{ fontSize: "9px", fontFamily: "'Cinzel', serif", background: "transparent", color: "oklch(0.45 0.02 60)", border: "1px solid oklch(0.45 0.02 60 / 30%)", padding: "4px 8px", cursor: "pointer" }}
+                        >
+                          Mark Resolved
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setShowReportsModal(false)}
                   style={{ fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", background: "oklch(0.38 0.14 20)", color: "white", border: "none", padding: "10px 20px", cursor: "pointer" }}
                 >
                   Close

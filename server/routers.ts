@@ -123,7 +123,11 @@ import {
   isCovenMuted,
   banCovenMember,
   unbanCovenMember,
-  getCovenBans
+  getCovenBans,
+  reportCovenContent,
+  getCovenReports,
+  getEscalatedCovenReports,
+  resolveCovenReport
 } from "./db";
 import { conversations, messages, creators, notifications, content, tiers, users, covens, covenMembers, covenPosts, covenComments } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
@@ -1020,6 +1024,13 @@ export const appRouter = router({
         }
         return getContentFlags(100);
       }),
+    getEscalatedCovenReports: protectedProcedure
+      .query(async ({ ctx }) => {
+        if (ctx.user.role !== 'admin') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only admins can view escalated coven reports' });
+        }
+        return getEscalatedCovenReports();
+      }),
     resolveFlag: protectedProcedure
       .input(z.object({ flagId: z.number() }))
       .mutation(async ({ ctx, input }) => {
@@ -1375,6 +1386,47 @@ export const appRouter = router({
         const isStaffUser = await isCovenStaff(ctx.user.id, input.covenId);
         if (!isStaffUser) throw new TRPCError({ code: "FORBIDDEN", message: "Only staff can view banned users" });
         return getCovenBans(input.covenId);
+      }),
+    report: protectedProcedure
+      .input(z.object({
+        covenId: z.number(),
+        postId: z.number(),
+        commentId: z.number().optional(),
+        reason: z.enum(["spam", "harassment", "other"]),
+        description: z.string().max(1000).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          return await reportCovenContent(
+            ctx.user.id,
+            input.covenId,
+            input.postId,
+            input.commentId ?? null,
+            input.reason,
+            input.description
+          );
+        } catch (err: any) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+        }
+      }),
+    // Coven staff's own queue — never includes escalated reports (harassment,
+    // or anything reported against the coven's own owner/moderators).
+    reports: protectedProcedure
+      .input(z.object({ covenId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const isStaffUser = await isCovenStaff(ctx.user.id, input.covenId);
+        if (!isStaffUser) throw new TRPCError({ code: "FORBIDDEN", message: "Only staff can view reports" });
+        return getCovenReports(input.covenId);
+      }),
+    resolveReport: protectedProcedure
+      .input(z.object({ reportId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await resolveCovenReport(ctx.user.id, input.reportId);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
       }),
   }),
 });

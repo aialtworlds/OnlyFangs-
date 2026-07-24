@@ -8,7 +8,7 @@ import { Streamdown } from "streamdown";
 
 export default function ModerationDashboard() {
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"pending" | "flags" | "stats">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "flags" | "stats" | "coven">("pending");
   const [selectedContent, setSelectedContent] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [changeNotes, setChangeNotes] = useState("");
@@ -21,6 +21,9 @@ export default function ModerationDashboard() {
     enabled: user?.role === "admin",
   });
   const statsQuery = trpc.moderation.getStats.useQuery(undefined, {
+    enabled: user?.role === "admin",
+  });
+  const covenReportsQuery = trpc.moderation.getEscalatedCovenReports.useQuery(undefined, {
     enabled: user?.role === "admin",
   });
 
@@ -50,6 +53,11 @@ export default function ModerationDashboard() {
       flagsQuery.refetch();
     },
   });
+  const resolveCovenReportMutation = trpc.coven.resolveReport.useMutation({
+    onSuccess: () => {
+      covenReportsQuery.refetch();
+    },
+  });
 
   if (authLoading) {
     return (
@@ -74,6 +82,7 @@ export default function ModerationDashboard() {
   const stats = statsQuery.data;
   const pending = pendingQuery.data || [];
   const flags = flagsQuery.data || [];
+  const covenReports = covenReportsQuery.data || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -122,6 +131,17 @@ export default function ModerationDashboard() {
           >
             <Flag size={16} className="inline mr-2" />
             Flagged Content ({flags.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("coven")}
+            className={`pb-4 px-4 font-semibold transition-colors ${
+              activeTab === "coven"
+                ? "border-b-2 border-primary text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Flag size={16} className="inline mr-2" />
+            Escalated Coven Reports ({covenReports.length})
           </button>
         </div>
 
@@ -297,6 +317,67 @@ export default function ModerationDashboard() {
                         className="bg-blue-600 hover:bg-blue-700"
                       >
                         {resolveFlagMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle size={16} className="mr-2" />}
+                        Mark Resolved
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Escalated Coven Reports Tab */}
+        {activeTab === "coven" && (
+          <div className="space-y-4">
+            {covenReportsQuery.isLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="animate-spin" />
+              </div>
+            ) : covenReports.length === 0 ? (
+              <Card className="p-8 text-center">
+                <CheckCircle className="mx-auto mb-4 text-green-600" size={48} />
+                <h2 className="text-xl font-bold mb-2">No Escalated Reports</h2>
+                <p className="text-muted-foreground">
+                  Reports about harassment, or against a coven's own owner/moderators, will show up here for platform review.
+                </p>
+              </Card>
+            ) : (
+              covenReports.map((report) => (
+                <Card key={report.id} className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <h3 className="font-bold text-lg mb-2">{report.covenName}</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Reason: <span className="font-semibold capitalize">{report.reason}</span>
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Reported: {new Date(report.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+
+                    <div>
+                      {report.description && (
+                        <div className="bg-muted p-4 rounded-lg">
+                          <p className="text-sm font-semibold mb-2">Report:</p>
+                          <Streamdown>{report.description}</Streamdown>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        onClick={() => window.open(`/coven/${report.covenSlug}/post/${report.postId}`, "_blank")}
+                        variant="outline"
+                      >
+                        View in Coven
+                      </Button>
+                      <Button
+                        onClick={() => resolveCovenReportMutation.mutate({ reportId: report.id })}
+                        disabled={resolveCovenReportMutation.isPending}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        {resolveCovenReportMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle size={16} className="mr-2" />}
                         Mark Resolved
                       </Button>
                     </div>

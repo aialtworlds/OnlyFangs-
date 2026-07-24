@@ -492,6 +492,29 @@ export const covenWarnings = mysqlTable("coven_warnings", {
 
 export type CovenWarning = typeof covenWarnings.$inferSelect;
 
+// ── Coven Reports (post/comment reports, with admin escalation) ──
+export const covenReports = mysqlTable("coven_reports", {
+  id: int("id").autoincrement().primaryKey(),
+  covenId: int("covenId").notNull(),
+  postId: int("postId").notNull(),
+  commentId: int("commentId"), // null = reporting the post itself, otherwise a specific comment
+  reportedUserId: int("reportedUserId").notNull(), // author of the reported post/comment
+  reportedBy: int("reportedBy").notNull(),
+  reason: mysqlEnum("reason", ["spam", "harassment", "other"]).notNull(),
+  description: varchar("description", { length: 1000 }),
+  // Escalated reports (harassment reason, or the reported user is coven
+  // staff) go straight to the platform admin queue instead of the coven's
+  // own owner/moderators — so staff can't quietly bury a report against
+  // themselves or a friend, and real threats get a faster, wider-eyes review.
+  escalated: boolean("escalated").default(false).notNull(),
+  status: mysqlEnum("status", ["pending", "resolved"]).default("pending").notNull(),
+  resolvedBy: int("resolvedBy"),
+  resolvedAt: timestamp("resolvedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CovenReport = typeof covenReports.$inferSelect;
+
 // ── Coven Posts (Threads) ───────────────────────────────────────
 export const covenPosts = mysqlTable("coven_posts", {
   id: int("id").autoincrement().primaryKey(),
