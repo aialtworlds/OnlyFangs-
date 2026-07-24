@@ -1142,6 +1142,8 @@ export const appRouter = router({
         content: z.string().min(10),
       }))
       .mutation(async ({ ctx, input }) => {
+        const allowed = await canAccessCoven(ctx.user.id, input.covenId);
+        if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Subscription required to post in this coven" });
         return createCovenPost(ctx.user.id, input.covenId, input.title, input.content);
       }),
     postDetail: protectedProcedure
@@ -1172,6 +1174,12 @@ export const appRouter = router({
         content: z.string().min(1),
       }))
       .mutation(async ({ ctx, input }) => {
+        const post = await getCovenPostById(input.postId);
+        if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
+
+        const allowed = await canAccessCoven(ctx.user.id, post.covenId);
+        if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Subscription required to comment in this coven" });
+
         return createCovenComment(ctx.user.id, input.postId, input.content);
       }),
   }),
