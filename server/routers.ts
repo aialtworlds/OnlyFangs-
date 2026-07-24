@@ -106,7 +106,16 @@ import {
   getCovenComments,
   createCovenComment,
   createCoven,
-  getMyCovens
+  getMyCovens,
+  getCovenRole,
+  isCovenStaff,
+  deleteCovenPost,
+  deleteCovenComment,
+  togglePinCovenPost,
+  toggleLockCovenPost,
+  getCovenMembersList,
+  updateCovenMemberRole,
+  kickCovenMember
 } from "./db";
 import { conversations, messages, creators, notifications, content, tiers, users, covens, covenMembers, covenPosts, covenComments } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
@@ -1185,6 +1194,87 @@ export const appRouter = router({
         if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Subscription required to comment in this coven" });
 
         return createCovenComment(ctx.user.id, input.postId, input.content);
+      }),
+    getRole: protectedProcedure
+      .input(z.object({ covenId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const role = await getCovenRole(ctx.user.id, input.covenId);
+        const isStaffUser = await isCovenStaff(ctx.user.id, input.covenId);
+        return { role, isStaff: isStaffUser };
+      }),
+    deletePost: protectedProcedure
+      .input(z.object({ postId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await deleteCovenPost(ctx.user.id, input.postId);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
+      }),
+    deleteComment: protectedProcedure
+      .input(z.object({ commentId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await deleteCovenComment(ctx.user.id, input.commentId);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
+      }),
+    togglePinPost: protectedProcedure
+      .input(z.object({ postId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await togglePinCovenPost(ctx.user.id, input.postId);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
+      }),
+    toggleLockPost: protectedProcedure
+      .input(z.object({ postId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await toggleLockCovenPost(ctx.user.id, input.postId);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
+      }),
+    membersList: protectedProcedure
+      .input(z.object({ covenId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const isStaffUser = await isCovenStaff(ctx.user.id, input.covenId);
+        if (!isStaffUser) throw new TRPCError({ code: "FORBIDDEN", message: "Only staff can view members list" });
+        return getCovenMembersList(input.covenId);
+      }),
+    updateMemberRole: protectedProcedure
+      .input(z.object({
+        covenId: z.number(),
+        targetUserId: z.number(),
+        newRole: z.enum(["member", "moderator"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await updateCovenMemberRole(ctx.user.id, input.covenId, input.targetUserId, input.newRole);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
+      }),
+    kickMember: protectedProcedure
+      .input(z.object({
+        covenId: z.number(),
+        targetUserId: z.number(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await kickCovenMember(ctx.user.id, input.covenId, input.targetUserId);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
       }),
   }),
 });

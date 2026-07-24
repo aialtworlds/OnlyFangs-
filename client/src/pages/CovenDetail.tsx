@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Loader2, ArrowLeft, MessageSquare, Plus, Lock, Globe, Sparkles, LogOut, Check } from "lucide-react";
+import { Loader2, ArrowLeft, MessageSquare, Plus, Lock, Globe, Sparkles, LogOut, Check, Pin, Trash } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -13,6 +13,7 @@ export default function CovenDetail() {
   const { user } = useAuth();
 
   const [showPostModal, setShowPostModal] = useState(false);
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const [newPost, setNewPost] = useState({ title: "", content: "" });
 
   // Queries
@@ -21,8 +22,44 @@ export default function CovenDetail() {
     { covenId: coven?.id || 0 },
     { enabled: !!coven?.allowed }
   );
+  const { data: roleData } = trpc.coven.getRole.useQuery(
+    { covenId: coven?.id || 0 },
+    { enabled: !!coven?.id }
+  );
+
+  const isStaff = roleData?.isStaff || user?.role === "admin";
+  const userRole = roleData?.role || (user?.role === "admin" ? "owner" : null);
 
   // Mutations
+  const deletePostMutation = trpc.coven.deletePost.useMutation({
+    onSuccess: () => {
+      toast.success("Post deleted.");
+      refetchPosts();
+    },
+    onError: (err) => {
+      toast.error(`Error deleting post: ${err.message}`);
+    },
+  });
+
+  const togglePinMutation = trpc.coven.togglePinPost.useMutation({
+    onSuccess: () => {
+      toast.success("Post pin status toggled.");
+      refetchPosts();
+    },
+    onError: (err) => {
+      toast.error(`Error: ${err.message}`);
+    },
+  });
+
+  const toggleLockMutation = trpc.coven.toggleLockPost.useMutation({
+    onSuccess: () => {
+      toast.success("Post lock status toggled.");
+      refetchPosts();
+    },
+    onError: (err) => {
+      toast.error(`Error: ${err.message}`);
+    },
+  });
   const joinMutation = trpc.coven.join.useMutation({
     onSuccess: () => {
       toast.success("Joined coven successfully!");
@@ -40,6 +77,32 @@ export default function CovenDetail() {
     },
     onError: (err) => {
       toast.error(`Error leaving: ${err.message}`);
+    },
+  });
+
+  const { data: members = [], refetch: refetchMembers } = trpc.coven.membersList.useQuery(
+    { covenId: coven?.id || 0 },
+    { enabled: !!coven?.id && showMembersModal }
+  );
+
+  const updateRoleMutation = trpc.coven.updateMemberRole.useMutation({
+    onSuccess: () => {
+      toast.success("Member role updated successfully.");
+      refetchMembers();
+    },
+    onError: (err) => {
+      toast.error(`Error updating role: ${err.message}`);
+    },
+  });
+
+  const kickMutation = trpc.coven.kickMember.useMutation({
+    onSuccess: () => {
+      toast.success("Member kicked from coven.");
+      refetchMembers();
+      refetchCoven();
+    },
+    onError: (err) => {
+      toast.error(`Error kicking member: ${err.message}`);
     },
   });
 
@@ -220,34 +283,104 @@ export default function CovenDetail() {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {posts.map((post) => (
-                  <div
-                    key={post.id}
-                    onClick={() => setLocation(`/coven/${slug}/post/${post.id}`)}
-                    style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "6px", padding: "20px", cursor: "pointer", transition: "border 0.2s" }}
-                    onMouseEnter={(e) => (e.currentTarget.style.border = "1px solid oklch(0.72 0.09 75 / 30%)")}
-                    onMouseLeave={(e) => (e.currentTarget.style.border = "1px solid oklch(1 0 0 / 6%)")}
-                  >
-                    <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "15px", color: "oklch(0.93 0.02 80)", margin: "0 0 8px 0" }}>{post.title}</h3>
-                    
-                    <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.55 0.03 60)", margin: "0 0 16px 0", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", lineHeight: 1.5 }}>
-                      {post.content}
-                    </p>
+                {[...posts]
+                  .sort((a, b) => {
+                    const pinA = a.isPinned ? 1 : 0;
+                    const pinB = b.isPinned ? 1 : 0;
+                    if (pinA !== pinB) return pinB - pinA;
+                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                  })
+                  .map((post) => (
+                    <div
+                      key={post.id}
+                      style={{
+                        background: "oklch(0.06 0.01 285)",
+                        border: post.isPinned
+                          ? "1px solid oklch(0.72 0.09 75 / 35%)"
+                          : "1px solid oklch(1 0 0 / 6%)",
+                        borderRadius: "6px",
+                        padding: "20px",
+                        position: "relative",
+                        transition: "border 0.2s",
+                      }}
+                    >
+                      <div
+                        onClick={() => setLocation(`/coven/${slug}/post/${post.id}`)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                          <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "15px", color: "oklch(0.93 0.02 80)", margin: 0 }}>
+                            {post.title}
+                          </h3>
+                          {post.isPinned && (
+                            <span style={{ fontSize: "8px", background: "oklch(0.72 0.09 75 / 15%)", color: "oklch(0.72 0.09 75)", padding: "2px 6px", borderRadius: "10px", display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                              <Pin size={8} /> PINNED
+                            </span>
+                          )}
+                          {post.isLocked && (
+                            <span style={{ fontSize: "8px", background: "oklch(0.75 0.14 20 / 15%)", color: "oklch(0.75 0.14 20)", padding: "2px 6px", borderRadius: "10px", display: "inline-flex", alignItems: "center", gap: "2px" }}>
+                              <Lock size={8} /> LOCKED
+                            </span>
+                          )}
+                        </div>
 
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid oklch(1 0 0 / 4%)", paddingTop: "12px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: post.userAvatarUrl ? `url(${post.userAvatarUrl}) center/cover` : "oklch(0.15 0.03 330)", overflow: "hidden" }} />
-                        <span style={{ fontSize: "11px", color: "oklch(0.72 0.09 75)" }}>{post.userDisplayName || post.userName}</span>
-                        {post.userRole === "creator" && (
-                          <span style={{ fontSize: "8px", background: "oklch(0.38 0.14 20 / 20%)", color: "oklch(0.75 0.14 20)", padding: "1px 4px", borderRadius: "2px" }}>HOST</span>
-                        )}
+                        <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.55 0.03 60)", margin: "0 0 16px 0", overflow: "hidden", textOverflow: "ellipsis", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", lineHeight: 1.5 }}>
+                          {post.content}
+                        </p>
                       </div>
-                      <span style={{ fontSize: "11px", color: "oklch(0.45 0.02 60)" }}>
-                        {format(new Date(post.createdAt), "MMM d, yyyy - HH:mm")}
-                      </span>
+
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid oklch(1 0 0 / 4%)", paddingTop: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: post.userAvatarUrl ? `url(${post.userAvatarUrl}) center/cover` : "oklch(0.15 0.03 330)", overflow: "hidden" }} />
+                          <span style={{ fontSize: "11px", color: "oklch(0.72 0.09 75)" }}>{post.userDisplayName || post.userName}</span>
+                          {post.userRole === "creator" && (
+                            <span style={{ fontSize: "8px", background: "oklch(0.38 0.14 20 / 20%)", color: "oklch(0.75 0.14 20)", padding: "1px 4px", borderRadius: "2px" }}>HOST</span>
+                          )}
+                        </div>
+                        
+                        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                          <span style={{ fontSize: "11px", color: "oklch(0.45 0.02 60)" }}>
+                            {format(new Date(post.createdAt), "MMM d, yyyy - HH:mm")}
+                          </span>
+
+                          {/* Moderation Controls */}
+                          {(isStaff || post.userId === user?.id) && (
+                            <div style={{ display: "flex", gap: "8px", borderLeft: "1px solid oklch(1 0 0 / 6%)", paddingLeft: "12px" }}>
+                              {isStaff && (
+                                <>
+                                  <button
+                                    onClick={() => togglePinMutation.mutate({ postId: post.id })}
+                                    style={{ background: "none", border: "none", color: post.isPinned ? "oklch(0.72 0.09 75)" : "oklch(0.45 0.02 60)", cursor: "pointer", display: "flex", padding: "2px" }}
+                                    title={post.isPinned ? "Unpin Topic" : "Pin Topic"}
+                                  >
+                                    <Pin size={12} />
+                                  </button>
+                                  <button
+                                    onClick={() => toggleLockMutation.mutate({ postId: post.id })}
+                                    style={{ background: "none", border: "none", color: post.isLocked ? "oklch(0.75 0.14 20)" : "oklch(0.45 0.02 60)", cursor: "pointer", display: "flex", padding: "2px" }}
+                                    title={post.isLocked ? "Unlock Topic" : "Lock Topic"}
+                                  >
+                                    <Lock size={12} />
+                                  </button>
+                                </>
+                              )}
+                              <button
+                                onClick={() => {
+                                  if (confirm("Are you sure you want to delete this topic and all its comments?")) {
+                                    deletePostMutation.mutate({ postId: post.id });
+                                  }
+                                }}
+                                style={{ background: "none", border: "none", color: "oklch(0.38 0.14 20)", cursor: "pointer", display: "flex", padding: "2px" }}
+                                title="Delete Topic"
+                              >
+                                <Trash size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             )}
           </div>
@@ -265,6 +398,16 @@ export default function CovenDetail() {
               <div>Members: <strong style={{ color: "oklch(0.82 0.03 75)" }}>{coven.memberCount}</strong></div>
               <div>Access: <strong style={{ color: "oklch(0.82 0.03 75)" }}>{coven.tierId ? `Exclusive (${coven.tierName})` : "Public"}</strong></div>
             </div>
+            {isStaff && (
+              <button
+                onClick={() => setShowMembersModal(true)}
+                style={{ width: "100%", marginTop: "20px", fontFamily: "'Cinzel', serif", fontSize: "9.5px", letterSpacing: "0.15em", textTransform: "uppercase", background: "transparent", color: "oklch(0.72 0.09 75)", border: "1px solid oklch(0.72 0.09 75 / 30%)", padding: "10px", cursor: "pointer", transition: "all 0.2s", display: "block" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "oklch(0.72 0.09 75 / 10%)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              >
+                Manage Members
+              </button>
+            )}
           </div>
 
         </div>
@@ -328,6 +471,91 @@ export default function CovenDetail() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMembersModal && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "oklch(0.02 0.005 285 / 85%)", backdropFilter: "blur(4px)" }}>
+          <div style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 30%)", width: "100%", maxWidth: "500px", borderRadius: "8px", position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, oklch(0.72 0.09 75), transparent)" }} />
+            <div style={{ padding: "24px 30px" }}>
+              <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "20px", color: "oklch(0.93 0.02 80)", margin: "0 0 8px 0" }}>Manage Coven Members</h2>
+              <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.45 0.02 60)", margin: "0 0 24px 0" }}>
+                Promote loyal followers to moderators, demote staff, or kick members who breach the rules of the dark circle.
+              </p>
+
+              <div style={{ maxHeight: "300px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "12px", marginBottom: "24px", paddingRight: "6px" }}>
+                {members.length === 0 ? (
+                  <div style={{ padding: "20px", textAlign: "center", color: "oklch(0.45 0.02 60)", fontStyle: "italic", fontFamily: "'IM Fell English', serif" }}>
+                    No members found in this coven.
+                  </div>
+                ) : (
+                  members.map((member) => (
+                    <div key={member.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "oklch(0.08 0.015 330)", padding: "10px 12px", borderRadius: "6px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: member.avatarUrl ? `url(${member.avatarUrl}) center/cover` : "oklch(0.15 0.03 330)", overflow: "hidden" }} />
+                        <div>
+                          <div style={{ fontFamily: "'Cinzel', serif", fontSize: "12px", color: "oklch(0.93 0.02 80)" }}>
+                            {member.displayName || member.name}
+                          </div>
+                          <span style={{ fontSize: "9px", color: "oklch(0.45 0.02 60)", textTransform: "uppercase" }}>
+                            {member.role}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        {/* Only owners/admins can promote/demote */}
+                        {(userRole === "owner" || user?.role === "admin") && member.userId !== user?.id && (
+                          <>
+                            {member.role === "member" && (
+                              <button
+                                onClick={() => updateRoleMutation.mutate({ covenId: coven.id, targetUserId: member.userId, newRole: "moderator" })}
+                                style={{ fontSize: "9px", fontFamily: "'Cinzel', serif", background: "oklch(0.72 0.09 75 / 10%)", color: "oklch(0.72 0.09 75)", border: "1px solid oklch(0.72 0.09 75 / 30%)", padding: "4px 8px", cursor: "pointer" }}
+                              >
+                                Make Mod
+                              </button>
+                            )}
+                            {member.role === "moderator" && (
+                              <button
+                                onClick={() => updateRoleMutation.mutate({ covenId: coven.id, targetUserId: member.userId, newRole: "member" })}
+                                style={{ fontSize: "9px", fontFamily: "'Cinzel', serif", background: "transparent", color: "oklch(0.45 0.02 60)", border: "1px solid oklch(0.45 0.02 60 / 30%)", padding: "4px 8px", cursor: "pointer" }}
+                              >
+                                Remove Mod
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        {/* Owners/Mods can kick */}
+                        {member.userId !== user?.id && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to kick ${member.displayName || member.name} from the coven?`)) {
+                                kickMutation.mutate({ covenId: coven.id, targetUserId: member.userId });
+                              }
+                            }}
+                            style={{ fontSize: "9px", fontFamily: "'Cinzel', serif", background: "transparent", color: "oklch(0.38 0.14 20)", border: "1px solid oklch(0.38 0.14 20 / 30%)", padding: "4px 8px", cursor: "pointer" }}
+                          >
+                            Kick
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  onClick={() => setShowMembersModal(false)}
+                  style={{ fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", background: "oklch(0.38 0.14 20)", color: "white", border: "none", padding: "10px 20px", cursor: "pointer" }}
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>

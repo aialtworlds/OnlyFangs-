@@ -2434,6 +2434,8 @@ export async function getCovenPosts(covenId: number) {
       userId: covenPosts.userId,
       title: covenPosts.title,
       content: covenPosts.content,
+      isPinned: covenPosts.isPinned,
+      isLocked: covenPosts.isLocked,
       createdAt: covenPosts.createdAt,
       userDisplayName: users.displayName,
       userName: users.name,
@@ -2457,6 +2459,8 @@ export async function getCovenPostById(postId: number) {
       userId: covenPosts.userId,
       title: covenPosts.title,
       content: covenPosts.content,
+      isPinned: covenPosts.isPinned,
+      isLocked: covenPosts.isLocked,
       createdAt: covenPosts.createdAt,
       userDisplayName: users.displayName,
       userName: users.name,
@@ -2595,7 +2599,192 @@ export async function getMyCovens(userId: number) {
     })
     .from(covenMembers)
     .innerJoin(covens, eq(covenMembers.covenId, covens.id))
-    .leftJoin(creators, eq(covens.creatorId, creators.id))
     .leftJoin(tiers, eq(covens.tierId, tiers.id))
     .where(eq(covenMembers.userId, userId));
+}
+
+export async function getCovenRole(userId: number, covenId: number): Promise<'member' | 'moderator' | 'owner' | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [membership] = await db
+    .select({ role: covenMembers.role })
+    .from(covenMembers)
+    .where(and(eq(covenMembers.userId, userId), eq(covenMembers.covenId, covenId)))
+    .limit(1);
+
+  return membership?.role ?? null;
+}
+
+export async function isCovenOwnerOrAdmin(userId: number, covenId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const user = await getUserById(userId);
+  if (user && user.role === 'admin') return true;
+
+  const [membership] = await db
+    .select({ role: covenMembers.role })
+    .from(covenMembers)
+    .where(and(eq(covenMembers.userId, userId), eq(covenMembers.covenId, covenId)))
+    .limit(1);
+
+  return !!membership && membership.role === 'owner';
+}
+
+export async function isCovenStaff(userId: number, covenId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const user = await getUserById(userId);
+  if (user && user.role === 'admin') return true;
+
+  const [membership] = await db
+    .select({ role: covenMembers.role })
+    .from(covenMembers)
+    .where(and(eq(covenMembers.userId, userId), eq(covenMembers.covenId, covenId)))
+    .limit(1);
+
+  return !!membership && (membership.role === 'owner' || membership.role === 'moderator');
+}
+
+export async function canModerateCoven(userId: number, covenId: number, postAuthorId?: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const user = await getUserById(userId);
+  if (user && user.role === 'admin') return true;
+
+  if (postAuthorId !== undefined && userId === postAuthorId) return true;
+
+  const [membership] = await db
+    .select({ role: covenMembers.role })
+    .from(covenMembers)
+    .where(and(eq(covenMembers.userId, userId), eq(covenMembers.covenId, covenId)))
+    .limit(1);
+
+  if (membership && (membership.role === 'owner' || membership.role === 'moderator')) {
+    return true;
+  }
+
+  return false;
+}
+
+export async function deleteCovenPost(userId: number, postId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const [post] = await db.select().from(covenPosts).where(eq(covenPosts.id, postId)).limit(1);
+  if (!post) throw new Error("Post not found");
+
+  const canMod = await canModerateCoven(userId, post.covenId, post.userId);
+  if (!canMod) throw new Error("Permission denied");
+
+  await db.delete(covenComments).where(eq(covenComments.postId, postId));
+  await db.delete(covenPosts).where(eq(covenPosts.id, postId));
+}
+
+export async function deleteCovenComment(userId: number, commentId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const [comment] = await db.select().from(covenComments).where(eq(covenComments.id, commentId)).limit(1);
+  if (!comment) throw new Error("Comment not found");
+
+  const [post] = await db.select().from(covenPosts).where(eq(covenPosts.id, comment.postId)).limit(1);
+  if (!post) throw new Error("Post not found");
+
+  const canMod = await canModerateCoven(userId, post.covenId, comment.userId);
+  if (!canMod) throw new Error("Permission denied");
+
+  await db.delete(covenComments).where(eq(covenComments.id, commentId));
+}
+
+export async function togglePinCovenPost(userId: number, postId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const [post] = await db.select().from(covenPosts).where(eq(covenPosts.id, postId)).limit(1);
+  if (!post) throw new Error("Post not found");
+
+  const isMod = await isCovenStaff(userId, post.covenId);
+  if (!isMod) throw new Error("Permission denied");
+
+  await db
+    .update(covenPosts)
+    .set({ isPinned: !post.isPinned })
+    .where(eq(covenPosts.id, postId));
+}
+
+export async function toggleLockCovenPost(userId: number, postId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const [post] = await db.select().from(covenPosts).where(eq(covenPosts.id, postId)).limit(1);
+  if (!post) throw new Error("Post not found");
+
+  const isMod = await isCovenStaff(userId, post.covenId);
+  if (!isMod) throw new Error("Permission denied");
+
+  await db
+    .update(covenPosts)
+    .set({ isLocked: !post.isLocked })
+    .where(eq(covenPosts.id, postId));
+}
+
+export async function getCovenMembersList(covenId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: covenMembers.id,
+      userId: covenMembers.userId,
+      role: covenMembers.role,
+      joinedAt: covenMembers.joinedAt,
+      name: users.name,
+      displayName: users.displayName,
+      avatarUrl: users.avatarUrl,
+    })
+    .from(covenMembers)
+    .innerJoin(users, eq(covenMembers.userId, users.id))
+    .where(eq(covenMembers.covenId, covenId))
+    .orderBy(covenMembers.joinedAt);
+}
+
+export async function updateCovenMemberRole(userId: number, covenId: number, targetUserId: number, newRole: 'member' | 'moderator') {
+  const db = await getDb();
+  if (!db) return;
+
+  const isOwnerOrAdmin = await isCovenOwnerOrAdmin(userId, covenId);
+  if (!isOwnerOrAdmin) throw new Error("Permission denied");
+
+  await db
+    .update(covenMembers)
+    .set({ role: newRole })
+    .where(and(eq(covenMembers.covenId, covenId), eq(covenMembers.userId, targetUserId)));
+}
+
+export async function kickCovenMember(userId: number, covenId: number, targetUserId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const userRole = await getCovenRole(userId, covenId);
+  const targetRole = await getCovenRole(targetUserId, covenId);
+  const isAdminUser = (await getUserById(userId))?.role === 'admin';
+
+  let allowed = false;
+  if (isAdminUser) {
+    allowed = true;
+  } else if (userRole === 'owner') {
+    allowed = targetUserId !== userId;
+  } else if (userRole === 'moderator') {
+    allowed = targetRole === 'member';
+  }
+
+  if (!allowed) throw new Error("Permission denied");
+
+  await db
+    .delete(covenMembers)
+    .where(and(eq(covenMembers.covenId, covenId), eq(covenMembers.userId, targetUserId)));
 }

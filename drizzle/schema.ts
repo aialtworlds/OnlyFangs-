@@ -474,6 +474,8 @@ export const covenPosts = mysqlTable("coven_posts", {
   userId: int("userId").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
+  isPinned: boolean("isPinned").default(false).notNull(),
+  isLocked: boolean("isLocked").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
