@@ -2574,3 +2574,28 @@ export async function createCoven(data: {
 
   return created;
 }
+
+export async function getMyCovens(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: covens.id,
+      name: covens.name,
+      slug: covens.slug,
+      description: covens.description,
+      avatarUrl: covens.avatarUrl,
+      coverUrl: covens.coverUrl,
+      role: covenMembers.role,
+      creatorAlias: creators.alias,
+      creatorHandle: creators.handle,
+      tierName: tiers.name,
+      tierPrice: tiers.price,
+    })
+    .from(covenMembers)
+    .innerJoin(covens, eq(covenMembers.covenId, covens.id))
+    .leftJoin(creators, eq(covens.creatorId, creators.id))
+    .leftJoin(tiers, eq(covens.tierId, tiers.id))
+    .where(eq(covenMembers.userId, userId));
+}

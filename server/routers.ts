@@ -105,7 +105,8 @@ import {
   createCovenPost,
   getCovenComments,
   createCovenComment,
-  createCoven
+  createCoven,
+  getMyCovens
 } from "./db";
 import { conversations, messages, creators, notifications, content, tiers, users, covens, covenMembers, covenPosts, covenComments } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
@@ -1070,6 +1071,9 @@ export const appRouter = router({
   coven: router({
     list: protectedProcedure.query(async () => {
       return getCovens();
+    }),
+    myCovens: protectedProcedure.query(async ({ ctx }) => {
+      return getMyCovens(ctx.user.id);
     }),
     bySlug: protectedProcedure
       .input(z.object({ slug: z.string() }))
