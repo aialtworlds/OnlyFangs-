@@ -167,7 +167,7 @@ export default function CreatorContent() {
                         {getContentIcon(item.type)}
                         <span className="capitalize">{item.type}</span>
                       </div>
-                      <span>{new Date(item.createdAt).toLocaleDateString("pt-BR")}</span>
+                      <span>{new Date(item.createdAt).toLocaleDateString("en-US")}</span>
                     </div>
 
                     {/* Report — separate click target from the card's own onClick */}
@@ -204,14 +204,14 @@ export default function CreatorContent() {
         {/* Tier Info */}
         {tiers.length > 0 && (
           <div className="mt-12 pt-8 border-t border-border">
-            <h2 className="text-2xl font-bold mb-6">Tiers Disponíveis</h2>
+            <h2 className="text-2xl font-bold mb-6">Available Tiers</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {tiers.map((tier: any) => (
                 <Card key={tier.id}>
                   <CardHeader>
                     <CardTitle>{tier.name}</CardTitle>
                     <CardDescription>
-                      ${tier.price}/mês
+                      ${tier.price}/mo
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -230,7 +230,7 @@ export default function CreatorContent() {
                     )}
                     <Link href={`/creator/${creatorHandle}`}>
                       <Button className="w-full">
-                        Assinar
+                        Subscribe
                       </Button>
                     </Link>
                   </CardContent>

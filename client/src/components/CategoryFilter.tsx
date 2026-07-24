@@ -18,7 +18,7 @@ export default function CategoryFilter({
   const allCategories = ['all', ...categories];
 
   const getCategoryLabel = (cat: string) => {
-    if (cat === 'all') return 'Todas as categorias';
+    if (cat === 'all') return 'All categories';
     return cat.charAt(0).toUpperCase() + cat.slice(1);
   };
 
@@ -36,7 +36,7 @@ export default function CategoryFilter({
       {isOpen && (
         <div className="absolute top-full mt-2 bg-background border border-border rounded-lg shadow-lg z-50 min-w-[200px]">
           {isLoading ? (
-            <div className="p-3 text-sm text-muted-foreground">Carregando...</div>
+            <div className="p-3 text-sm text-muted-foreground">Loading...</div>
           ) : (
             <div className="py-1">
               {allCategories.map((category) => (

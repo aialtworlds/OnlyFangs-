@@ -114,7 +114,7 @@ export function ContentPreview({ contentId, onUnlock }: ContentPreviewProps) {
               ) : (
                 <div className="rounded-lg bg-muted p-8 flex flex-col items-center justify-center gap-4">
                   {getContentIcon(content.type)}
-                  <p className="text-muted-foreground">Arquivo: {content.title}</p>
+                  <p className="text-muted-foreground">File: {content.title}</p>
                 </div>
               )}
 
@@ -123,7 +123,7 @@ export function ContentPreview({ contentId, onUnlock }: ContentPreviewProps) {
                 <a href={content.fileUrl} download target="_blank" rel="noopener noreferrer">
                   <Button variant="outline" className="w-full">
                     <Download className="w-4 h-4 mr-2" />
-                    Baixar Arquivo
+                    Download File
                   </Button>
                 </a>
               </div>
@@ -134,7 +134,7 @@ export function ContentPreview({ contentId, onUnlock }: ContentPreviewProps) {
               <div className="rounded-lg bg-muted aspect-video flex flex-col items-center justify-center gap-4">
                 <Lock className="w-12 h-12 text-muted-foreground" />
                 <p className="text-muted-foreground text-center">
-                  Conteúdo bloqueado
+                  Content locked
                 </p>
               </div>
 
@@ -164,11 +164,11 @@ export function ContentPreview({ contentId, onUnlock }: ContentPreviewProps) {
         {/* Content Info */}
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-muted-foreground">Tipo</p>
+            <p className="text-muted-foreground">Type</p>
             <p className="font-medium capitalize">{content.type}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Tamanho</p>
+            <p className="text-muted-foreground">Size</p>
             <p className="font-medium">
               {content.fileSize
                 ? `${(content.fileSize / (1024 * 1024)).toFixed(1)} MB`
@@ -177,14 +177,14 @@ export function ContentPreview({ contentId, onUnlock }: ContentPreviewProps) {
           </div>
           {content.duration && (
             <div>
-              <p className="text-muted-foreground">Duração</p>
+              <p className="text-muted-foreground">Duration</p>
               <p className="font-medium">{content.duration}</p>
             </div>
           )}
           <div>
-            <p className="text-muted-foreground">Data</p>
+            <p className="text-muted-foreground">Date</p>
             <p className="font-medium">
-              {new Date(content.createdAt).toLocaleDateString("pt-BR")}
+              {new Date(content.createdAt).toLocaleDateString("en-US")}
             </p>
           </div>
         </div>

@@ -66,9 +66,9 @@ export function PayoutsTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold font-serif tracking-wide">Payouts & Faturamento</h2>
+        <h2 className="text-2xl font-bold font-serif tracking-wide">Payouts & Billing</h2>
         <p className="text-muted-foreground mt-1">
-          Configure sua conta Stripe Connect Express para receber as assinaturas dos seus patronos de forma direta e automática.
+          Set up your Stripe Connect Express account to receive your patrons' subscriptions directly and automatically.
         </p>
       </div>
 
@@ -78,30 +78,30 @@ export function PayoutsTab() {
             <div className="flex items-center gap-3">
               <AlertTriangle className="text-red-500" size={24} />
               <div>
-                <CardTitle className="font-serif">Payouts Desativados</CardTitle>
+                <CardTitle className="font-serif">Payouts Disabled</CardTitle>
                 <CardDescription>
-                  Sua conta de pagamentos não está configurada ou o onboarding está pendente.
+                  Your payment account isn't set up yet, or onboarding is still pending.
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Para começar a receber pagamentos dos patronos na OnlyFangs, você precisa conectar uma conta da Stripe. 
-              Ao se cadastrar, você informará sua conta bancária de preferência para receber os valores das assinaturas mensais.
+              To start receiving payments from patrons on OnlyFangs, you need to connect a Stripe account.
+              When you sign up, you'll provide your preferred bank account to receive monthly subscription payouts.
             </p>
             <div className="bg-muted/40 p-4 rounded-lg border border-border/50 text-sm space-y-2">
               <div className="flex justify-between">
-                <span>Taxa da Plataforma:</span>
+                <span>Platform Fee:</span>
                 <span className="font-semibold text-primary">10%</span>
               </div>
               <div className="flex justify-between">
-                <span>Repasse Líquido p/ Criador:</span>
+                <span>Net Payout to Creator:</span>
                 <span className="font-semibold text-green-500">90%</span>
               </div>
               <div className="flex justify-between">
-                <span>Frequência de Payout:</span>
-                <span className="font-semibold">Automático (Configurado na Stripe)</span>
+                <span>Payout Frequency:</span>
+                <span className="font-semibold">Automatic (configured on Stripe)</span>
               </div>
             </div>
 
@@ -111,7 +111,7 @@ export function PayoutsTab() {
               className="w-full md:w-auto font-semibold gap-2"
             >
               {(loading || setupMutation.isPending) && <Loader2 className="animate-spin" size={16} />}
-              {connected ? "Concluir Onboarding da Stripe" : "Conectar Conta Stripe"}
+              {connected ? "Finish Stripe Onboarding" : "Connect Stripe Account"}
               <ExternalLink size={16} />
             </Button>
           </CardContent>
@@ -122,9 +122,9 @@ export function PayoutsTab() {
             <div className="flex items-center gap-3">
               <CheckCircle2 className="text-green-500" size={24} />
               <div>
-                <CardTitle className="font-serif">Payouts Configurados e Ativos</CardTitle>
+                <CardTitle className="font-serif">Payouts Set Up and Active</CardTitle>
                 <CardDescription>
-                  Sua conta Stripe Connect está ativa e você está pronto para receber repasses.
+                  Your Stripe Connect account is active and ready to receive payouts.
                 </CardDescription>
               </div>
             </div>
@@ -132,14 +132,14 @@ export function PayoutsTab() {
           <CardContent className="space-y-4">
             <div className="text-sm text-muted-foreground space-y-1">
               <p>
-                ID da Conta Stripe: <code className="bg-muted px-2 py-0.5 rounded text-foreground font-mono">{accountId}</code>
+                Stripe Account ID: <code className="bg-muted px-2 py-0.5 rounded text-foreground font-mono">{accountId}</code>
               </p>
-              <p>Status de Transações: <span className="text-green-500 font-semibold">Ativo</span></p>
+              <p>Transaction Status: <span className="text-green-500 font-semibold">Active</span></p>
             </div>
 
             <p className="text-sm text-muted-foreground leading-relaxed">
-              O repasse das assinaturas (90% do valor bruto) é enviado diretamente à sua conta bancária configurada na Stripe.
-              Você pode visualizar seu saldo acumulado, editar seus dados bancários e gerenciar extratos clicando no botão abaixo.
+              Subscription payouts (90% of gross revenue) are sent directly to your bank account configured on Stripe.
+              You can view your accumulated balance, edit your bank details, and manage statements by clicking the button below.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -149,7 +149,7 @@ export function PayoutsTab() {
                 className="font-semibold gap-2"
               >
                 {(loading || loginLinkMutation.isPending) && <Loader2 className="animate-spin" size={16} />}
-                Ver Painel Stripe Express
+                View Stripe Express Dashboard
                 <ExternalLink size={16} />
               </Button>
             </div>
