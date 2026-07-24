@@ -106,6 +106,47 @@ export default function CovenDetail() {
     },
   });
 
+  const warnMutation = trpc.coven.warnMember.useMutation({
+    onSuccess: () => {
+      toast.success("Warning issued.");
+      refetchMembers();
+    },
+    onError: (err) => {
+      toast.error(`Error issuing warning: ${err.message}`);
+    },
+  });
+
+  const muteMutation = trpc.coven.muteMember.useMutation({
+    onSuccess: () => {
+      toast.success("Member muted.");
+      refetchMembers();
+    },
+    onError: (err) => {
+      toast.error(`Error muting member: ${err.message}`);
+    },
+  });
+
+  const unmuteMutation = trpc.coven.unmuteMember.useMutation({
+    onSuccess: () => {
+      toast.success("Member unmuted.");
+      refetchMembers();
+    },
+    onError: (err) => {
+      toast.error(`Error unmuting member: ${err.message}`);
+    },
+  });
+
+  const banMutation = trpc.coven.banMember.useMutation({
+    onSuccess: () => {
+      toast.success("Member banned from coven.");
+      refetchMembers();
+      refetchCoven();
+    },
+    onError: (err) => {
+      toast.error(`Error banning member: ${err.message}`);
+    },
+  });
+
   const createPostMutation = trpc.coven.createPost.useMutation({
     onSuccess: () => {
       toast.success("Discussion started!");
@@ -540,6 +581,48 @@ export default function CovenDetail() {
                             style={{ fontSize: "9px", fontFamily: "'Cinzel', serif", background: "transparent", color: "oklch(0.38 0.14 20)", border: "1px solid oklch(0.38 0.14 20 / 30%)", padding: "4px 8px", cursor: "pointer" }}
                           >
                             Kick
+                          </button>
+                        )}
+
+                        {/* Warn — lightest action, just a logged notice */}
+                        {member.userId !== user?.id && (
+                          <button
+                            onClick={() => {
+                              const reason = prompt(`Reason for warning ${member.displayName || member.name}? (optional)`) || undefined;
+                              warnMutation.mutate({ covenId: coven.id, targetUserId: member.userId, reason });
+                            }}
+                            style={{ fontSize: "9px", fontFamily: "'Cinzel', serif", background: "transparent", color: "oklch(0.72 0.09 75)", border: "1px solid oklch(0.72 0.09 75 / 30%)", padding: "4px 8px", cursor: "pointer" }}
+                          >
+                            Warn
+                          </button>
+                        )}
+
+                        {/* Mute — temporary, defaults to 24h */}
+                        {member.userId !== user?.id && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Mute ${member.displayName || member.name} for 24 hours?`)) {
+                                muteMutation.mutate({ covenId: coven.id, targetUserId: member.userId, durationMs: 24 * 60 * 60 * 1000 });
+                              }
+                            }}
+                            style={{ fontSize: "9px", fontFamily: "'Cinzel', serif", background: "transparent", color: "oklch(0.6 0.1 60)", border: "1px solid oklch(0.6 0.1 60 / 30%)", padding: "4px 8px", cursor: "pointer" }}
+                          >
+                            Mute 24h
+                          </button>
+                        )}
+
+                        {/* Ban — permanent, blocks re-entry even after resubscribing */}
+                        {member.userId !== user?.id && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Permanently ban ${member.displayName || member.name} from this coven? They won't be able to rejoin even if they resubscribe.`)) {
+                                const reason = prompt("Reason for ban? (optional)") || undefined;
+                                banMutation.mutate({ covenId: coven.id, targetUserId: member.userId, reason });
+                              }
+                            }}
+                            style={{ fontSize: "9px", fontFamily: "'Cinzel', serif", background: "oklch(0.38 0.14 20)", color: "white", border: "1px solid oklch(0.38 0.14 20)", padding: "4px 8px", cursor: "pointer" }}
+                          >
+                            Ban
                           </button>
                         )}
                       </div>

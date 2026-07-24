@@ -461,11 +461,36 @@ export const covenMembers = mysqlTable("coven_members", {
   covenId: int("covenId").notNull(),
   userId: int("userId").notNull(),
   role: mysqlEnum("role", ["member", "moderator", "owner"]).default("member").notNull(),
+  mutedUntil: timestamp("mutedUntil"), // null = not muted; a future timestamp blocks posting/commenting until then
   joinedAt: timestamp("joinedAt").defaultNow().notNull(),
 });
 
 export type CovenMember = typeof covenMembers.$inferSelect;
 export type InsertCovenMember = typeof covenMembers.$inferInsert;
+
+// ── Coven Bans (permanent, blocks re-entry even after leaving/kick) ──
+export const covenBans = mysqlTable("coven_bans", {
+  id: int("id").autoincrement().primaryKey(),
+  covenId: int("covenId").notNull(),
+  userId: int("userId").notNull(),
+  bannedBy: int("bannedBy").notNull(),
+  reason: varchar("reason", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CovenBan = typeof covenBans.$inferSelect;
+
+// ── Coven Warnings (logged, non-restrictive) ─────────────────────
+export const covenWarnings = mysqlTable("coven_warnings", {
+  id: int("id").autoincrement().primaryKey(),
+  covenId: int("covenId").notNull(),
+  userId: int("userId").notNull(),
+  issuedBy: int("issuedBy").notNull(),
+  reason: varchar("reason", { length: 500 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CovenWarning = typeof covenWarnings.$inferSelect;
 
 // ── Coven Posts (Threads) ───────────────────────────────────────
 export const covenPosts = mysqlTable("coven_posts", {

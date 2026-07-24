@@ -1,9 +1,9 @@
-import { eq, desc, and, count, sql, isNull, or, ne, isNotNull } from "drizzle-orm";
+import { eq, desc, and, count, sql, isNull, or, ne, isNotNull, gt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
   releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
-  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments,
+  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments, covenBans, covenWarnings,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -2337,12 +2337,18 @@ export async function canAccessCoven(userId: number, covenId: number): Promise<b
   const [coven] = await db.select().from(covens).where(eq(covens.id, covenId)).limit(1);
   if (!coven) return false;
 
-  // 1. If public (no tier), anyone can access
-  if (!coven.tierId) return true;
-
-  // 2. Check user role
+  // Admin bypass always wins first, consistent with the "admin sees/does
+  // everything" pattern used elsewhere (content access, moderation, etc.)
   const user = await getUserById(userId);
   if (user && user.role === "admin") return true;
+
+  // A ban always wins over everything else — otherwise a banned patron
+  // with an active subscription could just rejoin immediately.
+  const banned = await isCovenBanned(userId, covenId);
+  if (banned) return false;
+
+  // 1. If public (no tier), anyone can access
+  if (!coven.tierId) return true;
 
   // 3. Check if user is the hosting creator
   if (coven.creatorId) {
@@ -2787,4 +2793,166 @@ export async function kickCovenMember(userId: number, covenId: number, targetUse
   await db
     .delete(covenMembers)
     .where(and(eq(covenMembers.covenId, covenId), eq(covenMembers.userId, targetUserId)));
+}
+
+// Shared hierarchy check reused by warn/mute/ban: moderators can only act
+// on regular members, the owner can act on anyone but themselves, and a
+// platform admin can always act. Mirrors kickCovenMember's rule exactly,
+// since warn/mute/ban/kick are all "staff action on a member", just
+// different severities.
+async function canActOnCovenMember(userId: number, covenId: number, targetUserId: number): Promise<boolean> {
+  const userRole = await getCovenRole(userId, covenId);
+  const targetRole = await getCovenRole(targetUserId, covenId);
+  const isAdminUser = (await getUserById(userId))?.role === 'admin';
+
+  if (isAdminUser) return true;
+  if (userRole === 'owner') return targetUserId !== userId;
+  if (userRole === 'moderator') return targetRole === 'member';
+  return false;
+}
+
+export async function warnCovenMember(issuedBy: number, covenId: number, targetUserId: number, reason?: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  const allowed = await canActOnCovenMember(issuedBy, covenId, targetUserId);
+  if (!allowed) throw new Error("Permission denied");
+
+  await db.insert(covenWarnings).values({
+    covenId,
+    userId: targetUserId,
+    issuedBy,
+    reason: reason || null,
+  });
+}
+
+export async function getCovenWarnings(covenId: number, targetUserId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = targetUserId
+    ? and(eq(covenWarnings.covenId, covenId), eq(covenWarnings.userId, targetUserId))
+    : eq(covenWarnings.covenId, covenId);
+
+  return db
+    .select({
+      id: covenWarnings.id,
+      userId: covenWarnings.userId,
+      issuedBy: covenWarnings.issuedBy,
+      reason: covenWarnings.reason,
+      createdAt: covenWarnings.createdAt,
+    })
+    .from(covenWarnings)
+    .where(conditions)
+    .orderBy(desc(covenWarnings.createdAt));
+}
+
+export async function muteCovenMember(issuedBy: number, covenId: number, targetUserId: number, durationMs: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const allowed = await canActOnCovenMember(issuedBy, covenId, targetUserId);
+  if (!allowed) throw new Error("Permission denied");
+
+  const mutedUntil = new Date(Date.now() + durationMs);
+  await db
+    .update(covenMembers)
+    .set({ mutedUntil })
+    .where(and(eq(covenMembers.covenId, covenId), eq(covenMembers.userId, targetUserId)));
+}
+
+export async function unmuteCovenMember(issuedBy: number, covenId: number, targetUserId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const allowed = await canActOnCovenMember(issuedBy, covenId, targetUserId);
+  if (!allowed) throw new Error("Permission denied");
+
+  await db
+    .update(covenMembers)
+    .set({ mutedUntil: null })
+    .where(and(eq(covenMembers.covenId, covenId), eq(covenMembers.userId, targetUserId)));
+}
+
+export async function isCovenMuted(userId: number, covenId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const [membership] = await db
+    .select({ mutedUntil: covenMembers.mutedUntil })
+    .from(covenMembers)
+    .where(and(eq(covenMembers.userId, userId), eq(covenMembers.covenId, covenId)))
+    .limit(1);
+
+  if (!membership?.mutedUntil) return false;
+  return membership.mutedUntil.getTime() > Date.now();
+}
+
+export async function banCovenMember(issuedBy: number, covenId: number, targetUserId: number, reason?: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  const allowed = await canActOnCovenMember(issuedBy, covenId, targetUserId);
+  if (!allowed) throw new Error("Permission denied");
+
+  // A ban implies removal — kicked out immediately, and the ban record
+  // (unlike membership) is never deleted by leaving/kicking, so it keeps
+  // blocking re-entry until explicitly lifted.
+  await db.insert(covenBans).values({
+    covenId,
+    userId: targetUserId,
+    bannedBy: issuedBy,
+    reason: reason || null,
+  });
+
+  await db
+    .delete(covenMembers)
+    .where(and(eq(covenMembers.covenId, covenId), eq(covenMembers.userId, targetUserId)));
+}
+
+export async function unbanCovenMember(issuedBy: number, covenId: number, targetUserId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  // Lifting a ban is more sensitive than issuing routine warnings/mutes —
+  // restricted to the owner or a platform admin, not regular moderators.
+  const isOwnerOrAdmin = await isCovenOwnerOrAdmin(issuedBy, covenId);
+  if (!isOwnerOrAdmin) throw new Error("Permission denied");
+
+  await db
+    .delete(covenBans)
+    .where(and(eq(covenBans.covenId, covenId), eq(covenBans.userId, targetUserId)));
+}
+
+export async function isCovenBanned(userId: number, covenId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const [ban] = await db
+    .select({ id: covenBans.id })
+    .from(covenBans)
+    .where(and(eq(covenBans.covenId, covenId), eq(covenBans.userId, userId)))
+    .limit(1);
+
+  return !!ban;
+}
+
+export async function getCovenBans(covenId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: covenBans.id,
+      userId: covenBans.userId,
+      bannedBy: covenBans.bannedBy,
+      reason: covenBans.reason,
+      createdAt: covenBans.createdAt,
+      name: users.name,
+      displayName: users.displayName,
+    })
+    .from(covenBans)
+    .innerJoin(users, eq(covenBans.userId, users.id))
+    .where(eq(covenBans.covenId, covenId))
+    .orderBy(desc(covenBans.createdAt));
 }

@@ -115,7 +115,15 @@ import {
   toggleLockCovenPost,
   getCovenMembersList,
   updateCovenMemberRole,
-  kickCovenMember
+  kickCovenMember,
+  warnCovenMember,
+  getCovenWarnings,
+  muteCovenMember,
+  unmuteCovenMember,
+  isCovenMuted,
+  banCovenMember,
+  unbanCovenMember,
+  getCovenBans
 } from "./db";
 import { conversations, messages, creators, notifications, content, tiers, users, covens, covenMembers, covenPosts, covenComments } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
@@ -1157,6 +1165,8 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const allowed = await canAccessCoven(ctx.user.id, input.covenId);
         if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Subscription required to post in this coven" });
+        const muted = await isCovenMuted(ctx.user.id, input.covenId);
+        if (muted) throw new TRPCError({ code: "FORBIDDEN", message: "You are muted in this coven" });
         return createCovenPost(ctx.user.id, input.covenId, input.title, input.content);
       }),
     postDetail: protectedProcedure
@@ -1192,6 +1202,17 @@ export const appRouter = router({
 
         const allowed = await canAccessCoven(ctx.user.id, post.covenId);
         if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Subscription required to comment in this coven" });
+
+        const muted = await isCovenMuted(ctx.user.id, post.covenId);
+        if (muted) throw new TRPCError({ code: "FORBIDDEN", message: "You are muted in this coven" });
+
+        // The frontend only hides the comment box for non-staff on a locked
+        // topic — enforce it here too, or anyone could still comment via a
+        // direct API call.
+        if (post.isLocked) {
+          const isStaffUser = await isCovenStaff(ctx.user.id, post.covenId);
+          if (!isStaffUser) throw new TRPCError({ code: "FORBIDDEN", message: "This topic is locked" });
+        }
 
         return createCovenComment(ctx.user.id, input.postId, input.content);
       }),
@@ -1275,6 +1296,85 @@ export const appRouter = router({
         } catch (err: any) {
           throw new TRPCError({ code: "FORBIDDEN", message: err.message });
         }
+      }),
+    warnMember: protectedProcedure
+      .input(z.object({
+        covenId: z.number(),
+        targetUserId: z.number(),
+        reason: z.string().max(500).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await warnCovenMember(ctx.user.id, input.covenId, input.targetUserId, input.reason);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
+      }),
+    warnings: protectedProcedure
+      .input(z.object({ covenId: z.number(), targetUserId: z.number().optional() }))
+      .query(async ({ ctx, input }) => {
+        const isStaffUser = await isCovenStaff(ctx.user.id, input.covenId);
+        if (!isStaffUser) throw new TRPCError({ code: "FORBIDDEN", message: "Only staff can view warnings" });
+        return getCovenWarnings(input.covenId, input.targetUserId);
+      }),
+    // durationMs is the mute length in milliseconds (e.g. 86400000 for 1 day,
+    // 604800000 for 7 days) — kept generic so the frontend can offer whatever
+    // presets make sense, without the backend hardcoding specific durations.
+    muteMember: protectedProcedure
+      .input(z.object({
+        covenId: z.number(),
+        targetUserId: z.number(),
+        durationMs: z.number().positive(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await muteCovenMember(ctx.user.id, input.covenId, input.targetUserId, input.durationMs);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
+      }),
+    unmuteMember: protectedProcedure
+      .input(z.object({ covenId: z.number(), targetUserId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await unmuteCovenMember(ctx.user.id, input.covenId, input.targetUserId);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
+      }),
+    banMember: protectedProcedure
+      .input(z.object({
+        covenId: z.number(),
+        targetUserId: z.number(),
+        reason: z.string().max(500).optional(),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await banCovenMember(ctx.user.id, input.covenId, input.targetUserId, input.reason);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
+      }),
+    unbanMember: protectedProcedure
+      .input(z.object({ covenId: z.number(), targetUserId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await unbanCovenMember(ctx.user.id, input.covenId, input.targetUserId);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
+      }),
+    bans: protectedProcedure
+      .input(z.object({ covenId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const isStaffUser = await isCovenStaff(ctx.user.id, input.covenId);
+        if (!isStaffUser) throw new TRPCError({ code: "FORBIDDEN", message: "Only staff can view banned users" });
+        return getCovenBans(input.covenId);
       }),
   }),
 });
