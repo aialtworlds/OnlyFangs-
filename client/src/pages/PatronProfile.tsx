@@ -956,70 +956,48 @@ export default function PatronProfile() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
               <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', margin: 0 }}>My Releases</h2>
-              {tiers.length > 0 && (
-                <button
-                  onClick={() => setShowUploadForm(!showUploadForm)}
-                  style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'oklch(0.38 0.14 20)', color: 'white', border: 'none', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Plus size={12} /> {showUploadForm ? 'Close Form' : 'New Release'}
-                </button>
-              )}
+              <button
+                onClick={() => setShowUploadForm(!showUploadForm)}
+                style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'oklch(0.38 0.14 20)', color: 'white', border: 'none', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Plus size={12} /> {showUploadForm ? 'Close Form' : 'New Release'}
+              </button>
             </div>
 
-            {tiers.length === 0 ? (
-              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(0.72 0.09 75 / 20%)', padding: '40px', borderRadius: '8px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                <div style={{ fontSize: '32px' }}>👑</div>
-                <div style={{ fontFamily: "'Cinzel', serif", fontSize: '16px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.04em' }}>
-                  Subscription Tier Required
+            {showUploadForm && (
+              <div style={{ background: 'oklch(0.055 0.012 330)', border: '1px solid oklch(1 0 0 / 6%)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
+                <ContentUploadForm onSuccess={() => {
+                  toast.success('Content published and sent for review!');
+                  setShowUploadForm(false);
+                  utils.creator.releases.invalidate();
+                }} />
+              </div>
+            )}
+
+            {releases.length === 0 ? (
+              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
+                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
+                  You have not uploaded any releases yet. Publish your first content!
                 </div>
-                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.55 0.03 60)', maxWidth: '400px', lineHeight: 1.6 }}>
-                  Before you can upload your work, you must define at least one tier (even a free one) so your audience knows who can access it.
-                </div>
-                <button
-                  onClick={() => setActiveNav('tiers')}
-                  style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.2em', textTransform: 'uppercase', background: 'oklch(0.72 0.09 75)', color: 'oklch(0.04 0.008 285)', border: 'none', padding: '12px 24px', cursor: 'pointer', fontWeight: 600, transition: 'all 0.2s' }}
-                >
-                  Create a Tier
-                </button>
               </div>
             ) : (
-              <>
-                {showUploadForm && (
-                  <div style={{ background: 'oklch(0.055 0.012 330)', border: '1px solid oklch(1 0 0 / 6%)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
-                    <ContentUploadForm onSuccess={() => {
-                      toast.success('Content published and sent for review!');
-                      setShowUploadForm(false);
-                      utils.creator.releases.invalidate();
-                    }} />
-                  </div>
-                )}
-
-                {releases.length === 0 ? (
-                  <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
-                    <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
-                      You have not uploaded any releases yet. Publish your first content!
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+                {releases.map((release) => (
+                  <div key={release.id} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', borderRadius: '6px', overflow: 'hidden' }}>
+                    <div style={{ height: '140px', background: 'oklch(0.05 0.01 285)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {release.thumbnailUrl ? (
+                        <img src={release.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ fontSize: '24px' }}>🦇</div>
+                      )}
+                    </div>
+                    <div style={{ padding: '14px' }}>
+                      <h4 style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', margin: '0 0 4px 0' }}>{release.title}</h4>
+                      <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.45 0.02 60)', margin: 0 }}>{release.type.toUpperCase()}</p>
                     </div>
                   </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
-                    {releases.map((release) => (
-                      <div key={release.id} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', borderRadius: '6px', overflow: 'hidden' }}>
-                        <div style={{ height: '140px', background: 'oklch(0.05 0.01 285)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {release.thumbnailUrl ? (
-                            <img src={release.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <div style={{ fontSize: '24px' }}>🦇</div>
-                          )}
-                        </div>
-                        <div style={{ padding: '14px' }}>
-                          <h4 style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', margin: '0 0 4px 0' }}>{release.title}</h4>
-                          <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.45 0.02 60)', margin: 0 }}>{release.type.toUpperCase()}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
+                ))}
+              </div>
             )}
           </div>
         )}

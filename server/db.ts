@@ -384,7 +384,19 @@ export async function createCreatorProfile(data: {
     .from(creators)
     .where(eq(creators.userId, data.userId))
     .limit(1);
-  return result[0];
+  const creator = result[0];
+  if (creator) {
+    // Automatically create a default free tier so they immediately have one!
+    await db.insert(tiers).values({
+      creatorId: creator.id,
+      name: "Fledgling",
+      slug: "fledgling",
+      price: "0.00",
+      description: "Free tier for all shadow followers",
+      sortOrder: 1,
+    });
+  }
+  return creator;
 }
 
 export async function updateCreatorProfile(

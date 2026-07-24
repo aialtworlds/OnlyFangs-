@@ -67,7 +67,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
 
     // Validate file size (max 50MB)
     if (file.size > 50 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo: 50MB");
+      toast.error("File too large. Maximum: 50MB");
       return;
     }
 
@@ -102,7 +102,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
     e.preventDefault();
 
     if (!selectedFile) {
-      toast.error("Selecione um arquivo");
+      toast.error("Please select a file");
       return;
     }
 
@@ -193,9 +193,9 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
                 ) : (
                   <div className="space-y-2">
                     <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
-                    <p className="text-sm font-medium">Clique para selecionar arquivo</p>
+                    <p className="text-sm font-medium">Click to select file</p>
                     <p className="text-xs text-muted-foreground">
-                      Máximo 50MB (imagens, áudio, vídeo, PDF)
+                      Maximum 50MB (images, audio, video, PDF)
                     </p>
                   </div>
                 )}
@@ -239,7 +239,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
           {/* Tier Selection */}
           <div className="space-y-2">
             <label htmlFor="tier" className="text-sm font-medium">
-              Tier Mínimo *
+              Access Tier *
             </label>
             {tiers.length === 0 ? (
               <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
@@ -249,12 +249,12 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
             ) : (
               <Select value={formData.tierId} onValueChange={(value) => setFormData((prev) => ({ ...prev, tierId: value }))}>
                 <SelectTrigger id="tier" disabled={isLoading}>
-                  <SelectValue placeholder="Selecione um tier" />
+                  <SelectValue placeholder="Select a tier" />
                 </SelectTrigger>
                 <SelectContent>
                   {tiers.map((tier: any) => (
                     <SelectItem key={tier.id} value={tier.id.toString()}>
-                      {tier.name} - ${tier.price}/mês
+                      {tier.name} - ${tier.price}/mo
                     </SelectItem>
                   ))}
                 </SelectContent>
