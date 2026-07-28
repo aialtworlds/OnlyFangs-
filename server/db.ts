@@ -239,7 +239,63 @@ export async function getCreatorByUserId(userId: number) {
     .from(creators)
     .where(eq(creators.userId, userId))
     .limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  
+  if (result.length > 0) {
+    return result[0];
+  }
+
+  // If creator profile not found, check if this user is an admin
+  const userResult = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  const user = userResult[0];
+  if (user && user.role === "admin") {
+    // Generate a unique clean handle for the admin creator profile
+    const baseHandle = (user.name || user.displayName || `admin_${userId}`)
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "")
+      .substring(0, 40) || `admin_${userId}`;
+    
+    // Ensure uniqueness by adding a suffix if handle already exists
+    let uniqueHandle = baseHandle;
+    let counter = 1;
+    while (true) {
+      const existing = await db
+        .select()
+        .from(creators)
+        .where(eq(creators.handle, uniqueHandle))
+        .limit(1);
+      if (existing.length === 0) break;
+      uniqueHandle = `${baseHandle}_${counter}`;
+      counter++;
+    }
+
+    // Insert new creator profile for the admin
+    await db.insert(creators).values({
+      userId: userId,
+      alias: user.displayName || user.name || "Admin Master",
+      handle: uniqueHandle,
+      email: user.email || `admin_${userId}@onlyfangs.com`,
+      bio: "Admin Master Creator Profile",
+      avatarUrl: user.avatarUrl || "",
+      coverUrl: user.coverUrl || "",
+      verified: true,
+      status: "active"
+    });
+
+    // Fetch the newly created profile
+    const newCreator = await db
+      .select()
+      .from(creators)
+      .where(eq(creators.userId, userId))
+      .limit(1);
+    return newCreator.length > 0 ? newCreator[0] : undefined;
+  }
+
+  return undefined;
 }
 
 export async function getCreatorReleases(creatorId: number, limit = 20) {

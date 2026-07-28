@@ -128,10 +128,12 @@ export default function Covens() {
                 onMouseEnter={(e) => {
                   e.currentTarget.style.border = "1px solid oklch(0.72 0.09 75 / 40%)";
                   e.currentTarget.style.transform = "translateY(-4px)";
+                  e.currentTarget.style.boxShadow = "0 8px 32px oklch(0 0 0 / 40%)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.border = "1px solid oklch(0.72 0.09 75 / 10%)";
                   e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
                 }}
               >
                 {/* Banner */}
@@ -190,7 +192,7 @@ export default function Covens() {
       {/* Creation Modal */}
       {showCreateModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "oklch(0.02 0.005 285 / 85%)", backdropFilter: "blur(4px)" }}>
-          <div style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 30%)", width: "100%", maxWidth: "500px", borderRadius: "8px", position: "relative", overflow: "hidden" }}>
+          <div className="animate-modal-reveal" style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 30%)", width: "100%", maxWidth: "500px", borderRadius: "8px", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, oklch(0.72 0.09 75), transparent)" }} />
             <div style={{ padding: "24px 30px" }}>
               <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "20px", color: "oklch(0.93 0.02 80)", margin: "0 0 8px 0" }}>Establish a New Coven</h2>

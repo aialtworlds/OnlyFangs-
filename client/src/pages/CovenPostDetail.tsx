@@ -192,7 +192,7 @@ export default function CovenPostDetail() {
         </div>
 
         {/* Main Post Card */}
-        <div style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 15%)", borderRadius: "8px", padding: "30px", marginBottom: "40px" }}>
+        <div style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 15%)", borderRadius: "8px", padding: "clamp(20px, 4vw, 36px)", marginBottom: "40px" }}>
           
           {/* Author Block */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px", borderBottom: "1px solid oklch(1 0 0 / 6%)", paddingBottom: "16px" }}>
@@ -215,7 +215,7 @@ export default function CovenPostDetail() {
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: "11px", color: "oklch(0.45 0.02 60)" }}>
+                <div style={{ fontSize: "11px", color: "oklch(0.52 0.02 60)" }}>
                   {format(new Date(post.createdAt), "MMMM d, yyyy - HH:mm")}
                 </div>
               </div>
@@ -358,7 +358,9 @@ export default function CovenPostDetail() {
               {comments.map((comment) => (
                 <div
                   key={comment.id}
-                  style={{ background: "oklch(0.05 0.01 285)", border: "1px solid oklch(1 0 0 / 4%)", borderRadius: "6px", padding: "20px" }}
+                  style={{ background: "oklch(0.05 0.01 285)", border: "1px solid oklch(1 0 0 / 4%)", borderRadius: "6px", padding: "20px", transition: "border-color 0.2s ease" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = "oklch(0.72 0.09 75 / 20%)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = "oklch(1 0 0 / 4%)")}
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -370,7 +372,7 @@ export default function CovenPostDetail() {
                         {comment.userRole === "creator" && (
                           <span style={{ fontSize: "7px", background: "oklch(0.38 0.14 20 / 20%)", color: "oklch(0.75 0.14 20)", padding: "1px 4px", borderRadius: "2px" }}>HOST</span>
                         )}
-                        <span style={{ fontSize: "10px", color: "oklch(0.45 0.02 60)" }}>
+                        <span style={{ fontSize: "10px", color: "oklch(0.52 0.02 60)" }}>
                           {format(new Date(comment.createdAt), "MMM d, yyyy - HH:mm")}
                         </span>
                       </div>
@@ -469,7 +471,7 @@ export default function CovenPostDetail() {
               <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", letterSpacing: "0.20em", textTransform: "uppercase", color: "oklch(0.55 0.03 60)", margin: 0 }}>
                 Speak to the Circle {post.isLocked && <span style={{ color: "oklch(0.75 0.14 20)", fontSize: "9px" }}>(LOCKED - STAFF ONLY)</span>}
               </h3>
-              <div style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
+              <div className="post-reply-form" style={{ display: "flex", gap: "12px", alignItems: "flex-end" }}>
                 <textarea
                   className="input-dark"
                   rows={3}
