@@ -573,8 +573,28 @@ export default function PatronProfile() {
     <div style={{ minHeight: "100vh", background: "oklch(0.04 0.008 285)", display: "flex", paddingTop: "68px" }}>
       
       {/* Desktop Sidebar */}
-      <div style={{ width: "240px", flexShrink: 0, background: "oklch(0.055 0.012 330)", borderRight: "1px solid oklch(1 0 0 / 6%)", display: "flex", flexDirection: "column", height: "calc(100vh - 68px)", position: "sticky", top: "68px", overflowY: "auto" }}>
+      <div className="patron-sidebar" style={{ width: "240px", flexShrink: 0, background: "oklch(0.055 0.012 330)", borderRight: "1px solid oklch(1 0 0 / 6%)", display: "flex", flexDirection: "column", height: "calc(100vh - 68px)", position: "sticky", top: "68px", overflowY: "auto" }}>
         <SidebarContent />
+      </div>
+
+      {/* Mobile Nav Bar (horizontal, shows only on mobile) */}
+      <div className="patron-mobile-nav">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => handleNav(item.id)}
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: "4px",
+              padding: "10px 14px", border: "none", background: "transparent",
+              color: activeNav === item.id ? "oklch(0.75 0.14 20)" : "oklch(0.55 0.03 60)",
+              borderBottom: activeNav === item.id ? "2px solid oklch(0.75 0.14 20)" : "2px solid transparent",
+              cursor: "pointer", flexShrink: 0, transition: "color 0.2s, border-color 0.2s",
+            }}
+          >
+            <item.icon size={16} />
+            <span style={{ fontSize: "8px", fontFamily: "'Cinzel', serif", letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{item.label}</span>
+          </button>
+        ))}
       </div>
 
       {/* Main Content Area */}
@@ -591,7 +611,7 @@ export default function PatronProfile() {
             </div>
 
             {/* Stats Row */}
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '40px', flexWrap: 'wrap' }}>
+            <div className="patron-stats-grid" style={{ display: 'flex', gap: '16px', marginBottom: '40px', flexWrap: 'wrap' }}>
               <StatBox value={stats?.activeSubscriptions ?? 0} label="Subscriptions" />
               <StatBox value={stats?.followingCreators ?? 0} label="Following" />
               <StatBox value={stats?.savedContentCount ?? 0} label="Saved" />

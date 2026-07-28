@@ -247,7 +247,7 @@ export default function CovenDetail() {
   return (
     <div style={{ background: "oklch(0.04 0.008 285)", minHeight: "100vh", padding: "60px 0 120px", color: "oklch(0.93 0.02 80)" }}>
       {/* Cover Header */}
-      <div style={{ height: "240px", background: coven.coverUrl ? `url(${coven.coverUrl}) center/cover` : "linear-gradient(180deg, oklch(0.085 0.015 330), oklch(0.04 0.008 285))", borderBottom: "1px solid oklch(0.72 0.09 75 / 10%)", position: "relative" }}>
+      <div className="coven-cover-header" style={{ height: "240px", background: coven.coverUrl ? `url(${coven.coverUrl}) center/cover` : "linear-gradient(180deg, oklch(0.085 0.015 330), oklch(0.04 0.008 285))", borderBottom: "1px solid oklch(0.72 0.09 75 / 10%)", position: "relative" }}>
         <div className="container mx-auto max-w-5xl" style={{ height: "100%", position: "relative" }}>
           <button
             onClick={() => setLocation("/covens")}
@@ -257,7 +257,7 @@ export default function CovenDetail() {
           </button>
 
           {/* Profile Details Block */}
-          <div style={{ position: "absolute", bottom: "-40px", left: "20px", right: "20px", display: "flex", alignItems: "flex-end", gap: "20px", flexWrap: "wrap" }}>
+          <div className="coven-cover-profile-block" style={{ position: "absolute", bottom: "-40px", left: "20px", right: "20px", display: "flex", alignItems: "flex-end", gap: "20px", flexWrap: "wrap" }}>
             <div style={{ width: "96px", height: "96px", borderRadius: "12px", background: coven.avatarUrl ? `url(${coven.avatarUrl}) center/cover` : "oklch(0.12 0.04 20)", border: "3px solid oklch(0.04 0.008 285)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "36px", flexShrink: 0 }}>
               {!coven.avatarUrl && "🔮"}
             </div>
@@ -309,7 +309,7 @@ export default function CovenDetail() {
 
       {/* Main Forum Board */}
       <div className="container mx-auto max-w-5xl" style={{ marginTop: "80px", padding: "0 20px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "40px", alignItems: "flex-start" }}>
+        <div className="coven-board-grid" style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: "40px", alignItems: "flex-start" }}>
           
           {/* Forum Threads list */}
           <div>
@@ -358,7 +358,17 @@ export default function CovenDetail() {
                         borderRadius: "6px",
                         padding: "20px",
                         position: "relative",
-                        transition: "border 0.2s",
+                        transition: "border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = post.isPinned ? "oklch(0.72 0.09 75 / 60%)" : "oklch(0.72 0.09 75 / 25%)";
+                        e.currentTarget.style.transform = "translateY(-2px)";
+                        e.currentTarget.style.boxShadow = "0 6px 24px oklch(0 0 0 / 30%)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = post.isPinned ? "oklch(0.72 0.09 75 / 35%)" : "oklch(1 0 0 / 6%)";
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "none";
                       }}
                     >
                       <div
@@ -443,7 +453,7 @@ export default function CovenDetail() {
           </div>
 
           {/* Sidebar Detail Card */}
-          <div style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "6px", padding: "20px" }}>
+          <div className="coven-sidebar" style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "6px", padding: "20px" }}>
             <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "11px", letterSpacing: "0.2em", textTransform: "uppercase", color: "oklch(0.72 0.09 75)", marginBottom: "16px", borderBottom: "1px solid oklch(1 0 0 / 6%)", paddingBottom: "10px" }}>
               Coven Description
             </h3>
@@ -483,7 +493,7 @@ export default function CovenDetail() {
       {/* Start discussion modal */}
       {showPostModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "oklch(0.02 0.005 285 / 85%)", backdropFilter: "blur(4px)" }}>
-          <div style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 30%)", width: "100%", maxWidth: "560px", borderRadius: "8px", position: "relative", overflow: "hidden" }}>
+          <div className="animate-modal-reveal" style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 30%)", width: "100%", maxWidth: "560px", borderRadius: "8px", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, oklch(0.72 0.09 75), transparent)" }} />
             <div style={{ padding: "24px 30px" }}>
               <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "20px", color: "oklch(0.93 0.02 80)", margin: "0 0 8px 0" }}>Start a New Topic</h2>
@@ -545,7 +555,7 @@ export default function CovenDetail() {
 
       {showMembersModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "oklch(0.02 0.005 285 / 85%)", backdropFilter: "blur(4px)" }}>
-          <div style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 30%)", width: "100%", maxWidth: "500px", borderRadius: "8px", position: "relative", overflow: "hidden" }}>
+          <div className="animate-modal-reveal" style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 30%)", width: "100%", maxWidth: "500px", borderRadius: "8px", position: "relative", overflow: "hidden" }}>
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: "linear-gradient(90deg, transparent, oklch(0.72 0.09 75), transparent)" }} />
             <div style={{ padding: "24px 30px" }}>
               <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "20px", color: "oklch(0.93 0.02 80)", margin: "0 0 8px 0" }}>Manage Coven Members</h2>
