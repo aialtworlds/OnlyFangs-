@@ -16,11 +16,15 @@ export default function CovenDetail() {
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showReportsModal, setShowReportsModal] = useState(false);
   const [newPost, setNewPost] = useState({ title: "", content: "" });
+  const [newPostImage, setNewPostImage] = useState<{ base64: string; mimeType: string; previewUrl: string } | null>(null);
+  const [postSort, setPostSort] = useState<"newest" | "oldest" | "most_commented">("newest");
+  const [postSearch, setPostSearch] = useState("");
+  const [postLimit, setPostLimit] = useState(20);
 
   // Queries
   const { data: coven, isLoading: isCovenLoading, refetch: refetchCoven } = trpc.coven.bySlug.useQuery({ slug });
   const { data: posts = [], isLoading: isPostsLoading, refetch: refetchPosts } = trpc.coven.posts.useQuery(
-    { covenId: coven?.id || 0 },
+    { covenId: coven?.id || 0, sort: postSort, search: postSearch || undefined, limit: postLimit },
     { enabled: !!coven?.allowed }
   );
   const { data: roleData } = trpc.coven.getRole.useQuery(
@@ -168,12 +172,28 @@ export default function CovenDetail() {
       toast.success("Discussion started!");
       setShowPostModal(false);
       setNewPost({ title: "", content: "" });
+      setNewPostImage(null);
       refetchPosts();
     },
     onError: (err) => {
       toast.error(`Error posting: ${err.message}`);
     },
   });
+
+  const handlePostImageSelect = (file: File | undefined) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be under 5MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1];
+      setNewPostImage({ base64, mimeType: file.type, previewUrl: result });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleCreatePost = (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,6 +206,8 @@ export default function CovenDetail() {
       covenId: coven.id,
       title: newPost.title,
       content: newPost.content,
+      imageBase64: newPostImage?.base64,
+      imageMimeType: newPostImage?.mimeType,
     });
   };
 
@@ -313,7 +335,7 @@ export default function CovenDetail() {
           
           {/* Forum Threads list */}
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
               <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "18px", color: "oklch(0.72 0.09 75)", margin: 0, letterSpacing: "0.05em" }}>
                 Discussions
               </h2>
@@ -325,6 +347,27 @@ export default function CovenDetail() {
                   <Plus size={10} /> Start Topic
                 </button>
               )}
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginBottom: "24px", flexWrap: "wrap" }}>
+              <input
+                type="text"
+                placeholder="Search topics..."
+                value={postSearch}
+                onChange={(e) => setPostSearch(e.target.value)}
+                className="input-dark"
+                style={{ flex: "1 1 200px", fontSize: "12px", padding: "8px 12px" }}
+              />
+              <select
+                value={postSort}
+                onChange={(e) => setPostSort(e.target.value as typeof postSort)}
+                className="input-dark"
+                style={{ fontSize: "11px", padding: "8px 12px", fontFamily: "'Cinzel', serif" }}
+              >
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="most_commented">Most Discussed</option>
+              </select>
             </div>
 
             {isPostsLoading ? (
@@ -340,14 +383,7 @@ export default function CovenDetail() {
               </div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {[...posts]
-                  .sort((a, b) => {
-                    const pinA = a.isPinned ? 1 : 0;
-                    const pinB = b.isPinned ? 1 : 0;
-                    if (pinA !== pinB) return pinB - pinA;
-                    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-                  })
-                  .map((post) => (
+                {posts.map((post) => (
                     <div
                       key={post.id}
                       style={{
@@ -406,6 +442,9 @@ export default function CovenDetail() {
                         </div>
                         
                         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+                          <span style={{ fontSize: "11px", color: "oklch(0.45 0.02 60)", display: "flex", alignItems: "center", gap: "4px" }}>
+                            <MessageSquare size={11} /> {post.commentCount}
+                          </span>
                           <span style={{ fontSize: "11px", color: "oklch(0.45 0.02 60)" }}>
                             {format(new Date(post.createdAt), "MMM d, yyyy - HH:mm")}
                           </span>
@@ -448,6 +487,17 @@ export default function CovenDetail() {
                       </div>
                     </div>
                   ))}
+              </div>
+            )}
+
+            {posts.length >= postLimit && (
+              <div style={{ display: "flex", justifyContent: "center", marginTop: "20px" }}>
+                <button
+                  onClick={() => setPostLimit((l) => l + 20)}
+                  style={{ fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", background: "transparent", color: "oklch(0.72 0.09 75)", border: "1px solid oklch(0.72 0.09 75 / 30%)", padding: "10px 24px", cursor: "pointer" }}
+                >
+                  Load More
+                </button>
               </div>
             )}
           </div>
@@ -528,6 +578,31 @@ export default function CovenDetail() {
                     value={newPost.content}
                     onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
                   />
+                </div>
+
+                <div>
+                  <label style={{ fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "oklch(0.55 0.03 60)", display: "block", marginBottom: "6px" }}>
+                    Image (optional)
+                  </label>
+                  {newPostImage ? (
+                    <div style={{ position: "relative", display: "inline-block" }}>
+                      <img src={newPostImage.previewUrl} alt="" style={{ maxHeight: "120px", borderRadius: "6px" }} />
+                      <button
+                        type="button"
+                        onClick={() => setNewPostImage(null)}
+                        style={{ position: "absolute", top: "-8px", right: "-8px", background: "oklch(0.38 0.14 20)", color: "white", border: "none", borderRadius: "50%", width: "22px", height: "22px", cursor: "pointer" }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => handlePostImageSelect(e.target.files?.[0])}
+                      style={{ fontSize: "12px", color: "oklch(0.65 0.02 60)" }}
+                    />
+                  )}
                 </div>
 
                 <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", marginTop: "12px" }}>
