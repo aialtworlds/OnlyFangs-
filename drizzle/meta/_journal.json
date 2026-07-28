@@ -127,6 +127,13 @@
       "when": 1784926230142,
       "tag": "0017_shiny_retro_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1784937042618,
+      "tag": "0018_natural_gambit",
+      "breakpoints": true
     }
   ]
 }

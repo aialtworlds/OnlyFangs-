@@ -522,9 +522,11 @@ export const covenPosts = mysqlTable("coven_posts", {
   userId: int("userId").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
+  imageUrl: text("imageUrl"),
   isPinned: boolean("isPinned").default(false).notNull(),
   isLocked: boolean("isLocked").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt"), // null = never edited
 });
 
 export type CovenPost = typeof covenPosts.$inferSelect;
@@ -537,7 +539,29 @@ export const covenComments = mysqlTable("coven_comments", {
   userId: int("userId").notNull(),
   content: text("content").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt"), // null = never edited
 });
 
 export type CovenComment = typeof covenComments.$inferSelect;
 export type InsertCovenComment = typeof covenComments.$inferInsert;
+
+// ── Coven Reactions (likes on a post or a comment, never both) ───
+export const covenReactions = mysqlTable("coven_reactions", {
+  id: int("id").autoincrement().primaryKey(),
+  postId: int("postId"),
+  commentId: int("commentId"),
+  userId: int("userId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CovenReaction = typeof covenReactions.$inferSelect;
+
+// ── Coven Thread Follows (get notified of new replies without commenting) ──
+export const covenThreadFollows = mysqlTable("coven_thread_follows", {
+  id: int("id").autoincrement().primaryKey(),
+  postId: int("postId").notNull(),
+  userId: int("userId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CovenThreadFollow = typeof covenThreadFollows.$inferSelect;

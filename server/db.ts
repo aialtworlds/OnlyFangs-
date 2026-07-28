@@ -1,9 +1,9 @@
-import { eq, desc, and, count, sql, isNull, or, ne, isNotNull, gt } from "drizzle-orm";
+import { eq, desc, asc, and, count, sql, isNull, or, ne, isNotNull, gt, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
   releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
-  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments, covenBans, covenWarnings, covenReports,
+  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments, covenBans, covenWarnings, covenReports, covenReactions, covenThreadFollows,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -2429,20 +2429,105 @@ export async function getCovenMembersCount(covenId: number) {
   return result[0]?.count ?? 0;
 }
 
-export async function getCovenPosts(covenId: number) {
+// Parses @Name mentions (word characters only, no spaces -- there's no
+// distinct @handle system for regular users, just displayName/name, so
+// multi-word names won't be caught by this; a reasonable v1 tradeoff
+// rather than building a full mention-autocomplete system) and notifies
+// each matched user, skipping the author mentioning themselves.
+async function notifyCovenMentions(contentStr: string, contextTitle: string, authorId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const names = Array.from(new Set(Array.from(contentStr.matchAll(/@(\w{2,30})/g)).map((m) => m[1])));
+  if (names.length === 0) return;
+
+  for (const name of names) {
+    const [matchedUser] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(or(eq(users.displayName, name), eq(users.name, name)))
+      .limit(1);
+
+    if (matchedUser && matchedUser.id !== authorId) {
+      await createNotification(
+        matchedUser.id,
+        "mention",
+        "You were mentioned",
+        `You were mentioned in "${contextTitle}"`
+      );
+    }
+  }
+}
+
+async function attachCovenReactionInfo<T extends { id: number }>(
+  rows: T[],
+  kind: "post" | "comment",
+  viewerId?: number
+): Promise<(T & { likeCount: number; likedByMe: boolean })[]> {
+  const db = await getDb();
+  if (!db || rows.length === 0) return rows.map((r) => ({ ...r, likeCount: 0, likedByMe: false }));
+
+  const ids = rows.map((r) => r.id);
+  const column = kind === "post" ? covenReactions.postId : covenReactions.commentId;
+  const allReactions = await db
+    .select({ targetId: column, userId: covenReactions.userId })
+    .from(covenReactions)
+    .where(inArray(column, ids));
+
+  const countMap = new Map<number, number>();
+  const likedByViewer = new Set<number>();
+  for (const r of allReactions) {
+    if (r.targetId === null) continue;
+    countMap.set(r.targetId, (countMap.get(r.targetId) ?? 0) + 1);
+    if (viewerId && r.userId === viewerId) likedByViewer.add(r.targetId);
+  }
+
+  return rows.map((r) => ({
+    ...r,
+    likeCount: countMap.get(r.id) ?? 0,
+    likedByMe: likedByViewer.has(r.id),
+  }));
+}
+
+export async function getCovenPosts(
+  covenId: number,
+  options?: {
+    limit?: number;
+    offset?: number;
+    sort?: "newest" | "oldest" | "most_commented";
+    search?: string;
+    viewerId?: number;
+  }
+) {
   const db = await getDb();
   if (!db) return [];
 
-  return db
+  const limit = options?.limit ?? 20;
+  const offset = options?.offset ?? 0;
+  const sort = options?.sort ?? "newest";
+
+  const whereConditions = options?.search
+    ? and(
+        eq(covenPosts.covenId, covenId),
+        or(
+          sql`${covenPosts.title} LIKE ${"%" + options.search + "%"}`,
+          sql`${covenPosts.content} LIKE ${"%" + options.search + "%"}`
+        )
+      )
+    : eq(covenPosts.covenId, covenId);
+
+  const posts = await db
     .select({
       id: covenPosts.id,
       covenId: covenPosts.covenId,
       userId: covenPosts.userId,
       title: covenPosts.title,
       content: covenPosts.content,
+      imageUrl: covenPosts.imageUrl,
       isPinned: covenPosts.isPinned,
       isLocked: covenPosts.isLocked,
       createdAt: covenPosts.createdAt,
+      updatedAt: covenPosts.updatedAt,
       userDisplayName: users.displayName,
       userName: users.name,
       userAvatarUrl: users.avatarUrl,
@@ -2450,11 +2535,53 @@ export async function getCovenPosts(covenId: number) {
     })
     .from(covenPosts)
     .innerJoin(users, eq(covenPosts.userId, users.id))
-    .where(eq(covenPosts.covenId, covenId))
+    .where(whereConditions)
+    .orderBy(desc(covenPosts.isPinned), sort === "oldest" ? asc(covenPosts.createdAt) : desc(covenPosts.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  if (posts.length === 0) return [];
+
+  const postIds = posts.map((p) => p.id);
+  const commentCounts = await db
+    .select({ postId: covenComments.postId, cnt: count() })
+    .from(covenComments)
+    .where(inArray(covenComments.postId, postIds))
+    .groupBy(covenComments.postId);
+  const commentCountMap = new Map(commentCounts.map((c) => [c.postId, c.cnt]));
+
+  let withCounts = posts.map((p) => ({ ...p, commentCount: commentCountMap.get(p.id) ?? 0 }));
+  withCounts = await attachCovenReactionInfo(withCounts, "post", options?.viewerId);
+
+  if (sort === "most_commented") {
+    withCounts.sort((a, b) => {
+      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+      return b.commentCount - a.commentCount;
+    });
+  }
+
+  return withCounts;
+}
+
+export async function getUserCovenPosts(covenId: number, targetUserId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: covenPosts.id,
+      title: covenPosts.title,
+      content: covenPosts.content,
+      isPinned: covenPosts.isPinned,
+      isLocked: covenPosts.isLocked,
+      createdAt: covenPosts.createdAt,
+    })
+    .from(covenPosts)
+    .where(and(eq(covenPosts.covenId, covenId), eq(covenPosts.userId, targetUserId)))
     .orderBy(desc(covenPosts.createdAt));
 }
 
-export async function getCovenPostById(postId: number) {
+export async function getCovenPostById(postId: number, viewerId?: number) {
   const db = await getDb();
   if (!db) return null;
 
@@ -2465,9 +2592,11 @@ export async function getCovenPostById(postId: number) {
       userId: covenPosts.userId,
       title: covenPosts.title,
       content: covenPosts.content,
+      imageUrl: covenPosts.imageUrl,
       isPinned: covenPosts.isPinned,
       isLocked: covenPosts.isLocked,
       createdAt: covenPosts.createdAt,
+      updatedAt: covenPosts.updatedAt,
       userDisplayName: users.displayName,
       userName: users.name,
       userAvatarUrl: users.avatarUrl,
@@ -2478,10 +2607,19 @@ export async function getCovenPostById(postId: number) {
     .where(eq(covenPosts.id, postId))
     .limit(1);
 
-  return result[0] || null;
+  if (!result[0]) return null;
+
+  const [withReactionInfo] = await attachCovenReactionInfo([result[0]], "post", viewerId);
+  return withReactionInfo;
 }
 
-export async function createCovenPost(userId: number, covenId: number, title: string, contentStr: string) {
+export async function createCovenPost(
+  userId: number,
+  covenId: number,
+  title: string,
+  contentStr: string,
+  imageUrl?: string
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
@@ -2494,6 +2632,7 @@ export async function createCovenPost(userId: number, covenId: number, title: st
     covenId,
     title,
     content: contentStr,
+    imageUrl: imageUrl || null,
   });
 
   const [created] = await db
@@ -2503,20 +2642,98 @@ export async function createCovenPost(userId: number, covenId: number, title: st
     .orderBy(desc(covenPosts.createdAt))
     .limit(1);
 
+  await notifyCovenMentions(contentStr, title, userId);
+  // Starting a thread implicitly follows it, so the author hears about replies.
+  await followCovenPost(userId, created.id);
+
   return created;
 }
 
-export async function getCovenComments(postId: number) {
+export async function updateCovenPost(userId: number, postId: number, title: string, contentStr: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [post] = await db.select().from(covenPosts).where(eq(covenPosts.id, postId)).limit(1);
+  if (!post) throw new Error("Post not found");
+
+  const user = await getUserById(userId);
+  if (post.userId !== userId && user?.role !== "admin") throw new Error("Permission denied");
+
+  await db
+    .update(covenPosts)
+    .set({ title, content: contentStr, updatedAt: new Date() })
+    .where(eq(covenPosts.id, postId));
+
+  await notifyCovenMentions(contentStr, title, userId);
+}
+
+export async function followCovenPost(userId: number, postId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  const existing = await db
+    .select({ id: covenThreadFollows.id })
+    .from(covenThreadFollows)
+    .where(and(eq(covenThreadFollows.postId, postId), eq(covenThreadFollows.userId, userId)))
+    .limit(1);
+
+  if (existing.length > 0) return;
+  await db.insert(covenThreadFollows).values({ postId, userId });
+}
+
+export async function unfollowCovenPost(userId: number, postId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .delete(covenThreadFollows)
+    .where(and(eq(covenThreadFollows.postId, postId), eq(covenThreadFollows.userId, userId)));
+}
+
+export async function isFollowingCovenPost(userId: number, postId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+
+  const existing = await db
+    .select({ id: covenThreadFollows.id })
+    .from(covenThreadFollows)
+    .where(and(eq(covenThreadFollows.postId, postId), eq(covenThreadFollows.userId, userId)))
+    .limit(1);
+
+  return existing.length > 0;
+}
+
+export async function toggleCovenReaction(userId: number, postId: number | null, commentId: number | null) {
+  const db = await getDb();
+  if (!db) return { liked: false };
+
+  const condition = postId
+    ? and(eq(covenReactions.postId, postId), eq(covenReactions.userId, userId))
+    : and(eq(covenReactions.commentId, commentId as number), eq(covenReactions.userId, userId));
+
+  const existing = await db.select({ id: covenReactions.id }).from(covenReactions).where(condition).limit(1);
+
+  if (existing.length > 0) {
+    await db.delete(covenReactions).where(eq(covenReactions.id, existing[0].id));
+    return { liked: false };
+  }
+
+  await db.insert(covenReactions).values({ postId: postId ?? null, commentId: commentId ?? null, userId });
+  return { liked: true };
+}
+
+export async function getCovenComments(postId: number, viewerId?: number) {
   const db = await getDb();
   if (!db) return [];
 
-  return db
+  const rows = await db
     .select({
       id: covenComments.id,
       postId: covenComments.postId,
       userId: covenComments.userId,
       content: covenComments.content,
       createdAt: covenComments.createdAt,
+      updatedAt: covenComments.updatedAt,
       userDisplayName: users.displayName,
       userName: users.name,
       userAvatarUrl: users.avatarUrl,
@@ -2526,6 +2743,8 @@ export async function getCovenComments(postId: number) {
     .innerJoin(users, eq(covenComments.userId, users.id))
     .where(eq(covenComments.postId, postId))
     .orderBy(covenComments.createdAt);
+
+  return attachCovenReactionInfo(rows, "comment", viewerId);
 }
 
 export async function createCovenComment(userId: number, postId: number, contentStr: string) {
@@ -2551,7 +2770,53 @@ export async function createCovenComment(userId: number, postId: number, content
     .orderBy(desc(covenComments.createdAt))
     .limit(1);
 
+  // Replying to a thread implicitly follows it too.
+  await followCovenPost(userId, postId);
+
+  // Notify everyone following this thread (which always includes the
+  // original poster, since starting/replying to a thread auto-follows it),
+  // except whoever just wrote this comment.
+  try {
+    const commenter = await getUserById(userId);
+    const followers = await db
+      .select({ userId: covenThreadFollows.userId })
+      .from(covenThreadFollows)
+      .where(eq(covenThreadFollows.postId, postId));
+
+    const notifyIds = new Set(followers.map((f) => f.userId));
+    notifyIds.delete(userId);
+
+    for (const notifyUserId of Array.from(notifyIds)) {
+      await createNotification(
+        notifyUserId,
+        "coven_reply",
+        "New reply in a coven thread",
+        `${commenter?.displayName || commenter?.name || "Someone"} replied to "${post.title}"`
+      );
+    }
+  } catch (notifyError) {
+    console.error("[Coven] Error notifying thread followers:", notifyError);
+  }
+
+  await notifyCovenMentions(contentStr, post.title, userId);
+
   return created;
+}
+
+export async function updateCovenComment(userId: number, commentId: number, contentStr: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [comment] = await db.select().from(covenComments).where(eq(covenComments.id, commentId)).limit(1);
+  if (!comment) throw new Error("Comment not found");
+
+  const user = await getUserById(userId);
+  if (comment.userId !== userId && user?.role !== "admin") throw new Error("Permission denied");
+
+  await db
+    .update(covenComments)
+    .set({ content: contentStr, updatedAt: new Date() })
+    .where(eq(covenComments.id, commentId));
 }
 
 export async function createCoven(data: {

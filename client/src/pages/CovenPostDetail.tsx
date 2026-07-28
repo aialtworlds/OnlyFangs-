@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useRoute, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Loader2, ArrowLeft, MessageSquare, Send, Check, Pin, Trash, Lock, Unlock } from "lucide-react";
+import { Loader2, ArrowLeft, MessageSquare, Send, Check, Pin, Trash, Lock, Unlock, Heart, Pencil, Bell, BellOff, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { Streamdown } from "streamdown";
 import { ReportCovenButton } from "@/components/ReportCovenButton";
 
 export default function CovenPostDetail() {
@@ -17,6 +18,11 @@ export default function CovenPostDetail() {
   const { user } = useAuth();
   
   const [commentText, setCommentText] = useState("");
+  const [isEditingPost, setIsEditingPost] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
+  const [editCommentText, setEditCommentText] = useState("");
 
   // Queries
   const { data: post, isLoading: isPostLoading } = trpc.coven.postDetail.useQuery({ postId });
@@ -24,6 +30,10 @@ export default function CovenPostDetail() {
   const { data: roleData } = trpc.coven.getRole.useQuery(
     { covenId: post?.covenId || 0 },
     { enabled: !!post?.covenId }
+  );
+  const { data: isFollowing, refetch: refetchFollowing } = trpc.coven.isFollowingPost.useQuery(
+    { postId },
+    { enabled: !!postId }
   );
 
   const isStaff = roleData?.isStaff || user?.role === "admin";
@@ -80,6 +90,59 @@ export default function CovenPostDetail() {
     },
   });
 
+  const updatePostMutation = trpc.coven.updatePost.useMutation({
+    onSuccess: () => {
+      toast.success("Topic updated.");
+      setIsEditingPost(false);
+      utils.coven.postDetail.invalidate({ postId });
+    },
+    onError: (err) => {
+      toast.error(`Error: ${err.message}`);
+    },
+  });
+
+  const updateCommentMutation = trpc.coven.updateComment.useMutation({
+    onSuccess: () => {
+      toast.success("Reply updated.");
+      setEditingCommentId(null);
+      refetchComments();
+    },
+    onError: (err) => {
+      toast.error(`Error: ${err.message}`);
+    },
+  });
+
+  const toggleReactionMutation = trpc.coven.toggleReaction.useMutation({
+    onSuccess: () => {
+      utils.coven.postDetail.invalidate({ postId });
+      refetchComments();
+    },
+    onError: (err) => {
+      toast.error(`Error: ${err.message}`);
+    },
+  });
+
+  const followMutation = trpc.coven.followPost.useMutation({
+    onSuccess: () => {
+      toast.success("Following this thread — you'll be notified of new replies.");
+      refetchFollowing();
+    },
+  });
+
+  const unfollowMutation = trpc.coven.unfollowPost.useMutation({
+    onSuccess: () => {
+      toast.success("Unfollowed this thread.");
+      refetchFollowing();
+    },
+  });
+
+  const startEditingPost = () => {
+    if (!post) return;
+    setEditTitle(post.title);
+    setEditContent(post.content);
+    setIsEditingPost(true);
+  };
+
   const handleCommentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
@@ -111,12 +174,22 @@ export default function CovenPostDetail() {
       <div className="container mx-auto max-w-4xl">
         
         {/* Navigation */}
-        <button
-          onClick={() => setLocation(`/coven/${slug}`)}
-          style={{ background: "none", border: "none", color: "oklch(0.72 0.09 75)", display: "flex", alignItems: "center", gap: "6px", fontSize: "10px", fontFamily: "'Cinzel', serif", textTransform: "uppercase", letterSpacing: "0.1em", cursor: "pointer", marginBottom: "32px", padding: 0 }}
-        >
-          <ArrowLeft size={12} /> Back to Coven Discussion
-        </button>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "32px" }}>
+          <button
+            onClick={() => setLocation(`/coven/${slug}`)}
+            style={{ background: "none", border: "none", color: "oklch(0.72 0.09 75)", display: "flex", alignItems: "center", gap: "6px", fontSize: "10px", fontFamily: "'Cinzel', serif", textTransform: "uppercase", letterSpacing: "0.1em", cursor: "pointer", padding: 0 }}
+          >
+            <ArrowLeft size={12} /> Back to Coven Discussion
+          </button>
+
+          <button
+            onClick={() => (isFollowing ? unfollowMutation.mutate({ postId }) : followMutation.mutate({ postId }))}
+            style={{ background: "none", border: "1px solid oklch(0.72 0.09 75 / 30%)", color: isFollowing ? "oklch(0.72 0.09 75)" : "oklch(0.45 0.02 60)", display: "flex", alignItems: "center", gap: "6px", fontSize: "9px", fontFamily: "'Cinzel', serif", textTransform: "uppercase", letterSpacing: "0.1em", cursor: "pointer", padding: "6px 12px" }}
+          >
+            {isFollowing ? <Bell size={12} /> : <BellOff size={12} />}
+            {isFollowing ? "Following" : "Follow Thread"}
+          </button>
+        </div>
 
         {/* Main Post Card */}
         <div style={{ background: "oklch(0.06 0.01 285)", border: "1px solid oklch(0.72 0.09 75 / 15%)", borderRadius: "8px", padding: "30px", marginBottom: "40px" }}>
@@ -169,6 +242,15 @@ export default function CovenPostDetail() {
                     </button>
                   </>
                 )}
+                {(post.userId === user?.id || user?.role === "admin") && !isEditingPost && (
+                  <button
+                    onClick={startEditingPost}
+                    style={{ background: "none", border: "none", color: "oklch(0.72 0.09 75)", cursor: "pointer", display: "flex" }}
+                    title="Edit Topic"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     if (confirm("Are you sure you want to delete this topic and all its comments?")) {
@@ -185,19 +267,74 @@ export default function CovenPostDetail() {
           </div>
 
           {/* Title and Content */}
-          <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: "22px", color: "white", letterSpacing: "0.02em", margin: "0 0 20px 0", lineHeight: 1.3 }}>
-            {post.title}
-          </h1>
-
-          <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "16px", color: "oklch(0.85 0.02 75)", lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>
-            {post.content}
-          </p>
-
-          {post.userId !== user?.id && (
-            <div style={{ marginTop: "12px" }}>
-              <ReportCovenButton covenId={post.covenId} postId={post.id} />
+          {isEditingPost ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
+              <input
+                className="input-dark"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                style={{ fontFamily: "'Cinzel', serif", fontSize: "16px" }}
+              />
+              <textarea
+                className="input-dark"
+                rows={6}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                style={{ resize: "vertical" }}
+              />
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  onClick={() => updatePostMutation.mutate({ postId: post.id, title: editTitle, content: editContent })}
+                  disabled={updatePostMutation.isPending}
+                  style={{ background: "oklch(0.72 0.09 75)", color: "oklch(0.04 0.008 285)", border: "none", padding: "8px 16px", fontSize: "10px", fontFamily: "'Cinzel', serif", cursor: "pointer" }}
+                >
+                  {updatePostMutation.isPending ? "Saving..." : "Save"}
+                </button>
+                <button
+                  onClick={() => setIsEditingPost(false)}
+                  style={{ background: "none", color: "oklch(0.45 0.02 60)", border: "1px solid oklch(0.45 0.02 60 / 30%)", padding: "8px 16px", fontSize: "10px", fontFamily: "'Cinzel', serif", cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
+          ) : (
+            <>
+              <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: "22px", color: "white", letterSpacing: "0.02em", margin: "0 0 20px 0", lineHeight: 1.3 }}>
+                {post.title}
+              </h1>
+
+              <div style={{ fontFamily: "'IM Fell English', serif", fontSize: "16px", color: "oklch(0.85 0.02 75)", lineHeight: 1.7 }}>
+                <Streamdown>{post.content}</Streamdown>
+              </div>
+
+              {post.imageUrl && (
+                <img
+                  src={post.imageUrl}
+                  alt=""
+                  style={{ maxWidth: "100%", borderRadius: "6px", marginTop: "16px" }}
+                />
+              )}
+
+              {post.updatedAt && (
+                <div style={{ fontSize: "10px", color: "oklch(0.4 0.02 60)", fontStyle: "italic", marginTop: "8px" }}>
+                  (edited {format(new Date(post.updatedAt), "MMM d, yyyy - HH:mm")})
+                </div>
+              )}
+            </>
           )}
+
+          <div style={{ display: "flex", alignItems: "center", gap: "16px", marginTop: "16px" }}>
+            <button
+              onClick={() => toggleReactionMutation.mutate({ postId: post.id })}
+              style={{ background: "none", border: "none", color: post.likedByMe ? "oklch(0.75 0.14 20)" : "oklch(0.45 0.02 60)", display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", cursor: "pointer", padding: 0 }}
+            >
+              <Heart size={14} fill={post.likedByMe ? "oklch(0.75 0.14 20)" : "none"} />
+              {post.likeCount}
+            </button>
+
+            {post.userId !== user?.id && <ReportCovenButton covenId={post.covenId} postId={post.id} />}
+          </div>
         </div>
 
         {/* Comments Section */}
@@ -240,27 +377,84 @@ export default function CovenPostDetail() {
                     </div>
 
                     {(isStaff || comment.userId === user?.id) && (
-                      <button
-                        onClick={() => {
-                          if (confirm("Are you sure you want to delete this reply?")) {
-                            deleteCommentMutation.mutate({ commentId: comment.id });
-                          }
-                        }}
-                        style={{ background: "none", border: "none", color: "oklch(0.38 0.14 20)", cursor: "pointer", display: "flex", padding: "2px" }}
-                        title="Delete Reply"
-                      >
-                        <Trash size={12} />
-                      </button>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        {comment.userId === user?.id && editingCommentId !== comment.id && (
+                          <button
+                            onClick={() => {
+                              setEditingCommentId(comment.id);
+                              setEditCommentText(comment.content);
+                            }}
+                            style={{ background: "none", border: "none", color: "oklch(0.72 0.09 75)", cursor: "pointer", display: "flex", padding: "2px" }}
+                            title="Edit Reply"
+                          >
+                            <Pencil size={12} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            if (confirm("Are you sure you want to delete this reply?")) {
+                              deleteCommentMutation.mutate({ commentId: comment.id });
+                            }
+                          }}
+                          style={{ background: "none", border: "none", color: "oklch(0.38 0.14 20)", cursor: "pointer", display: "flex", padding: "2px" }}
+                          title="Delete Reply"
+                        >
+                          <Trash size={12} />
+                        </button>
+                      </div>
                     )}
                   </div>
-                  <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "14px", color: "oklch(0.75 0.02 60)", lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
-                    {comment.content}
-                  </p>
-                  {comment.userId !== user?.id && (
-                    <div style={{ marginTop: "8px" }}>
-                      <ReportCovenButton covenId={post.covenId} postId={post.id} commentId={comment.id} />
+
+                  {editingCommentId === comment.id ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <textarea
+                        className="input-dark"
+                        rows={3}
+                        value={editCommentText}
+                        onChange={(e) => setEditCommentText(e.target.value)}
+                        style={{ resize: "vertical" }}
+                      />
+                      <div style={{ display: "flex", gap: "8px" }}>
+                        <button
+                          onClick={() => updateCommentMutation.mutate({ commentId: comment.id, content: editCommentText })}
+                          disabled={updateCommentMutation.isPending}
+                          style={{ background: "oklch(0.72 0.09 75)", color: "oklch(0.04 0.008 285)", border: "none", padding: "6px 12px", fontSize: "9px", fontFamily: "'Cinzel', serif", cursor: "pointer" }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingCommentId(null)}
+                          style={{ background: "none", color: "oklch(0.45 0.02 60)", border: "1px solid oklch(0.45 0.02 60 / 30%)", padding: "6px 12px", fontSize: "9px", fontFamily: "'Cinzel', serif", cursor: "pointer" }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      <div style={{ fontFamily: "'IM Fell English', serif", fontSize: "14px", color: "oklch(0.75 0.02 60)", lineHeight: 1.6 }}>
+                        <Streamdown>{comment.content}</Streamdown>
+                      </div>
+                      {comment.updatedAt && (
+                        <div style={{ fontSize: "9px", color: "oklch(0.4 0.02 60)", fontStyle: "italic", marginTop: "4px" }}>
+                          (edited)
+                        </div>
+                      )}
+                    </>
                   )}
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px", marginTop: "8px" }}>
+                    <button
+                      onClick={() => toggleReactionMutation.mutate({ commentId: comment.id })}
+                      style={{ background: "none", border: "none", color: comment.likedByMe ? "oklch(0.75 0.14 20)" : "oklch(0.45 0.02 60)", display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", cursor: "pointer", padding: 0 }}
+                    >
+                      <Heart size={12} fill={comment.likedByMe ? "oklch(0.75 0.14 20)" : "none"} />
+                      {comment.likeCount}
+                    </button>
+                    {comment.userId !== user?.id && (
+                      <ReportCovenButton covenId={post.covenId} postId={post.id} commentId={comment.id} />
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

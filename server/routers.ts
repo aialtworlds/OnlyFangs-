@@ -127,7 +127,14 @@ import {
   reportCovenContent,
   getCovenReports,
   getEscalatedCovenReports,
-  resolveCovenReport
+  resolveCovenReport,
+  updateCovenPost,
+  updateCovenComment,
+  followCovenPost,
+  unfollowCovenPost,
+  isFollowingCovenPost,
+  toggleCovenReaction,
+  getUserCovenPosts
 } from "./db";
 import { conversations, messages, creators, notifications, content, tiers, users, covens, covenMembers, covenPosts, covenComments } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
@@ -1161,29 +1168,80 @@ export const appRouter = router({
         return coven;
       }),
     posts: protectedProcedure
-      .input(z.object({ covenId: z.number() }))
+      .input(z.object({
+        covenId: z.number(),
+        limit: z.number().min(1).max(50).optional(),
+        offset: z.number().min(0).optional(),
+        sort: z.enum(["newest", "oldest", "most_commented"]).optional(),
+        search: z.string().max(200).optional(),
+      }))
       .query(async ({ ctx, input }) => {
         const allowed = await canAccessCoven(ctx.user.id, input.covenId);
         if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Subscription required to access this coven" });
-        return getCovenPosts(input.covenId);
+        return getCovenPosts(input.covenId, {
+          limit: input.limit,
+          offset: input.offset,
+          sort: input.sort,
+          search: input.search,
+          viewerId: ctx.user.id,
+        });
+      }),
+    userPosts: protectedProcedure
+      .input(z.object({ covenId: z.number(), targetUserId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        const allowed = await canAccessCoven(ctx.user.id, input.covenId);
+        if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Subscription required to access this coven" });
+        return getUserCovenPosts(input.covenId, input.targetUserId);
       }),
     createPost: protectedProcedure
       .input(z.object({
         covenId: z.number(),
         title: z.string().min(3).max(255),
         content: z.string().min(10),
+        imageBase64: z.string().optional(),
+        imageMimeType: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const allowed = await canAccessCoven(ctx.user.id, input.covenId);
         if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Subscription required to post in this coven" });
         const muted = await isCovenMuted(ctx.user.id, input.covenId);
         if (muted) throw new TRPCError({ code: "FORBIDDEN", message: "You are muted in this coven" });
-        return createCovenPost(ctx.user.id, input.covenId, input.title, input.content);
+
+        let imageUrl: string | undefined;
+        if (input.imageBase64 && input.imageMimeType) {
+          const buffer = Buffer.from(input.imageBase64, "base64");
+          const fileSizeInMB = buffer.length / (1024 * 1024);
+          if (fileSizeInMB > 5) throw new TRPCError({ code: "BAD_REQUEST", message: "Image exceeds 5MB limit" });
+          const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+          if (!allowedMimes.includes(input.imageMimeType)) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid file type. Only JPEG, PNG, and WebP are allowed" });
+          }
+          const ext = input.imageMimeType.split("/")[1];
+          const fileKey = `coven-posts/coven-${input.covenId}-${ctx.user.id}-${Date.now()}.${ext}`;
+          const uploaded = await storagePut(fileKey, buffer, input.imageMimeType);
+          imageUrl = uploaded.url;
+        }
+
+        return createCovenPost(ctx.user.id, input.covenId, input.title, input.content, imageUrl);
+      }),
+    updatePost: protectedProcedure
+      .input(z.object({
+        postId: z.number(),
+        title: z.string().min(3).max(255),
+        content: z.string().min(10),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await updateCovenPost(ctx.user.id, input.postId, input.title, input.content);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
       }),
     postDetail: protectedProcedure
       .input(z.object({ postId: z.number() }))
       .query(async ({ ctx, input }) => {
-        const post = await getCovenPostById(input.postId);
+        const post = await getCovenPostById(input.postId, ctx.user.id);
         if (!post) throw new TRPCError({ code: "NOT_FOUND", message: "Post not found" });
 
         const allowed = await canAccessCoven(ctx.user.id, post.covenId);
@@ -1200,7 +1258,17 @@ export const appRouter = router({
         const allowed = await canAccessCoven(ctx.user.id, post.covenId);
         if (!allowed) throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
 
-        return getCovenComments(input.postId);
+        return getCovenComments(input.postId, ctx.user.id);
+      }),
+    updateComment: protectedProcedure
+      .input(z.object({ commentId: z.number(), content: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          await updateCovenComment(ctx.user.id, input.commentId, input.content);
+          return { success: true };
+        } catch (err: any) {
+          throw new TRPCError({ code: "FORBIDDEN", message: err.message });
+        }
       }),
     createComment: protectedProcedure
       .input(z.object({
@@ -1427,6 +1495,31 @@ export const appRouter = router({
         } catch (err: any) {
           throw new TRPCError({ code: "FORBIDDEN", message: err.message });
         }
+      }),
+    followPost: protectedProcedure
+      .input(z.object({ postId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await followCovenPost(ctx.user.id, input.postId);
+        return { success: true };
+      }),
+    unfollowPost: protectedProcedure
+      .input(z.object({ postId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        await unfollowCovenPost(ctx.user.id, input.postId);
+        return { success: true };
+      }),
+    isFollowingPost: protectedProcedure
+      .input(z.object({ postId: z.number() }))
+      .query(async ({ ctx, input }) => {
+        return isFollowingCovenPost(ctx.user.id, input.postId);
+      }),
+    toggleReaction: protectedProcedure
+      .input(z.object({ postId: z.number().optional(), commentId: z.number().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        if (!input.postId && !input.commentId) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Either postId or commentId is required" });
+        }
+        return toggleCovenReaction(ctx.user.id, input.postId ?? null, input.commentId ?? null);
       }),
   }),
 });
