@@ -242,6 +242,55 @@ export async function getCreatorByUserId(userId: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+// For creator-only WRITE actions only (upload content, create a tier,
+// update creator settings, etc.) — never for plain reads/queries, since
+// that would silently create a row just from loading a dashboard, which
+// is exactly the bug we reverted earlier. An admin passes creatorProcedure
+// but has no creators row of their own; rather than blocking them or
+// faking data, this creates one real row using their own actual name/
+// email (never a fabricated placeholder), the first time they deliberately
+// try to do something that needs one. Regular (non-admin) users still get
+// the normal "Creator profile not found" behavior — this never creates a
+// profile on their behalf.
+export async function getOrCreateCreatorForAdmin(userId: number) {
+  const existing = await getCreatorByUserId(userId);
+  if (existing) return existing;
+
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const user = await getUserById(userId);
+  if (!user || user.role !== "admin") return undefined;
+
+  const baseHandle = (user.displayName || user.name || `admin_${userId}`)
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 40) || `admin_${userId}`;
+
+  let uniqueHandle = baseHandle;
+  let suffix = 1;
+  while (true) {
+    const clash = await db.select({ id: creators.id }).from(creators).where(eq(creators.handle, uniqueHandle)).limit(1);
+    if (clash.length === 0) break;
+    uniqueHandle = `${baseHandle}_${suffix}`;
+    suffix++;
+  }
+
+  await db.insert(creators).values({
+    userId,
+    alias: user.displayName || user.name || "Admin",
+    handle: uniqueHandle,
+    email: user.email ?? null, // real email if present, otherwise left blank rather than fabricated
+    bio: null,
+    avatarUrl: user.avatarUrl ?? null,
+    verified: true,
+    status: "active",
+  });
+
+  return getCreatorByUserId(userId);
+}
+
 export async function getCreatorReleases(creatorId: number, limit = 20) {
   const db = await getDb();
   if (!db) return [];

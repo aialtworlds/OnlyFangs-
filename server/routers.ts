@@ -24,6 +24,7 @@ import {
   getUnreadNotificationCount,
   getDiscoverCreators,
   getCreatorByUserId,
+  getOrCreateCreatorForAdmin,
   getCreatorByHandle,
   getPublicCreatorTiers,
   getCreatorReleases,
@@ -409,7 +410,7 @@ export const appRouter = router({
         mimeType: z.string(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
 
         // Validate file size (max 5MB)
@@ -450,7 +451,7 @@ export const appRouter = router({
         socialWebsite: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
         await updateCreatorProfile(creator.id, input);
         return { success: true };
@@ -468,7 +469,7 @@ export const appRouter = router({
         locked: z.boolean(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
         const releaseId = await createRelease({ creatorId: creator.id, ...input });
         // Notify followers about new release
@@ -493,7 +494,7 @@ export const appRouter = router({
         type: z.enum(["album", "gallery", "playlist", "anthology"])
       }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
         return createCollection({ creatorId: creator.id, ...input });
       }),
@@ -509,7 +510,7 @@ export const appRouter = router({
         sortOrder: z.number().int().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
         await createTier({ creatorId: creator.id, ...input });
         return { success: true };
@@ -545,7 +546,7 @@ export const appRouter = router({
         sortOrder: z.number().int().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
         const { tierId, ...data } = input;
         await updateTier(tierId, creator.id, data);
@@ -557,7 +558,7 @@ export const appRouter = router({
         newName: z.string().min(2).max(100).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
 
         // Get the tier to duplicate
@@ -591,7 +592,7 @@ export const appRouter = router({
     deleteTier: creatorProcedure
       .input(z.object({ tierId: z.number() }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
         await deleteTier(input.tierId, creator.id);
         return { success: true };
@@ -625,7 +626,7 @@ export const appRouter = router({
     stripeConnectSetup: protectedProcedure
       .input(z.object({ origin: z.string() }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
 
         let accountId = creator.stripeConnectAccountId;
@@ -662,7 +663,7 @@ export const appRouter = router({
 
     getStripeLoginLink: protectedProcedure
       .mutation(async ({ ctx }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
         if (!creator.stripeConnectAccountId) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "No Stripe Connect account found" });
@@ -689,7 +690,7 @@ export const appRouter = router({
         thumbnailUrl: z.string().url().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
         const result = await uploadContent(
           creator.id,
@@ -715,7 +716,7 @@ export const appRouter = router({
     delete: creatorProcedure
       .input(z.object({ contentId: z.number() }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
         await deleteContent(input.contentId, creator.id);
         return { success: true };
@@ -1063,7 +1064,7 @@ export const appRouter = router({
         reason: z.string().min(10).max(1000),
       }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new TRPCError({ code: 'FORBIDDEN', message: 'Creator profile not found' });
         return submitAppeal(input.contentId, creator.id, input.reason);
       }),
@@ -1149,7 +1150,7 @@ export const appRouter = router({
         coverUrl: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
-        const creator = await getCreatorByUserId(ctx.user.id);
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
 
         const coven = await createCoven({
