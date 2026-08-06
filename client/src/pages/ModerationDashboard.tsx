@@ -8,10 +8,12 @@ import { Streamdown } from "streamdown";
 
 export default function ModerationDashboard() {
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"pending" | "flags" | "stats" | "coven">("pending");
+  const [activeTab, setActiveTab] = useState<"pending" | "flags" | "stats" | "coven" | "appeals">("pending");
   const [selectedContent, setSelectedContent] = useState<number | null>(null);
+  const [selectedAppeal, setSelectedAppeal] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [changeNotes, setChangeNotes] = useState("");
+  const [adminResponse, setAdminResponse] = useState("");
 
   // Queries
   const pendingQuery = trpc.moderation.getPending.useQuery(undefined, {
@@ -24,6 +26,9 @@ export default function ModerationDashboard() {
     enabled: user?.role === "admin",
   });
   const covenReportsQuery = trpc.moderation.getEscalatedCovenReports.useQuery(undefined, {
+    enabled: user?.role === "admin",
+  });
+  const appealsQuery = trpc.appeals.listPendingAdmin.useQuery(undefined, {
     enabled: user?.role === "admin",
   });
 
@@ -58,6 +63,13 @@ export default function ModerationDashboard() {
       covenReportsQuery.refetch();
     },
   });
+  const resolveAppealMutation = trpc.appeals.resolve.useMutation({
+    onSuccess: () => {
+      appealsQuery.refetch();
+      setSelectedAppeal(null);
+      setAdminResponse("");
+    },
+  });
 
   if (authLoading) {
     return (
@@ -83,6 +95,7 @@ export default function ModerationDashboard() {
   const pending = pendingQuery.data || [];
   const flags = flagsQuery.data || [];
   const covenReports = covenReportsQuery.data || [];
+  const appeals = appealsQuery.data || [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -142,6 +155,17 @@ export default function ModerationDashboard() {
           >
             <Flag size={16} className="inline mr-2" />
             Escalated Coven Reports ({covenReports.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("appeals")}
+            className={`pb-4 px-4 font-semibold transition-colors ${
+              activeTab === "appeals"
+                ? "border-b-2 border-primary text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <AlertCircle size={16} className="inline mr-2" />
+            Appeals ({appeals.length})
           </button>
         </div>
 
@@ -380,6 +404,92 @@ export default function ModerationDashboard() {
                         {resolveCovenReportMutation.isPending ? <Loader2 className="animate-spin mr-2" /> : <CheckCircle size={16} className="mr-2" />}
                         Mark Resolved
                       </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Appeals Tab */}
+        {activeTab === "appeals" && (
+          <div className="space-y-4">
+            {appealsQuery.isLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="animate-spin" />
+              </div>
+            ) : appeals.length === 0 ? (
+              <Card className="p-8 text-center">
+                <CheckCircle className="mx-auto mb-4 text-green-600" size={48} />
+                <h2 className="text-xl font-bold mb-2">No Pending Appeals</h2>
+                <p className="text-muted-foreground">Creators haven't submitted any content appeals.</p>
+              </Card>
+            ) : (
+              appeals.map((appeal) => (
+                <Card key={appeal.id} className="p-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Appeal Context */}
+                    <div>
+                      <h3 className="font-bold text-lg mb-2">Content ID: #{appeal.contentId}</h3>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Creator ID: <span className="font-semibold">#{appeal.creatorId}</span>
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Submitted: {new Date(appeal.submittedAt).toLocaleString()}
+                      </p>
+                    </div>
+
+                    {/* Creator's Reason */}
+                    <div>
+                      <div className="bg-muted p-4 rounded-lg">
+                        <p className="text-sm font-semibold mb-2">Creator's Appeal Reason:</p>
+                        <p className="text-sm italic">{appeal.reason}</p>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex flex-col gap-2">
+                      {selectedAppeal === appeal.id ? (
+                        <>
+                          <textarea
+                            value={adminResponse}
+                            onChange={(e) => setAdminResponse(e.target.value)}
+                            placeholder="Response / notes to the creator..."
+                            className="w-full p-2 text-sm border rounded-lg mb-2 bg-transparent"
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => resolveAppealMutation.mutate({ appealId: appeal.id, action: "approve", adminResponse })}
+                              disabled={resolveAppealMutation.isPending}
+                              className="flex-1 bg-green-600 hover:bg-green-700"
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              onClick={() => resolveAppealMutation.mutate({ appealId: appeal.id, action: "deny", adminResponse })}
+                              disabled={resolveAppealMutation.isPending}
+                              className="flex-1 bg-red-600 hover:bg-red-700"
+                            >
+                              Deny
+                            </Button>
+                          </div>
+                          <Button
+                            onClick={() => {
+                              setSelectedAppeal(null);
+                              setAdminResponse("");
+                            }}
+                            variant="outline"
+                            className="mt-1"
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      ) : (
+                        <Button onClick={() => setSelectedAppeal(appeal.id)} variant="outline">
+                          Resolve Appeal
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </Card>

@@ -1240,7 +1240,7 @@ export default function Home() {
                 color: 'oklch(0.93 0.02 80)',
               }}
             >
-              Choose Your Initiation Level
+              Membership Plans
             </h2>
             <div className="ornament" style={{ margin: '18px auto' }}>
               <span style={{ color: 'oklch(0.72 0.09 75)' }}>✦</span>

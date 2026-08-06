@@ -13,6 +13,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import AppealForm from "./AppealForm";
+
 
 export function ContentGallery() {
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -171,17 +173,27 @@ export function ContentGallery() {
                     <p>Data: {formatDate(item.createdAt)}</p>
                   </div>
 
-                  {/* Delete Button */}
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="w-full mt-2"
-                    onClick={() => setDeleteId(item.id)}
-                    disabled={deleteMutation.isPending}
-                  >
-                    <Trash2 className="w-3 h-3 mr-1" />
-                    Deletar
-                  </Button>
+                  {/* Actions (Delete and optional Appeal) */}
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setDeleteId(item.id)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 mr-1" />
+                      Deletar
+                    </Button>
+                    {item.moderationStatus === "rejected" && (
+                      <div className="flex-1">
+                        <AppealForm
+                          contentId={item.id}
+                          onSuccess={() => refetch()}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

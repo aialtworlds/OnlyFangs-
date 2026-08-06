@@ -565,3 +565,4 @@ export const covenThreadFollows = mysqlTable("coven_thread_follows", {
 });
 
 export type CovenThreadFollow = typeof covenThreadFollows.$inferSelect;
+
