@@ -252,137 +252,219 @@ export default function PatronDashboard() {
 
         {/* Dashboard Content */}
         <div style={{ padding: "24px", flex: 1, overflowY: "auto" }}>
-
-          {/* Stats Grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px", marginBottom: "24px" }}>
-            <StatCard icon={Crown} title="Active Subscriptions" value={statsLoading ? "..." : stats?.activeSubscriptions ?? 0} subtitle="Your current memberships" />
-            <StatCard icon={Bookmark} title="Saved Content" value={statsLoading ? "..." : stats?.savedContentCount ?? 0} subtitle="Your favorite posts & media" />
-            <StatCard icon={Users} title="Following Creators" value={statsLoading ? "..." : stats?.followingCreators ?? 0} subtitle="The creators you follow" />
-            <StatCard icon={Shield} title="Loyalty Status" value={statsLoading ? "..." : stats?.loyaltyPoints ?? 0} subtitle="Your loyalty benefits" />
-          </div>
-
-          {/* Two-column layout on desktop */}
-          <div className="pdb-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
-
-            {/* Subscriptions */}
-            <div style={{ background: "oklch(0.07 0.012 330)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "8px", overflow: "hidden" }}>
-              <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid oklch(1 0 0 / 6%)" }}>
-                <span style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>Your Subscriptions</span>
-                <button style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", color: "oklch(0.75 0.14 20)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
-                  View all <ChevronRight size={12} />
-                </button>
+          {activeNav === "requests" ? (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                <BookOpen size={16} style={{ color: "oklch(0.55 0.03 60)" }} />
+                <span style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>My Custom Orders</span>
               </div>
-              {subsLoading ? (
-                <div style={{ padding: "32px", textAlign: "center", color: "oklch(0.35 0.02 60)", fontFamily: "'IM Fell English', serif", fontStyle: "italic" }}>Loading...</div>
-              ) : !subscriptions || subscriptions.length === 0 ? (
-                <div style={{ padding: "32px", textAlign: "center" }}>
-                  <div style={{ fontSize: "28px", marginBottom: "10px" }}>✦</div>
-                  <div style={{ fontFamily: "'Cinzel', serif", fontSize: "12px", color: "oklch(0.55 0.03 60)", marginBottom: "6px" }}>No active subscriptions</div>
-                  <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.35 0.02 60)", marginBottom: "14px" }}>Discover creators and support the darkness</div>
-                  <button onClick={() => navigate("/")} style={{ padding: "8px 20px", background: "oklch(0.38 0.14 20)", border: "none", color: "white", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px" }}>
-                    Explore Creators
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  {subscriptions.map((sub: any) => (
-                    <div key={sub.subId} style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: "14px", borderBottom: "1px solid oklch(1 0 0 / 4%)", cursor: "pointer", transition: "background 0.2s" }}
-                      onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "oklch(1 0 0 / 3%)"}
-                      onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
-                      <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "oklch(0.1 0.025 330)", border: "1px solid oklch(0.38 0.14 20 / 30%)", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {sub.creatorAvatarUrl ? <img src={sub.creatorAvatarUrl} alt={sub.creatorAlias} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <User size={18} style={{ color: "oklch(0.35 0.02 60)" }} />}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
-                          <span style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.04em" }}>{sub.creatorAlias}</span>
-                          {sub.creatorVerified && <span style={{ color: "oklch(0.75 0.14 20)", fontSize: "12px" }}>✓</span>}
-                        </div>
-                        <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.45 0.02 60)" }}>{sub.creatorCategory || "Creator"}</div>
-                      </div>
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        {sub.renewsAt && (
-                          <>
-                            <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "11px", color: "oklch(0.45 0.02 60)" }}>Renews on</div>
-                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: "11px", color: "oklch(0.65 0.02 60)" }}>
-                              {new Date(sub.renewsAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <ChevronRight size={14} style={{ color: "oklch(0.35 0.02 60)", flexShrink: 0 }} />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            {/* Recent Activity */}
-            <div style={{ background: "oklch(0.07 0.012 330)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "8px", overflow: "hidden" }}>
-              <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid oklch(1 0 0 / 6%)" }}>
-                <span style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>Recent Activity</span>
-                <button style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", color: "oklch(0.75 0.14 20)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
-                  View all <ChevronRight size={12} />
-                </button>
-              </div>
-              {activityLoading ? (
-                <div style={{ padding: "32px", textAlign: "center", color: "oklch(0.35 0.02 60)", fontFamily: "'IM Fell English', serif", fontStyle: "italic" }}>Loading...</div>
-              ) : !activity || activity.length === 0 ? (
-                <div style={{ padding: "32px", textAlign: "center" }}>
-                  <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.35 0.02 60)" }}>
-                    No recent activity. Subscribe to creators to see their updates here.
+              {myCustomRequests.length === 0 ? (
+                <div style={{ padding: "60px 20px", textAlign: "center", background: "oklch(0.07 0.012 330)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "8px" }}>
+                  <div style={{ width: "80px", height: "80px", borderRadius: "50%", border: "1px solid oklch(0.38 0.14 20 / 20%)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: "32px" }}>🖤</div>
+                  <div style={{ fontFamily: "'Cinzel', serif", fontSize: "16px", color: "oklch(0.82 0.03 75)", letterSpacing: "0.06em", marginBottom: "8px" }}>No Custom Orders Yet</div>
+                  <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "14px", color: "oklch(0.45 0.02 60)" }}>
+                    You haven't commissioned any custom content. Visit a creator profile to order!
                   </div>
                 </div>
               ) : (
-                <div>
-                  {activity.map((item: any) => (
-                    <div key={item.id} style={{ padding: "12px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid oklch(1 0 0 / 4%)" }}>
-                      <ActivityIcon type={item.type} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontFamily: "'Cinzel', serif", fontSize: "12px", color: "oklch(0.82 0.03 75)", letterSpacing: "0.04em", marginBottom: "2px" }}>{item.creatorAlias || "Creator"}</div>
-                        <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.45 0.02 60)" }}>{item.message || item.type.replace(/_/g, " ")}</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                  {myCustomRequests.map((req: any) => (
+                    <div key={req.id} style={{ background: "oklch(0.07 0.012 330)", border: "1px solid oklch(0.72 0.09 75 / 15%)", borderRadius: "8px", padding: "18px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", marginBottom: "10px" }}>
+                        <div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <div style={{ width: "24px", height: "24px", borderRadius: "50%", overflow: "hidden", background: "oklch(0.1 0.02 285)" }}>
+                              {req.creatorAvatar ? <img src={req.creatorAvatar} alt={req.creatorAlias} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : "🦇"}
+                            </div>
+                            <span style={{ fontFamily: "'Cinzel', serif", fontSize: "12px", color: "oklch(0.93 0.02 80)" }}>{req.creatorAlias}</span>
+                          </div>
+                          <h4 style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", margin: "6px 0 2px 0" }}>{req.title}</h4>
+                          <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "11px", color: "oklch(0.35 0.02 60)" }}>Placed {new Date(req.createdAt).toLocaleDateString()}</span>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div style={{ fontFamily: "'Cinzel', serif", fontSize: "15px", fontWeight: "bold", color: "oklch(0.75 0.14 20)" }}>${parseFloat(req.price).toFixed(2)}</div>
+                          <span style={{
+                            display: "inline-block", fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase", padding: "2px 6px", borderRadius: "2px", marginTop: "4px",
+                            background: req.status === "completed" ? "oklch(0.45 0.09 140 / 15%)" : req.status === "accepted" ? "oklch(0.75 0.14 20 / 15%)" : req.status === "declined" ? "oklch(0.35 0.09 20 / 15%)" : "oklch(0.55 0.03 60 / 15%)",
+                            color: req.status === "completed" ? "oklch(0.55 0.11 140)" : req.status === "accepted" ? "oklch(0.75 0.14 20)" : req.status === "declined" ? "oklch(0.55 0.09 20)" : "oklch(0.55 0.03 60)",
+                            border: `1px solid ${req.status === "completed" ? "oklch(0.55 0.11 140 / 35%)" : req.status === "accepted" ? "oklch(0.75 0.14 20 / 35%)" : req.status === "declined" ? "oklch(0.55 0.09 20 / 35%)" : "oklch(0.55 0.03 60 / 35%)"}`
+                          }}>
+                            {req.status}
+                          </span>
+                        </div>
                       </div>
-                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "11px", color: "oklch(0.35 0.02 60)", flexShrink: 0 }}>{timeAgo(item.createdAt)}</div>
+
+                      <div style={{ background: "oklch(0.04 0.008 285)", padding: "10px", borderRadius: "4px", borderLeft: "2px solid oklch(0.72 0.09 75 / 20%)", marginBottom: "12px" }}>
+                        <span style={{ display: "block", fontSize: "8px", letterSpacing: "0.08em", color: "oklch(0.45 0.02 60)", marginBottom: "4px" }}>MY INSTRUCTIONS</span>
+                        <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "13px", color: "oklch(0.82 0.03 75)", margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                          {req.instructions}
+                        </p>
+                      </div>
+
+                      {req.status === "completed" && req.deliveryUrl && (
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "oklch(0.55 0.11 140)", background: "oklch(0.55 0.11 140 / 6%)", padding: "10px", borderRadius: "4px" }}>
+                          <span>✓ Content delivered! Click link to access:</span>
+                          <a href={req.deliveryUrl} target="_blank" rel="noopener noreferrer" style={{ color: "oklch(0.72 0.09 75)", textDecoration: "underline", fontWeight: "bold" }}>Download / View File</a>
+                        </div>
+                      )}
+
+                      {req.status === "pending" && (
+                        <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.45 0.02 60)" }}>
+                          Waiting for the creator to accept the briefing and begin crafting.
+                        </div>
+                      )}
+
+                      {req.status === "accepted" && (
+                        <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.75 0.14 20)" }}>
+                          The creator has accepted your order and is currently crafting the content.
+                        </div>
+                      )}
+
+                      {req.status === "declined" && (
+                        <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.55 0.09 20)" }}>
+                          Order declined. The processed transaction will be refunded shortly.
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
             </div>
+          ) : (
+            <>
+              {/* Stats Grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "12px", marginBottom: "24px" }}>
+                <StatCard icon={Crown} title="Active Subscriptions" value={statsLoading ? "..." : stats?.activeSubscriptions ?? 0} subtitle="Your current memberships" />
+                <StatCard icon={Bookmark} title="Saved Content" value={statsLoading ? "..." : stats?.savedContentCount ?? 0} subtitle="Your favorite posts & media" />
+                <StatCard icon={Users} title="Following Creators" value={statsLoading ? "..." : stats?.followingCreators ?? 0} subtitle="The creators you follow" />
+                <StatCard icon={Shield} title="Loyalty Status" value={statsLoading ? "..." : stats?.loyaltyPoints ?? 0} subtitle="Your loyalty benefits" />
+              </div>
 
-            {/* Continue Exploring */}
-            {discoverCreators && discoverCreators.length > 0 && (
-              <div style={{ background: "oklch(0.07 0.012 330)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "8px", overflow: "hidden" }}>
-                <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid oklch(1 0 0 / 6%)" }}>
-                  <span style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>Continue Exploring</span>
-                  <button onClick={() => navigate("/")} style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", color: "oklch(0.75 0.14 20)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
-                    View all <ChevronRight size={12} />
+              {/* Two-column layout on desktop */}
+              <div className="pdb-main-grid" style={{ display: "grid", gridTemplateColumns: "1fr", gap: "16px" }}>
+
+                {/* Subscriptions */}
+                <div style={{ background: "oklch(0.07 0.012 330)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "8px", overflow: "hidden" }}>
+                  <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid oklch(1 0 0 / 6%)" }}>
+                    <span style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>Your Subscriptions</span>
+                    <button style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", color: "oklch(0.75 0.14 20)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
+                      View all <ChevronRight size={12} />
+                    </button>
+                  </div>
+                  {subsLoading ? (
+                    <div style={{ padding: "32px", textAlign: "center", color: "oklch(0.35 0.02 60)", fontFamily: "'IM Fell English', serif", fontStyle: "italic" }}>Loading...</div>
+                  ) : !subscriptions || subscriptions.length === 0 ? (
+                    <div style={{ padding: "32px", textAlign: "center" }}>
+                      <div style={{ fontSize: "28px", marginBottom: "10px" }}>✦</div>
+                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: "12px", color: "oklch(0.55 0.03 60)", marginBottom: "6px" }}>No active subscriptions</div>
+                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.35 0.02 60)", marginBottom: "14px" }}>Discover creators and support the darkness</div>
+                      <button onClick={() => navigate("/")} style={{ padding: "8px 20px", background: "oklch(0.38 0.14 20)", border: "none", color: "white", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px" }}>
+                        Explore Creators
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      {subscriptions.map((sub: any) => (
+                        <div key={sub.subId} style={{ padding: "14px 20px", display: "flex", alignItems: "center", gap: "14px", borderBottom: "1px solid oklch(1 0 0 / 4%)", cursor: "pointer", transition: "background 0.2s" }}
+                          onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.background = "oklch(1 0 0 / 3%)"}
+                          onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+                          <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "oklch(0.1 0.025 330)", border: "1px solid oklch(0.38 0.14 20 / 30%)", overflow: "hidden", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {sub.creatorAvatarUrl ? <img src={sub.creatorAvatarUrl} alt={sub.creatorAlias} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <User size={18} style={{ color: "oklch(0.35 0.02 60)" }} />}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+                              <span style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.04em" }}>{sub.creatorAlias}</span>
+                              {sub.creatorVerified && <span style={{ color: "oklch(0.75 0.14 20)", fontSize: "12px" }}>✓</span>}
+                            </div>
+                            <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.45 0.02 60)" }}>{sub.creatorCategory || "Creator"}</div>
+                          </div>
+                          <div style={{ textAlign: "right", flexShrink: 0 }}>
+                            {sub.renewsAt && (
+                              <>
+                                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "11px", color: "oklch(0.45 0.02 60)" }}>Renews on</div>
+                                <div style={{ fontFamily: "'Cinzel', serif", fontSize: "11px", color: "oklch(0.65 0.02 60)" }}>
+                                  {new Date(sub.renewsAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <ChevronRight size={14} style={{ color: "oklch(0.35 0.02 60)", flexShrink: 0 }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent Activity */}
+                <div style={{ background: "oklch(0.07 0.012 330)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "8px", overflow: "hidden" }}>
+                  <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid oklch(1 0 0 / 6%)" }}>
+                    <span style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>Recent Activity</span>
+                    <button style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", color: "oklch(0.75 0.14 20)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
+                      View all <ChevronRight size={12} />
+                    </button>
+                  </div>
+                  {activityLoading ? (
+                    <div style={{ padding: "32px", textAlign: "center", color: "oklch(0.35 0.02 60)", fontFamily: "'IM Fell English', serif", fontStyle: "italic" }}>Loading...</div>
+                  ) : !activity || activity.length === 0 ? (
+                    <div style={{ padding: "32px", textAlign: "center" }}>
+                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.35 0.02 60)" }}>
+                        No recent activity. Subscribe to creators to see their updates here.
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      {activity.map((item: any) => (
+                        <div key={item.id} style={{ padding: "12px 20px", display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid oklch(1 0 0 / 4%)" }}>
+                          <ActivityIcon type={item.type} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: "12px", color: "oklch(0.82 0.03 75)", letterSpacing: "0.04em", marginBottom: "2px" }}>{item.creatorAlias || "Creator"}</div>
+                            <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.45 0.02 60)" }}>{item.message || item.type.replace(/_/g, " ")}</div>
+                          </div>
+                          <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "11px", color: "oklch(0.35 0.02 60)", flexShrink: 0 }}>{timeAgo(item.createdAt)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Continue Exploring */}
+                {discoverCreators && discoverCreators.length > 0 && (
+                  <div style={{ background: "oklch(0.07 0.012 330)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "8px", overflow: "hidden" }}>
+                    <div style={{ padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid oklch(1 0 0 / 6%)" }}>
+                      <span style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>Continue Exploring</span>
+                      <button onClick={() => navigate("/")} style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", color: "oklch(0.75 0.14 20)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}>
+                        View all <ChevronRight size={12} />
+                      </button>
+                    </div>
+                    <div style={{ padding: "16px 20px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
+                      {discoverCreators.map((creator: any) => (
+                        <div key={creator.id} style={{ textAlign: "center", cursor: "pointer" }}>
+                          <div style={{ width: "64px", height: "64px", borderRadius: "8px", background: "oklch(0.1 0.025 330)", border: "1px solid oklch(0.38 0.14 20 / 20%)", overflow: "hidden", margin: "0 auto 8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            {creator.avatarUrl ? <img src={creator.avatarUrl} alt={creator.alias} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <User size={24} style={{ color: "oklch(0.35 0.02 60)" }} />}
+                          </div>
+                          <div style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", color: "oklch(0.82 0.03 75)", letterSpacing: "0.04em", marginBottom: "2px" }}>{creator.alias}</div>
+                          <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "10px", color: "oklch(0.4 0.02 60)" }}>{creator.category || "Creator"}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Support Banner */}
+                <div style={{ background: "linear-gradient(135deg, oklch(0.1 0.04 20) 0%, oklch(0.07 0.012 330) 100%)", border: "1px solid oklch(0.38 0.14 20 / 20%)", borderRadius: "8px", padding: "20px 24px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                  <div style={{ width: "48px", height: "48px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px" }}>✦</div>
+                  <div style={{ flex: 1, minWidth: "200px" }}>
+                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.04em", marginBottom: "4px" }}>Thank you for supporting the night.</div>
+                    <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.45 0.02 60)" }}>Your support keeps the darkness alive.</div>
+                  </div>
+                  <button onClick={() => navigate("/")} style={{ padding: "10px 20px", background: "transparent", border: "1px solid oklch(0.75 0.14 20)", color: "oklch(0.75 0.14 20)", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px", display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
+                    Browse More Creators <ChevronRight size={12} />
                   </button>
                 </div>
-                <div style={{ padding: "16px 20px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" }}>
-                  {discoverCreators.map((creator: any) => (
-                    <div key={creator.id} style={{ textAlign: "center", cursor: "pointer" }}>
-                      <div style={{ width: "64px", height: "64px", borderRadius: "8px", background: "oklch(0.1 0.025 330)", border: "1px solid oklch(0.38 0.14 20 / 20%)", overflow: "hidden", margin: "0 auto 8px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {creator.avatarUrl ? <img src={creator.avatarUrl} alt={creator.alias} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <User size={24} style={{ color: "oklch(0.35 0.02 60)" }} />}
-                      </div>
-                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: "10px", color: "oklch(0.82 0.03 75)", letterSpacing: "0.04em", marginBottom: "2px" }}>{creator.alias}</div>
-                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "10px", color: "oklch(0.4 0.02 60)" }}>{creator.category || "Creator"}</div>
-                    </div>
-                  ))}
-                </div>
               </div>
-            )}
-
-            {/* Support Banner */}
-            <div style={{ background: "linear-gradient(135deg, oklch(0.1 0.04 20) 0%, oklch(0.07 0.012 330) 100%)", border: "1px solid oklch(0.38 0.14 20 / 20%)", borderRadius: "8px", padding: "20px 24px", display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-              <div style={{ width: "48px", height: "48px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px" }}>✦</div>
-              <div style={{ flex: 1, minWidth: "200px" }}>
-                <div style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.04em", marginBottom: "4px" }}>Thank you for supporting the night.</div>
-                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.45 0.02 60)" }}>Your support keeps the darkness alive.</div>
-              </div>
-              <button onClick={() => navigate("/")} style={{ padding: "10px 20px", background: "transparent", border: "1px solid oklch(0.75 0.14 20)", color: "oklch(0.75 0.14 20)", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px", display: "flex", alignItems: "center", gap: "6px", flexShrink: 0 }}>
-                Browse More Creators <ChevronRight size={12} />
-              </button>
-            </div>
-          </div>
+            </>
+          )}
         </div>
 
         {/* Mobile Bottom Nav */}

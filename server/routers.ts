@@ -136,7 +136,14 @@ import {
   unfollowCovenPost,
   isFollowingCovenPost,
   toggleCovenReaction,
-  getUserCovenPosts
+  getUserCovenPosts,
+  createCreatorGoal,
+  getActiveCreatorGoal,
+  getCreatorCustomRequests,
+  getPatronCustomRequests,
+  acceptCustomRequest,
+  declineCustomRequest,
+  deliverCustomRequest
 } from "./db";
 import { conversations, messages, creators, notifications, content, tiers, users, covens, covenMembers, covenPosts, covenComments } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
@@ -1599,6 +1606,91 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "Either postId or commentId is required" });
         }
         return toggleCovenReaction(ctx.user.id, input.postId ?? null, input.commentId ?? null);
+      }),
+  }),
+
+  goals: router({
+    getActive: publicProcedure
+      .input(z.object({ creatorId: z.number() }))
+      .query(async ({ input }) => {
+        return getActiveCreatorGoal(input.creatorId);
+      }),
+    create: creatorProcedure
+      .input(
+        z.object({
+          title: z.string().min(1).max(255),
+          description: z.string().max(1000).optional(),
+          targetAmount: z.number().positive(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
+        if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
+        return createCreatorGoal(creator.id, input.title, input.description, input.targetAmount);
+      }),
+  }),
+
+  customRequests: router({
+    submitCheckout: protectedProcedure
+      .input(
+        z.object({
+          creatorId: z.number(),
+          amount: z.number().positive(),
+          title: z.string().min(1).max(255),
+          instructions: z.string().min(1).max(5000),
+          origin: z.string(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const url = await createOneTimeCheckoutSession({
+          userId: ctx.user.id,
+          userEmail: ctx.user.email || "",
+          userName: ctx.user.name || undefined,
+          creatorId: input.creatorId,
+          amount: input.amount,
+          type: "custom_request",
+          customTitle: input.title,
+          instructions: input.instructions,
+          origin: input.origin,
+        });
+        return { url };
+      }),
+    listCreator: creatorProcedure.query(async ({ ctx }) => {
+      const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
+      if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
+      return getCreatorCustomRequests(creator.id);
+    }),
+    listPatron: protectedProcedure.query(async ({ ctx }) => {
+      return getPatronCustomRequests(ctx.user.id);
+    }),
+    accept: creatorProcedure
+      .input(z.object({ requestId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
+        if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
+        await acceptCustomRequest(input.requestId, creator.id);
+        return { success: true };
+      }),
+    decline: creatorProcedure
+      .input(z.object({ requestId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
+        if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
+        await declineCustomRequest(input.requestId, creator.id);
+        return { success: true };
+      }),
+    deliver: creatorProcedure
+      .input(
+        z.object({
+          requestId: z.number(),
+          deliveryUrl: z.string().url(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
+        if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
+        await deliverCustomRequest(input.requestId, creator.id, input.deliveryUrl);
+        return { success: true };
       }),
   }),
 });

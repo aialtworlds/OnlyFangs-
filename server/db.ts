@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
   releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
-  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments, covenBans, covenWarnings, covenReports, covenReactions, covenThreadFollows, oneTimePurchases,
+  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments, covenBans, covenWarnings, covenReports, covenReactions, covenThreadFollows, oneTimePurchases, customRequests, creatorGoals,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -3443,3 +3443,180 @@ export async function resolveCovenReport(resolverId: number, reportId: number) {
     .set({ status: "resolved", resolvedBy: resolverId, resolvedAt: new Date() })
     .where(eq(covenReports.id, reportId));
 }
+
+// ── Funding Goals Helpers ──────────────────────────────────────────
+export async function createCreatorGoal(
+  creatorId: number,
+  title: string,
+  description: string | undefined,
+  targetAmount: number
+) {
+  const db = await getDb();
+  if (!db) return null;
+
+  // Deactivate previous active goals for this creator
+  await db
+    .update(creatorGoals)
+    .set({ active: false })
+    .where(and(eq(creatorGoals.creatorId, creatorId), eq(creatorGoals.active, true)));
+
+  // Insert new active goal
+  const result = await db.insert(creatorGoals).values({
+    creatorId,
+    title,
+    description: description || null,
+    targetAmount: targetAmount.toString(),
+    active: true,
+  });
+
+  return result;
+}
+
+export async function calculateCreatorMonthlyRevenue(creatorId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+
+  // Fetch all active subscriptions for this creator
+  const activeSubs = await db
+    .select({
+      price: tiers.price,
+    })
+    .from(subscriptions)
+    .innerJoin(tiers, eq(subscriptions.tierId, tiers.id))
+    .where(and(eq(subscriptions.creatorId, creatorId), eq(subscriptions.status, "active")));
+
+  // Sum up prices
+  let sum = 0;
+  for (const sub of activeSubs) {
+    sum += parseFloat(sub.price || "0");
+  }
+
+  return sum;
+}
+
+export async function getActiveCreatorGoal(creatorId: number) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [goal] = await db
+    .select()
+    .from(creatorGoals)
+    .where(and(eq(creatorGoals.creatorId, creatorId), eq(creatorGoals.active, true)))
+    .limit(1);
+
+  if (!goal) return null;
+
+  const currentAmount = await calculateCreatorMonthlyRevenue(creatorId);
+
+  return {
+    ...goal,
+    currentAmount,
+  };
+}
+
+// ── Custom Requests Helpers ─────────────────────────────────────────
+export async function createCustomRequest(params: {
+  patronId: number;
+  creatorId: number;
+  title: string;
+  instructions: string;
+  price: number;
+  stripeSessionId?: string;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+
+  const result = await db.insert(customRequests).values({
+    patronId: params.patronId,
+    creatorId: params.creatorId,
+    title: params.title,
+    instructions: params.instructions,
+    price: params.price.toString(),
+    stripeSessionId: params.stripeSessionId || null,
+    status: "pending",
+  });
+
+  return result;
+}
+
+export async function getCreatorCustomRequests(creatorId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: customRequests.id,
+      title: customRequests.title,
+      instructions: customRequests.instructions,
+      price: customRequests.price,
+      status: customRequests.status,
+      deliveryUrl: customRequests.deliveryUrl,
+      createdAt: customRequests.createdAt,
+      completedAt: customRequests.completedAt,
+      patronName: users.name,
+      patronDisplayName: users.displayName,
+      patronAvatar: users.avatarUrl,
+    })
+    .from(customRequests)
+    .innerJoin(users, eq(customRequests.patronId, users.id))
+    .where(eq(customRequests.creatorId, creatorId))
+    .orderBy(desc(customRequests.createdAt));
+}
+
+export async function getPatronCustomRequests(patronId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      id: customRequests.id,
+      title: customRequests.title,
+      instructions: customRequests.instructions,
+      price: customRequests.price,
+      status: customRequests.status,
+      deliveryUrl: customRequests.deliveryUrl,
+      createdAt: customRequests.createdAt,
+      completedAt: customRequests.completedAt,
+      creatorAlias: creators.alias,
+      creatorAvatar: creators.avatarUrl,
+    })
+    .from(customRequests)
+    .innerJoin(creators, eq(customRequests.creatorId, creators.id))
+    .where(eq(customRequests.patronId, patronId))
+    .orderBy(desc(customRequests.createdAt));
+}
+
+export async function acceptCustomRequest(requestId: number, creatorId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .update(customRequests)
+    .set({ status: "accepted" })
+    .where(and(eq(customRequests.id, requestId), eq(customRequests.creatorId, creatorId)));
+}
+
+export async function declineCustomRequest(requestId: number, creatorId: number) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .update(customRequests)
+    .set({ status: "declined" })
+    .where(and(eq(customRequests.id, requestId), eq(customRequests.creatorId, creatorId)));
+}
+
+export async function deliverCustomRequest(requestId: number, creatorId: number, deliveryUrl: string) {
+  const db = await getDb();
+  if (!db) return;
+
+  await db
+    .update(customRequests)
+    .set({
+      status: "completed",
+      deliveryUrl,
+      completedAt: new Date(),
+    })
+    .where(and(eq(customRequests.id, requestId), eq(customRequests.creatorId, creatorId)));
+}
+

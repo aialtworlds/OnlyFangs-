@@ -583,6 +583,36 @@ export const covenThreadFollows = mysqlTable("coven_thread_follows", {
   userId: int("userId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
-
 export type CovenThreadFollow = typeof covenThreadFollows.$inferSelect;
 
+// ── Custom Requests (Creator Custom Commissions) ────────────────
+export const customRequests = mysqlTable("custom_requests", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull(),
+  patronId: int("patronId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  instructions: text("instructions").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  status: mysqlEnum("status", ["pending", "accepted", "completed", "declined"]).default("pending").notNull(),
+  deliveryUrl: text("deliveryUrl"), // Uploaded file URL by creator
+  stripeSessionId: varchar("stripeSessionId", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+});
+
+export type CustomRequest = typeof customRequests.$inferSelect;
+export type InsertCustomRequest = typeof customRequests.$inferInsert;
+
+// ── Creator Funding Goals ─────────────────────────────────────────
+export const creatorGoals = mysqlTable("creator_goals", {
+  id: int("id").autoincrement().primaryKey(),
+  creatorId: int("creatorId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  targetAmount: decimal("targetAmount", { precision: 10, scale: 2 }).notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type CreatorGoal = typeof creatorGoals.$inferSelect;
+export type InsertCreatorGoal = typeof creatorGoals.$inferInsert;

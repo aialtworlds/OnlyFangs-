@@ -116,6 +116,60 @@ export default function CreatorDashboard() {
   const { data: tiers } = trpc.creator.tiers.useQuery();
   const { data: unread } = trpc.patron.unreadCounts.useQuery();
 
+  // Goals
+  const { data: activeGoal, refetch: refetchGoal } = trpc.goals.getActive.useQuery(
+    { creatorId: profile?.id ?? 0 },
+    { enabled: !!profile?.id }
+  );
+  const createGoalMutation = trpc.goals.create.useMutation({
+    onSuccess: () => {
+      toast.success("Goal set successfully!");
+      refetchGoal();
+    },
+    onError: (err) => {
+      toast.error(`Error: ${err.message}`);
+    },
+  });
+
+  const [goalTitle, setGoalTitle] = useState("");
+  const [goalDescription, setGoalDescription] = useState("");
+  const [goalTarget, setGoalTarget] = useState("");
+
+  // Custom Requests
+  const { data: customRequests = [], refetch: refetchRequests } = trpc.customRequests.listCreator.useQuery(
+    undefined,
+    { enabled: !!profile?.id }
+  );
+
+  const acceptRequestMutation = trpc.customRequests.accept.useMutation({
+    onSuccess: () => {
+      toast.success("Commission accepted!");
+      refetchRequests();
+    },
+  });
+
+  const declineRequestMutation = trpc.customRequests.decline.useMutation({
+    onSuccess: () => {
+      toast.success("Commission declined");
+      refetchRequests();
+    },
+  });
+
+  const deliverRequestMutation = trpc.customRequests.deliver.useMutation({
+    onSuccess: () => {
+      toast.success("Content delivered successfully!");
+      refetchRequests();
+      setActiveDeliverRequestId(null);
+      setDeliveryUrl("");
+    },
+    onError: (err) => {
+      toast.error(`Error delivering: ${err.message}`);
+    },
+  });
+
+  const [activeDeliverRequestId, setActiveDeliverRequestId] = useState<number | null>(null);
+  const [deliveryUrl, setDeliveryUrl] = useState("");
+
   const displayName = profile?.alias || user.name || "Creator";
   const handle = profile?.handle ? `@${profile.handle}` : "";
   const tags = ["VAMPIRE AESTHETIC", "GOTHIC FASHION", "DARK ROMANCE", "LIFESTYLE"];
@@ -124,6 +178,8 @@ export default function CreatorDashboard() {
     { id: "dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { id: "releases", icon: Moon, label: "My Releases" },
     { id: "messages", icon: MessageCircle, label: "Messages", badge: unread?.messages },
+    { id: "custom-requests", icon: BookOpen, label: "Custom Requests" },
+    { id: "goals", icon: Crown, label: "Funding Goals" },
     { id: "audience", icon: Users, label: "Audience" },
     { id: "insights", icon: BarChart2, label: "Insights" },
     { id: "payments", icon: CreditCard, label: "Payments" },
@@ -267,115 +323,120 @@ export default function CreatorDashboard() {
           </div>
         </div>
 
-        {/* Profile Cover */}
-        <div style={{ position: "relative", height: "200px", overflow: "hidden", flexShrink: 0 }}>
-          {profile?.coverUrl ? (
-            <img src={profile.coverUrl} alt="cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-          ) : (
-            <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, oklch(0.08 0.03 20) 0%, oklch(0.04 0.008 285) 50%, oklch(0.06 0.02 300) 100%)", position: "relative", overflow: "hidden" }}>
-              {[15, 35, 65, 80].map((pos, i) => (
-                <div key={i} style={{ position: "absolute", bottom: "20px", left: `${pos}%`, display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
-                  <div style={{ width: "2px", height: "8px", background: "oklch(0.75 0.14 20 / 80%)", borderRadius: "1px", boxShadow: "0 0 8px oklch(0.75 0.14 20 / 60%)" }} />
-                  <div style={{ width: "6px", height: `${30 + i * 10}px`, background: "oklch(0.82 0.03 75 / 20%)", borderRadius: "2px" }} />
+        {/* Profile Header & Stats */}
+        {activeNav === "dashboard" && (
+          <>
+            {/* Profile Cover */}
+            <div style={{ position: "relative", height: "200px", overflow: "hidden", flexShrink: 0 }}>
+              {profile?.coverUrl ? (
+                <img src={profile.coverUrl} alt="cover" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg, oklch(0.08 0.03 20) 0%, oklch(0.04 0.008 285) 50%, oklch(0.06 0.02 300) 100%)", position: "relative", overflow: "hidden" }}>
+                  {[15, 35, 65, 80].map((pos, i) => (
+                    <div key={i} style={{ position: "absolute", bottom: "20px", left: `${pos}%`, display: "flex", flexDirection: "column", alignItems: "center", gap: "2px" }}>
+                      <div style={{ width: "2px", height: "8px", background: "oklch(0.75 0.14 20 / 80%)", borderRadius: "1px", boxShadow: "0 0 8px oklch(0.75 0.14 20 / 60%)" }} />
+                      <div style={{ width: "6px", height: `${30 + i * 10}px`, background: "oklch(0.82 0.03 75 / 20%)", borderRadius: "2px" }} />
+                    </div>
+                  ))}
                 </div>
+              )}
+              <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, oklch(0.04 0.008 285 / 60%) 100%)" }} />
+              <button style={{ position: "absolute", top: "16px", right: "16px", padding: "8px 16px", background: "oklch(0.04 0.008 285 / 80%)", border: "1px solid oklch(1 0 0 / 20%)", backdropFilter: "blur(8px)", color: "oklch(0.93 0.02 80)", fontFamily: "'Cinzel', serif", fontSize: "10px", letterSpacing: "0.15em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Edit size={12} /> Edit Profile
+              </button>
+              <button
+                onClick={async () => {
+                  const profileUrl = `${window.location.origin}/creator/${profile?.handle || ''}`;
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({
+                        title: profile?.alias || 'My Profile',
+                        text: profile?.bio || 'Check out my page on OnlyFangs!',
+                        url: profileUrl,
+                      });
+                    } catch (err) {
+                      if ((err as Error).name !== 'AbortError') {
+                        toast.error('Error sharing profile');
+                      }
+                    }
+                  } else {
+                    try {
+                      await navigator.clipboard.writeText(profileUrl);
+                      toast.success('Profile link copied!');
+                    } catch {
+                      toast.error('Error copying link');
+                    }
+                  }
+                }}
+                style={{ position: "absolute", top: "52px", right: "16px", padding: "8px", background: "oklch(0.04 0.008 285 / 80%)", border: "1px solid oklch(1 0 0 / 20%)", backdropFilter: "blur(8px)", color: "oklch(0.55 0.03 60)", cursor: "pointer", borderRadius: "4px" }}
+                title="Share Profile"
+              >
+                <Share2 size={14} />
+              </button>
+            </div>
+
+            {/* Profile Info */}
+            <div style={{ padding: "0 24px 0", position: "relative" }}>
+              <div style={{ marginTop: "-50px", marginBottom: "16px" }}>
+                <div style={{ position: "relative", display: "inline-block" }}>
+                  <div style={{ width: "100px", height: "100px", borderRadius: "50%", border: "3px solid oklch(0.04 0.008 285)", overflow: "hidden", background: "oklch(0.1 0.025 330)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {profile?.avatarUrl ? <img src={profile.avatarUrl} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <User size={40} style={{ color: "oklch(0.35 0.02 60)" }} />}
+                  </div>
+                  {profile?.verified && (
+                    <div style={{ position: "absolute", bottom: "4px", right: "4px", width: "24px", height: "24px", borderRadius: "50%", background: "oklch(0.38 0.14 20)", border: "2px solid oklch(0.04 0.008 285)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px" }}>🦇</div>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: "8px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
+                  <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: "clamp(20px, 3vw, 28px)", color: "oklch(0.93 0.02 80)", letterSpacing: "0.04em", margin: 0 }}>
+                    {profileLoading ? "Loading..." : displayName}
+                  </h1>
+                  {profile?.verified && <span style={{ color: "oklch(0.75 0.14 20)", fontSize: "16px" }}>✓</span>}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
+                  {handle && <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.55 0.03 60)" }}>{handle}</span>}
+                  {profile?.location && (
+                    <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.55 0.03 60)" }}>
+                      <MapPin size={12} /> {profile.location}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {profile?.bio ? (
+                <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "14px", color: "oklch(0.65 0.02 60)", lineHeight: 1.7, marginBottom: "12px", maxWidth: "600px" }}>
+                  {profile.bio}
+                </p>
+              ) : (
+                <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "14px", color: "oklch(0.45 0.02 60)", lineHeight: 1.7, marginBottom: "12px" }}>
+                  Vampire. Storyteller. Keeper of ancient beauty and eternal night.<br />
+                  I create dark romantic content, gothic fashion &amp; vampire lifestyle.
+                </p>
+              )}
+
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
+                {tags.map((tag) => <Tag key={tag} label={tag} />)}
+                <span style={{ fontFamily: "'Cinzel', serif", fontSize: "8px", letterSpacing: "0.2em", color: "oklch(0.45 0.02 60)", padding: "4px 8px", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: "2px" }}>+2</span>
+              </div>
+
+              <div style={{ display: "flex", gap: "32px", paddingBottom: "16px", borderBottom: "1px solid oklch(1 0 0 / 6%)", flexWrap: "wrap" }}>
+                <StatBadge icon={Users} value={0} label="Followers" />
+                <StatBadge icon={Crown} value={0} label="Patrons" />
+                <StatBadge icon={BookOpen} value={releases?.length ?? 0} label="Releases" />
+                <StatBadge icon={Bell} value={0} label="Renown" />
+              </div>
+            </div>
+
+            {/* Tabs */}
+            <div style={{ padding: "0 24px", borderBottom: "1px solid oklch(1 0 0 / 6%)", display: "flex", gap: "0", overflowX: "auto" }}>
+              {["releases", "about", "tiers", "gallery", "posts", "collections"].map((tab) => (
+                <Tab key={tab} label={tab.toUpperCase()} active={activeTab === tab} onClick={() => setActiveTab(tab)} />
               ))}
             </div>
-          )}
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, oklch(0.04 0.008 285 / 60%) 100%)" }} />
-          <button style={{ position: "absolute", top: "16px", right: "16px", padding: "8px 16px", background: "oklch(0.04 0.008 285 / 80%)", border: "1px solid oklch(1 0 0 / 20%)", backdropFilter: "blur(8px)", color: "oklch(0.93 0.02 80)", fontFamily: "'Cinzel', serif", fontSize: "10px", letterSpacing: "0.15em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
-            <Edit size={12} /> Edit Profile
-          </button>
-          <button
-            onClick={async () => {
-              const profileUrl = `${window.location.origin}/creator/${profile?.handle || ''}`;
-              if (navigator.share) {
-                try {
-                  await navigator.share({
-                    title: profile?.alias || 'My Profile',
-                    text: profile?.bio || 'Check out my page on OnlyFangs!',
-                    url: profileUrl,
-                  });
-                } catch (err) {
-                  if ((err as Error).name !== 'AbortError') {
-                    toast.error('Error sharing profile');
-                  }
-                }
-              } else {
-                try {
-                  await navigator.clipboard.writeText(profileUrl);
-                  toast.success('Profile link copied!');
-                } catch {
-                  toast.error('Error copying link');
-                }
-              }
-            }}
-            style={{ position: "absolute", top: "52px", right: "16px", padding: "8px", background: "oklch(0.04 0.008 285 / 80%)", border: "1px solid oklch(1 0 0 / 20%)", backdropFilter: "blur(8px)", color: "oklch(0.55 0.03 60)", cursor: "pointer", borderRadius: "4px" }}
-            title="Share Profile"
-          >
-            <Share2 size={14} />
-          </button>
-        </div>
-
-        {/* Profile Info */}
-        <div style={{ padding: "0 24px 0", position: "relative" }}>
-          <div style={{ marginTop: "-50px", marginBottom: "16px" }}>
-            <div style={{ position: "relative", display: "inline-block" }}>
-              <div style={{ width: "100px", height: "100px", borderRadius: "50%", border: "3px solid oklch(0.04 0.008 285)", overflow: "hidden", background: "oklch(0.1 0.025 330)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {profile?.avatarUrl ? <img src={profile.avatarUrl} alt={displayName} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <User size={40} style={{ color: "oklch(0.35 0.02 60)" }} />}
-              </div>
-              {profile?.verified && (
-                <div style={{ position: "absolute", bottom: "4px", right: "4px", width: "24px", height: "24px", borderRadius: "50%", background: "oklch(0.38 0.14 20)", border: "2px solid oklch(0.04 0.008 285)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px" }}>🦇</div>
-              )}
-            </div>
-          </div>
-
-          <div style={{ marginBottom: "8px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "4px", flexWrap: "wrap" }}>
-              <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: "clamp(20px, 3vw, 28px)", color: "oklch(0.93 0.02 80)", letterSpacing: "0.04em", margin: 0 }}>
-                {profileLoading ? "Loading..." : displayName}
-              </h1>
-              {profile?.verified && <span style={{ color: "oklch(0.75 0.14 20)", fontSize: "16px" }}>✓</span>}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "16px", flexWrap: "wrap" }}>
-              {handle && <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.55 0.03 60)" }}>{handle}</span>}
-              {profile?.location && (
-                <span style={{ display: "flex", alignItems: "center", gap: "4px", fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.55 0.03 60)" }}>
-                  <MapPin size={12} /> {profile.location}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {profile?.bio ? (
-            <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "14px", color: "oklch(0.65 0.02 60)", lineHeight: 1.7, marginBottom: "12px", maxWidth: "600px" }}>
-              {profile.bio}
-            </p>
-          ) : (
-            <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "14px", color: "oklch(0.45 0.02 60)", lineHeight: 1.7, marginBottom: "12px" }}>
-              Vampire. Storyteller. Keeper of ancient beauty and eternal night.<br />
-              I create dark romantic content, gothic fashion &amp; vampire lifestyle.
-            </p>
-          )}
-
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-            {tags.map((tag) => <Tag key={tag} label={tag} />)}
-            <span style={{ fontFamily: "'Cinzel', serif", fontSize: "8px", letterSpacing: "0.2em", color: "oklch(0.45 0.02 60)", padding: "4px 8px", border: "1px solid oklch(1 0 0 / 10%)", borderRadius: "2px" }}>+2</span>
-          </div>
-
-          <div style={{ display: "flex", gap: "32px", paddingBottom: "16px", borderBottom: "1px solid oklch(1 0 0 / 6%)", flexWrap: "wrap" }}>
-            <StatBadge icon={Users} value={0} label="Followers" />
-            <StatBadge icon={Crown} value={0} label="Patrons" />
-            <StatBadge icon={BookOpen} value={releases?.length ?? 0} label="Releases" />
-            <StatBadge icon={Bell} value={0} label="Renown" />
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div style={{ padding: "0 24px", borderBottom: "1px solid oklch(1 0 0 / 6%)", display: "flex", gap: "0", overflowX: "auto" }}>
-          {["releases", "about", "tiers", "gallery", "posts", "collections"].map((tab) => (
-            <Tab key={tab} label={tab.toUpperCase()} active={activeTab === tab} onClick={() => setActiveTab(tab)} />
-          ))}
-        </div>
+          </>
+        )}
 
         {/* Tab Content */}
         <div style={{ padding: "24px", flex: 1 }}>
@@ -383,7 +444,259 @@ export default function CreatorDashboard() {
 
             {/* Main Content Area */}
             <div>
-              {activeTab === "releases" && (
+              {/* Custom Requests Manager */}
+              {activeNav === "custom-requests" && (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <BookOpen size={16} style={{ color: "oklch(0.55 0.03 60)" }} />
+                      <span style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>Custom Request Orders</span>
+                    </div>
+                  </div>
+
+                  {customRequests.length === 0 ? (
+                    <div style={{ padding: "60px 20px", textAlign: "center", background: "oklch(0.07 0.012 330)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "8px" }}>
+                      <div style={{ width: "80px", height: "80px", borderRadius: "50%", border: "1px solid oklch(0.38 0.14 20 / 20%)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", fontSize: "32px" }}>🖤</div>
+                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: "16px", color: "oklch(0.82 0.03 75)", letterSpacing: "0.06em", marginBottom: "8px" }}>No Custom Requests Yet</div>
+                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "14px", color: "oklch(0.45 0.02 60)" }}>Commission requests from your patrons will appear here.</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                      {customRequests.map((req: any) => (
+                        <div key={req.id} style={{ background: "oklch(0.07 0.012 330)", border: "1px solid oklch(0.72 0.09 75 / 15%)", borderRadius: "8px", padding: "20px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px", marginBottom: "12px" }}>
+                            <div>
+                              <span style={{ fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", color: "oklch(0.72 0.09 75)", textTransform: "uppercase" }}>Order #{req.id}</span>
+                              <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "15px", color: "oklch(0.93 0.02 80)", margin: "4px 0" }}>{req.title}</h3>
+                              <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.45 0.02 60)", margin: 0 }}>
+                                From: {req.patronDisplayName || req.patronName}
+                              </p>
+                            </div>
+                            <div style={{ textAlign: "right" }}>
+                              <div style={{ fontFamily: "'Cinzel', serif", fontSize: "16px", fontWeight: "bold", color: "oklch(0.75 0.14 20)" }}>${parseFloat(req.price).toFixed(2)}</div>
+                              <span style={{
+                                display: "inline-block", fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", padding: "3px 8px", borderRadius: "2px", marginTop: "4px",
+                                background: req.status === "completed" ? "oklch(0.45 0.09 140 / 15%)" : req.status === "accepted" ? "oklch(0.75 0.14 20 / 15%)" : req.status === "declined" ? "oklch(0.35 0.09 20 / 15%)" : "oklch(0.55 0.03 60 / 15%)",
+                                color: req.status === "completed" ? "oklch(0.55 0.11 140)" : req.status === "accepted" ? "oklch(0.75 0.14 20)" : req.status === "declined" ? "oklch(0.55 0.09 20)" : "oklch(0.55 0.03 60)",
+                                border: `1px solid ${req.status === "completed" ? "oklch(0.55 0.11 140 / 35%)" : req.status === "accepted" ? "oklch(0.75 0.14 20 / 35%)" : req.status === "declined" ? "oklch(0.55 0.09 20 / 35%)" : "oklch(0.55 0.03 60 / 35%)"}`
+                              }}>
+                                {req.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div style={{ background: "oklch(0.04 0.008 285)", padding: "12px", borderRadius: "4px", borderLeft: "2px solid oklch(0.72 0.09 75 / 30%)", marginBottom: "16px" }}>
+                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.1em", color: "oklch(0.55 0.03 60)", marginBottom: "4px" }}>PATRON BRIEFING & INSTRUCTIONS</div>
+                            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "14px", color: "oklch(0.82 0.03 75)", margin: 0, whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
+                              {req.instructions}
+                            </p>
+                          </div>
+
+                          {/* Action Buttons */}
+                          {req.status === "pending" && (
+                            <div style={{ display: "flex", gap: "10px" }}>
+                              <button
+                                onClick={() => declineRequestMutation.mutate({ requestId: req.id })}
+                                disabled={declineRequestMutation.isPending}
+                                style={{ padding: "8px 16px", background: "transparent", border: "1px solid oklch(0.35 0.09 20)", color: "oklch(0.55 0.09 20)", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px" }}
+                              >
+                                Decline Order
+                              </button>
+                              <button
+                                onClick={() => acceptRequestMutation.mutate({ requestId: req.id })}
+                                disabled={acceptRequestMutation.isPending}
+                                style={{ padding: "8px 16px", background: "oklch(0.75 0.14 20)", border: "none", color: "white", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px" }}
+                              >
+                                Accept & Start Work
+                              </button>
+                            </div>
+                          )}
+
+                          {req.status === "accepted" && (
+                            <div>
+                              {activeDeliverRequestId === req.id ? (
+                                <form
+                                  onSubmit={(e) => {
+                                    e.preventDefault();
+                                    if (!deliveryUrl.trim()) return;
+                                    deliverRequestMutation.mutate({ requestId: req.id, deliveryUrl });
+                                  }}
+                                  style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px" }}
+                                >
+                                  <div>
+                                    <label style={{ display: "block", fontSize: "9px", letterSpacing: "0.1em", color: "oklch(0.72 0.09 75)", marginBottom: "4px" }}>DELIVERY FILE URL (S3 LINK)</label>
+                                    <input
+                                      type="url"
+                                      placeholder="https://onlyfangs-assets.s3.amazonaws.com/deliveries/..."
+                                      value={deliveryUrl}
+                                      onChange={(e) => setDeliveryUrl(e.target.value)}
+                                      style={{ width: "100%", background: "oklch(0.1 0.02 285)", border: "1px solid oklch(0.72 0.09 75 / 30%)", padding: "8px 12px", borderRadius: "4px", color: "white", fontSize: "13px", outline: "none" }}
+                                      required
+                                    />
+                                  </div>
+                                  <div style={{ display: "flex", gap: "10px" }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveDeliverRequestId(null)}
+                                      style={{ padding: "6px 12px", background: "transparent", border: "1px solid oklch(1 0 0 / 10%)", color: "oklch(0.45 0.02 60)", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", cursor: "pointer", borderRadius: "4px" }}
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="submit"
+                                      disabled={deliverRequestMutation.isPending}
+                                      style={{ padding: "6px 12px", background: "oklch(0.75 0.14 20)", border: "none", color: "white", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", cursor: "pointer", borderRadius: "4px" }}
+                                    >
+                                      {deliverRequestMutation.isPending ? "Submitting..." : "Submit Delivery"}
+                                    </button>
+                                  </div>
+                                </form>
+                              ) : (
+                                <button
+                                  onClick={() => setActiveDeliverRequestId(req.id)}
+                                  style={{ padding: "8px 16px", background: "oklch(0.72 0.09 75)", border: "none", color: "oklch(0.04 0.008 285)", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px", fontWeight: "bold" }}
+                                >
+                                  Deliver Finished Content
+                                </button>
+                              )}
+                            </div>
+                          )}
+
+                          {req.status === "completed" && req.deliveryUrl && (
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "oklch(0.55 0.11 140)" }}>
+                              <span>✓ Delivered content is available at:</span>
+                              <a href={req.deliveryUrl} target="_blank" rel="noopener noreferrer" style={{ color: "oklch(0.72 0.09 75)", textDecoration: "underline" }}>View Delivered File</a>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Funding Goals Manager */}
+              {activeNav === "goals" && (
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                    <Crown size={16} style={{ color: "oklch(0.55 0.03 60)" }} />
+                    <span style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>Set Funding Goals</span>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", flexWrap: "wrap" }} className="cdb-content-grid">
+                    {/* Goal Form */}
+                    <div style={{ background: "oklch(0.07 0.012 330)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "8px", padding: "20px" }}>
+                      <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "oklch(0.93 0.02 80)", marginBottom: "16px", letterSpacing: "0.05em" }}>CREATE NEW ACTIVE GOAL</h3>
+                      
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const targetVal = parseFloat(goalTarget);
+                          if (!goalTitle.trim()) {
+                            toast.error("Please enter a title");
+                            return;
+                          }
+                          if (!targetVal || targetVal <= 0) {
+                            toast.error("Please enter a valid target amount");
+                            return;
+                          }
+                          createGoalMutation.mutate({
+                            title: goalTitle,
+                            description: goalDescription || undefined,
+                            targetAmount: targetVal,
+                          });
+                        }}
+                        style={{ display: "flex", flexDirection: "column", gap: "14px" }}
+                      >
+                        <div>
+                          <label style={{ display: "block", fontSize: "9px", letterSpacing: "0.1em", color: "oklch(0.72 0.09 75)", marginBottom: "4px" }}>GOAL TITLE</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Hire gothic voice actor for audiobook"
+                            value={goalTitle}
+                            onChange={(e) => setGoalTitle(e.target.value)}
+                            style={{ width: "100%", background: "oklch(0.1 0.02 285)", border: "1px solid oklch(0.72 0.09 75 / 20%)", padding: "8px 12px", borderRadius: "4px", color: "white", fontSize: "13px", outline: "none" }}
+                            disabled={createGoalMutation.isPending}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: "block", fontSize: "9px", letterSpacing: "0.1em", color: "oklch(0.72 0.09 75)", marginBottom: "4px" }}>DESCRIPTION (OPTIONAL)</label>
+                          <textarea
+                            placeholder="Describe how this funding target improves the content for your community..."
+                            value={goalDescription}
+                            onChange={(e) => setGoalDescription(e.target.value)}
+                            rows={3}
+                            style={{ width: "100%", background: "oklch(0.1 0.02 285)", border: "1px solid oklch(0.72 0.09 75 / 20%)", padding: "8px 12px", borderRadius: "4px", color: "white", fontSize: "13px", outline: "none", resize: "none" }}
+                            disabled={createGoalMutation.isPending}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: "block", fontSize: "9px", letterSpacing: "0.1em", color: "oklch(0.72 0.09 75)", marginBottom: "4px" }}>MONTHLY FUNDING TARGET (USD)</label>
+                          <input
+                            type="number"
+                            placeholder="e.g. 500"
+                            value={goalTarget}
+                            onChange={(e) => setGoalTarget(e.target.value)}
+                            style={{ width: "100%", background: "oklch(0.1 0.02 285)", border: "1px solid oklch(0.72 0.09 75 / 20%)", padding: "8px 12px", borderRadius: "4px", color: "white", fontSize: "13px", outline: "none" }}
+                            disabled={createGoalMutation.isPending}
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={createGoalMutation.isPending || !goalTitle || !goalTarget}
+                          style={{ padding: "10px", background: "oklch(0.72 0.09 75)", border: "none", color: "oklch(0.04 0.008 285)", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", cursor: "pointer", borderRadius: "4px", fontWeight: "bold" }}
+                        >
+                          {createGoalMutation.isPending ? "Setting..." : "Set Goal Active"}
+                        </button>
+                      </form>
+                    </div>
+
+                    {/* Active Goal Display */}
+                    <div style={{ background: "oklch(0.07 0.012 330)", border: "1px solid oklch(0.72 0.09 75 / 20%)", borderRadius: "8px", padding: "20px" }}>
+                      <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "oklch(0.93 0.02 80)", marginBottom: "16px", letterSpacing: "0.05em" }}>CURRENT ACTIVE GOAL</h3>
+
+                      {activeGoal ? (
+                        <div>
+                          <div style={{ fontFamily: "'Cinzel', serif", fontSize: "15px", color: "oklch(0.93 0.02 80)", fontWeight: "bold", marginBottom: "6px" }}>{activeGoal.title}</div>
+                          {activeGoal.description && (
+                            <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.55 0.03 60)", marginTop: 0, marginBottom: "16px" }}>{activeGoal.description}</p>
+                          )}
+
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "oklch(0.72 0.09 75)", fontFamily: "'IM Fell English', serif", fontStyle: "italic", marginBottom: "8px" }}>
+                            <span>Active monthly revenue:</span>
+                            <span style={{ fontWeight: "bold" }}>${parseFloat(activeGoal.currentAmount || "0").toFixed(2)} / ${parseFloat(activeGoal.targetAmount).toFixed(2)}</span>
+                          </div>
+
+                          {/* Progress Track */}
+                          <div style={{ height: "10px", background: "oklch(0.15 0.02 285)", borderRadius: "5px", overflow: "hidden", marginBottom: "12px" }}>
+                            <div
+                              style={{
+                                height: "100%",
+                                width: `${Math.min(100, (parseFloat(activeGoal.currentAmount || "0") / parseFloat(activeGoal.targetAmount)) * 100)}%`,
+                                background: "linear-gradient(90deg, oklch(0.35 0.09 20), oklch(0.72 0.09 75))",
+                              }}
+                            />
+                          </div>
+
+                          <div style={{ fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.1em", color: "oklch(0.45 0.02 60)" }}>
+                            Calculated automatically based on your active recurring subscriptions.
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 0", color: "oklch(0.45 0.02 60)" }}>
+                          <span style={{ fontSize: "28px" }}>✦</span>
+                          <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", marginTop: "8px" }}>No active goals configured.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeNav === "dashboard" && activeTab === "releases" && (
                 <div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>

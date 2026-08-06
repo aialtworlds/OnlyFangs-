@@ -552,6 +552,12 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
   const [tipAmount, setTipAmount] = useState('');
   const tipMutation = trpc.stripe.createOneTimeCheckout.useMutation();
 
+  const [showCustomRequestModal, setShowCustomRequestModal] = useState(false);
+  const [customRequestTitle, setCustomRequestTitle] = useState('');
+  const [customRequestInstructions, setCustomRequestInstructions] = useState('');
+  const [customRequestAmount, setCustomRequestAmount] = useState('');
+  const customRequestMutation = trpc.customRequests.submitCheckout.useMutation();
+
   const { isAuthenticated, user } = useAuth();
 
   // Try to find the real creator by handle
@@ -574,6 +580,12 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
 
   // Fetch real collections if database creator exists
   const { data: creatorCollections = [] } = trpc.public.creatorCollections.useQuery(
+    { creatorId: dbCreator?.id ?? 0 },
+    { enabled: !!dbCreator?.id, retry: false }
+  );
+
+  // Fetch active goal if database creator exists
+  const { data: activeGoal } = trpc.goals.getActive.useQuery(
     { creatorId: dbCreator?.id ?? 0 },
     { enabled: !!dbCreator?.id, retry: false }
   );
@@ -826,6 +838,31 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                     Send Tip
                   </button>
                 )}
+                {isAuthenticated && dbCreator && (
+                  <button
+                    onClick={() => setShowCustomRequestModal(true)}
+                    style={{
+                      fontFamily: "'Cinzel', serif",
+                      fontSize: '9px',
+                      letterSpacing: '0.2em',
+                      textTransform: 'uppercase',
+                      background: 'transparent',
+                      color: 'oklch(0.72 0.09 75)',
+                      border: '1px solid oklch(0.72 0.09 75 / 40%)',
+                      padding: '8px 16px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'oklch(0.72 0.09 75 / 10%)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    Order Custom
+                  </button>
+                )}
                 <button
                   onClick={async () => {
                     const profileUrl = `${window.location.origin}/creator/${creatorId}`;
@@ -914,6 +951,79 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                 </span>
               ))}
             </div>
+
+            {/* Goal Progress Bar */}
+            {activeGoal && (
+              <div
+                style={{
+                  marginTop: '24px',
+                  background: 'oklch(0.06 0.01 285)',
+                  border: '1px solid oklch(0.72 0.09 75 / 15%)',
+                  padding: '16px',
+                  borderRadius: '6px',
+                  maxWidth: '500px',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '8px' }}>
+                  <span
+                    style={{
+                      fontFamily: "'Cinzel', serif",
+                      fontSize: '11px',
+                      letterSpacing: '0.1em',
+                      color: 'oklch(0.93 0.02 80)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    Goal: {activeGoal.title}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "'IM Fell English', serif",
+                      fontStyle: 'italic',
+                      fontSize: '12px',
+                      color: 'oklch(0.72 0.09 75)',
+                    }}
+                  >
+                    ${parseFloat(activeGoal.currentAmount || "0").toFixed(2)} / ${parseFloat(activeGoal.targetAmount).toFixed(2)}
+                  </span>
+                </div>
+
+                {/* Progress Track */}
+                <div
+                  style={{
+                    height: '8px',
+                    background: 'oklch(0.15 0.02 285)',
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                    position: 'relative',
+                  }}
+                >
+                  <div
+                    style={{
+                      height: '100%',
+                      width: `${Math.min(100, (parseFloat(activeGoal.currentAmount || "0") / parseFloat(activeGoal.targetAmount)) * 100)}%`,
+                      background: 'linear-gradient(90deg, oklch(0.35 0.09 20), oklch(0.72 0.09 75))',
+                      transition: 'width 1s ease-out',
+                    }}
+                  />
+                </div>
+
+                {activeGoal.description && (
+                  <p
+                    style={{
+                      fontFamily: "'Cormorant Garamond', serif",
+                      fontStyle: 'italic',
+                      fontSize: '13px',
+                      color: 'oklch(0.55 0.03 60)',
+                      margin: '8px 0 0 0',
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {activeGoal.description}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Stats */}
@@ -1325,6 +1435,241 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                 {tipMutation.isPending ? "Connecting..." : "Confirm Tip"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Request Modal */}
+      {showCustomRequestModal && dbCreator && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'oklch(0 0 0 / 70%)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: 'oklch(0.04 0.008 285)',
+              border: '1px solid oklch(0.72 0.09 75 / 30%)',
+              borderRadius: '8px',
+              padding: '24px',
+              maxWidth: '420px',
+              width: '100%',
+              margin: '0 16px',
+              boxShadow: '0 12px 40px oklch(0 0 0 / 80%)',
+            }}
+          >
+            <h3
+              style={{
+                fontFamily: "'Cinzel', serif",
+                fontSize: '16px',
+                color: 'oklch(0.93 0.02 80)',
+                margin: '0 0 8px 0',
+                letterSpacing: '0.08em',
+                textAlign: 'center',
+              }}
+            >
+              Order Custom Content
+            </h3>
+            <p
+              style={{
+                fontFamily: "'IM Fell English', serif",
+                fontStyle: 'italic',
+                fontSize: '13px',
+                color: 'oklch(0.55 0.03 60)',
+                margin: '0 0 20px 0',
+                textAlign: 'center',
+              }}
+            >
+              Commission a personalized masterpiece directly from {dbCreator.alias}.
+            </p>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const amountVal = parseFloat(customRequestAmount);
+                if (!customRequestTitle.trim()) {
+                  toast.error("Please enter a title");
+                  return;
+                }
+                if (!customRequestInstructions.trim()) {
+                  toast.error("Please enter your instructions");
+                  return;
+                }
+                if (!amountVal || amountVal <= 0) {
+                  toast.error("Please enter a valid amount");
+                  return;
+                }
+                try {
+                  const res = await customRequestMutation.mutateAsync({
+                    creatorId: dbCreator.id,
+                    amount: amountVal,
+                    title: customRequestTitle,
+                    instructions: customRequestInstructions,
+                    origin: window.location.origin,
+                  });
+                  if (res.url) {
+                    window.location.href = res.url;
+                  }
+                } catch (err: any) {
+                  toast.error(err.message || "Failed to initiate custom request");
+                }
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+            >
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '10px',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    color: 'oklch(0.72 0.09 75)',
+                    marginBottom: '4px',
+                  }}
+                >
+                  Request Title / Type
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Custom 5-min gothic audiobook reading"
+                  value={customRequestTitle}
+                  onChange={(e) => setCustomRequestTitle(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'oklch(0.1 0.02 285)',
+                    border: '1px solid oklch(0.72 0.09 75 / 20%)',
+                    padding: '8px 12px',
+                    borderRadius: '4px',
+                    color: 'oklch(0.93 0.02 80)',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                  disabled={customRequestMutation.isPending}
+                  maxLength={255}
+                />
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '10px',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    color: 'oklch(0.72 0.09 75)',
+                    marginBottom: '4px',
+                  }}
+                >
+                  Instructions & Details
+                </label>
+                <textarea
+                  placeholder="Provide precise details, themes, pronunciations, or links..."
+                  value={customRequestInstructions}
+                  onChange={(e) => setCustomRequestInstructions(e.target.value)}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    background: 'oklch(0.1 0.02 285)',
+                    border: '1px solid oklch(0.72 0.09 75 / 20%)',
+                    padding: '8px 12px',
+                    borderRadius: '4px',
+                    color: 'oklch(0.93 0.02 80)',
+                    fontSize: '13px',
+                    outline: 'none',
+                    resize: 'none',
+                  }}
+                  disabled={customRequestMutation.isPending}
+                  maxLength={5000}
+                />
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '10px',
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    color: 'oklch(0.72 0.09 75)',
+                    marginBottom: '4px',
+                  }}
+                >
+                  Offered Price (USD)
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 50.00"
+                  min="5"
+                  step="1"
+                  value={customRequestAmount}
+                  onChange={(e) => setCustomRequestAmount(e.target.value)}
+                  style={{
+                    width: '100%',
+                    background: 'oklch(0.1 0.02 285)',
+                    border: '1px solid oklch(0.72 0.09 75 / 20%)',
+                    padding: '8px 12px',
+                    borderRadius: '4px',
+                    color: 'oklch(0.93 0.02 80)',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                  disabled={customRequestMutation.isPending}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomRequestModal(false);
+                    setCustomRequestTitle('');
+                    setCustomRequestInstructions('');
+                    setCustomRequestAmount('');
+                  }}
+                  disabled={customRequestMutation.isPending}
+                  style={{
+                    flex: 1,
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: '9px',
+                    letterSpacing: '0.15em',
+                    textTransform: 'uppercase',
+                    background: 'transparent',
+                    color: 'oklch(0.55 0.03 60)',
+                    border: '1px solid oklch(1 0 0 / 10%)',
+                    padding: '10px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={customRequestMutation.isPending || !customRequestTitle || !customRequestInstructions || !customRequestAmount}
+                  style={{
+                    flex: 1,
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: '9px',
+                    letterSpacing: '0.15em',
+                    textTransform: 'uppercase',
+                    background: 'oklch(0.72 0.09 75)',
+                    color: 'oklch(0.04 0.008 285)',
+                    border: 'none',
+                    padding: '10px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {customRequestMutation.isPending ? "Connecting..." : "Place Order"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 import Stripe from "stripe";
 import { eq, and } from "drizzle-orm";
-import { getDb } from "./db";
+import { getDb, createCustomRequest } from "./db";
 import { users, subscriptions, tiers, creators, oneTimePurchases, notifications } from "../drizzle/schema";
 import {
   sendPaymentConfirmationEmail,
@@ -186,8 +186,10 @@ export async function createOneTimeCheckoutSession(params: {
   userName?: string;
   creatorId: number;
   amount: number; // in USD (e.g. 15.00)
-  type: "post" | "message" | "tip";
-  targetId?: number; // post id or message id (optional for tips)
+  type: "post" | "message" | "tip" | "custom_request";
+  targetId?: number; // post id or message id
+  customTitle?: string; // for custom request title
+  instructions?: string; // for custom request briefing instructions
   origin: string;
 }): Promise<string> {
   const stripe = getStripe();
@@ -207,6 +209,8 @@ export async function createOneTimeCheckoutSession(params: {
     successUrl = `${params.origin}/creator/${creator.handle}?unlocked_post=${params.targetId}`;
   } else if (params.type === "message") {
     successUrl = `${params.origin}/messages?unlocked_msg=1`;
+  } else if (params.type === "custom_request") {
+    successUrl = `${params.origin}/profile?tab=requests&request_success=1`;
   }
 
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -223,6 +227,8 @@ export async function createOneTimeCheckoutSession(params: {
                 ? `Tip to ${creator.alias}`
                 : params.type === "post"
                 ? `Post Unlock — ${creator.alias}`
+                : params.type === "custom_request"
+                ? `Custom Request: ${params.customTitle || "Content"} — ${creator.alias}`
                 : `PPV DM Unlock — ${creator.alias}`,
           },
           unit_amount: priceAmountInCents,
@@ -239,6 +245,8 @@ export async function createOneTimeCheckoutSession(params: {
       type: params.type,
       target_id: params.targetId ? params.targetId.toString() : "",
       amount: params.amount.toString(),
+      custom_title: params.customTitle || "",
+      instructions: params.instructions || "",
     },
   };
 
@@ -328,10 +336,10 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
       
       // Check if this is a subscription checkout or a one-time payment
       const tierIdStr = session.metadata?.tier_id;
-      const type = session.metadata?.type as "post" | "message" | "tip" | undefined;
+      const type = session.metadata?.type as "post" | "message" | "tip" | "custom_request" | undefined;
 
       if (type) {
-        // ONE-TIME PAYMENT (Tips, PPV Messages, Post unlocks)
+        // ONE-TIME PAYMENT (Tips, PPV Messages, Post unlocks, Custom requests)
         const userId = parseInt(session.metadata?.user_id || "0");
         const creatorId = parseInt(session.metadata?.creator_id || "0");
         const targetId = session.metadata?.target_id ? parseInt(session.metadata.target_id) : null;
@@ -342,15 +350,30 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
           break;
         }
 
-        // Insert purchase log
-        await db.insert(oneTimePurchases).values({
-          userId,
-          type,
-          targetId,
-          creatorId,
-          amount: amount.toString(),
-          stripeSessionId: session.id,
-        });
+        // Handle Custom Request specifically
+        if (type === "custom_request") {
+          const customTitle = session.metadata?.custom_title || "Custom Request";
+          const instructions = session.metadata?.instructions || "";
+          
+          await createCustomRequest({
+            patronId: userId,
+            creatorId,
+            title: customTitle,
+            instructions,
+            price: amount,
+            stripeSessionId: session.id,
+          });
+        } else {
+          // Insert purchase log for tips, posts, messages
+          await db.insert(oneTimePurchases).values({
+            userId,
+            type,
+            targetId,
+            creatorId,
+            amount: amount.toString(),
+            stripeSessionId: session.id,
+          });
+        }
 
         // Notify creator and user
         const [patron] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
@@ -368,6 +391,10 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
         } else if (type === "message") {
           notifTitle = "PPV DM Unlocked";
           notifMsg = `${patronName} unlocked your PPV attachment for $${amount.toFixed(2)}.`;
+        } else if (type === "custom_request") {
+          const customTitle = session.metadata?.custom_title || "Custom Request";
+          notifTitle = "New Custom Request";
+          notifMsg = `${patronName} ordered custom content: "${customTitle}" for $${amount.toFixed(2)}.`;
         }
 
         // Notify creator
