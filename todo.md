@@ -299,18 +299,18 @@
 
 
 ## Glossary Unification & Copy Cleanup
-- [ ] Replace tier names (Mortal→Fledgling, Initiate→Dweller, Acolyte→Courtier, Immortal→Night Royalty) in all files
-- [ ] Remove Latin subtitles (Homo Mortalis, Initiatus, Acolythus, Immortalis) from tier descriptions
-- [ ] Replace "The Initiation Ritual" → "How It Works"
-- [ ] Replace "Choose Your Initiation Level" → "Membership Plans"
-- [ ] Replace "Sign the Pact" → "Subscribe" / "Join as Patron"
-- [ ] Remove decorative tier icons (candles, blood drops, bats, crowns)
-- [ ] Replace fixed prices with "Creator's Choice" placeholder
-- [ ] Add "Example Profile" / "Demo" badges to mock creator profiles
-- [ ] Remove generic "Coven" references (keep only for Feature 2: Covens/Communities)
-- [ ] Replace "Subscriber" → "Patron" in all contexts
-- [ ] Simplify tier descriptions (remove supernatural language)
-- [ ] Test all changes and verify consistency across site
+- [x] Replace tier names (Mortal→Fledgling, Initiate→Dweller, Acolyte→Courtier, Immortal→Night Royalty) in all files
+- [x] Remove Latin subtitles (Homo Mortalis, Initiatus, Acolythus, Immortalis) from tier descriptions
+- [x] Replace "The Initiation Ritual" → "How It Works"
+- [x] Replace "Choose Your Initiation Level" → "Membership Plans"
+- [x] Replace "Sign the Pact" → "Subscribe" / "Join as Patron"
+- [x] Remove decorative tier icons (candles, blood drops, bats, crowns)
+- [x] Replace fixed prices with "Creator's Choice" placeholder
+- [x] Add "Example Profile" / "Demo" badges to mock creator profiles
+- [x] Remove generic "Coven" references (keep only for Feature 2: Covens/Communities)
+- [x] Replace "Subscriber" → "Patron" in all contexts
+- [x] Simplify tier descriptions (remove supernatural language)
+- [x] Test all changes and verify consistency across site
 
 
 ## Glossary Unification & Copy Cleanup (PHASE 1-5)
