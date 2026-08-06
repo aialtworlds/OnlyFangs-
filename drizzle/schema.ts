@@ -193,6 +193,7 @@ export const content = mysqlTable("content", {
   fileSize: int("fileSize"), // Size in bytes
   duration: varchar("duration", { length: 20 }), // For audio/video: "HH:MM:SS"
   thumbnailUrl: text("thumbnailUrl"), // Optional preview image
+  price: decimal("price", { precision: 10, scale: 2 }), // One-time unlock price (optional)
   moderationStatus: mysqlEnum("moderationStatus", ["pending", "approved", "rejected"]).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -221,12 +222,31 @@ export const messages = mysqlTable("messages", {
   conversationId: int("conversationId").notNull(),
   senderId: int("senderId").notNull(),
   content: text("content").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }), // Pay-Per-View lock price
+  mediaUrl: text("mediaUrl"), // Locked media URL
+  mediaKey: varchar("mediaKey", { length: 255 }), // S3 Key for the locked media
+  mediaType: mysqlEnum("mediaType", ["image", "photo", "music", "video", "book"]), // Type of PPV attachment
   readAt: timestamp("readAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
+
+// ── One-Time Purchases ──────────────────────────────────────────
+export const oneTimePurchases = mysqlTable("one_time_purchases", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", ["post", "message", "tip"]).notNull(),
+  targetId: int("targetId"), // ID of post or message, null for direct tips
+  creatorId: int("creatorId").notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  stripeSessionId: varchar("stripeSessionId", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type OneTimePurchase = typeof oneTimePurchases.$inferSelect;
+export type InsertOneTimePurchase = typeof oneTimePurchases.$inferInsert;
 
 // ── Message Reactions ────────────────────────────────────────
 export const messageReactions = mysqlTable(

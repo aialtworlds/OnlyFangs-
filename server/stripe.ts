@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import { eq, and } from "drizzle-orm";
 import { getDb } from "./db";
-import { users, subscriptions, tiers, creators } from "../drizzle/schema";
+import { users, subscriptions, tiers, creators, oneTimePurchases, notifications } from "../drizzle/schema";
 import {
   sendPaymentConfirmationEmail,
   sendSubscriptionRenewalEmail,
@@ -179,6 +179,86 @@ export async function createCheckoutSession(params: {
   return session.url;
 }
 
+// ── Create One-Time Checkout Session ───────────────────────────
+export async function createOneTimeCheckoutSession(params: {
+  userId: number;
+  userEmail: string;
+  userName?: string;
+  creatorId: number;
+  amount: number; // in USD (e.g. 15.00)
+  type: "post" | "message" | "tip";
+  targetId?: number; // post id or message id (optional for tips)
+  origin: string;
+}): Promise<string> {
+  const stripe = getStripe();
+  const customerId = await ensureStripeCustomer(params.userId, params.userEmail, params.userName);
+
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [creator] = await db.select().from(creators).where(eq(creators.id, params.creatorId)).limit(1);
+  if (!creator) throw new Error("Creator not found");
+
+  const priceAmountInCents = Math.round(params.amount * 100);
+
+  // Generate success redirect url
+  let successUrl = `${params.origin}/profile?payment_success=1`;
+  if (params.type === "post" && params.targetId) {
+    successUrl = `${params.origin}/creator/${creator.handle}?unlocked_post=${params.targetId}`;
+  } else if (params.type === "message") {
+    successUrl = `${params.origin}/messages?unlocked_msg=1`;
+  }
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    customer: customerId,
+    mode: "payment",
+    payment_method_types: ["card"],
+    line_items: [
+      {
+        price_data: {
+          currency: "usd",
+          product_data: {
+            name:
+              params.type === "tip"
+                ? `Tip to ${creator.alias}`
+                : params.type === "post"
+                ? `Post Unlock — ${creator.alias}`
+                : `PPV DM Unlock — ${creator.alias}`,
+          },
+          unit_amount: priceAmountInCents,
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: successUrl,
+    cancel_url: `${params.origin}`,
+    client_reference_id: params.userId.toString(),
+    metadata: {
+      user_id: params.userId.toString(),
+      creator_id: params.creatorId.toString(),
+      type: params.type,
+      target_id: params.targetId ? params.targetId.toString() : "",
+      amount: params.amount.toString(),
+    },
+  };
+
+  // Connect split: 10% platform fee if Connect account is active
+  if (creator.stripeConnectAccountId) {
+    const feeInCents = Math.round(priceAmountInCents * 0.1); // 10%
+    sessionParams.payment_intent_data = {
+      application_fee_amount: feeInCents,
+      transfer_data: {
+        destination: creator.stripeConnectAccountId,
+      },
+    };
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionParams);
+  if (!session.url) throw new Error("Failed to create checkout session URL");
+  return session.url;
+}
+
+
 // ── Create Billing Portal Session ─────────────────────────────
 export async function createBillingPortalSession(userId: number, origin: string): Promise<string> {
   const db = await getDb();
@@ -245,14 +325,73 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
+      
+      // Check if this is a subscription checkout or a one-time payment
+      const tierIdStr = session.metadata?.tier_id;
+      const type = session.metadata?.type as "post" | "message" | "tip" | undefined;
+
+      if (type) {
+        // ONE-TIME PAYMENT (Tips, PPV Messages, Post unlocks)
+        const userId = parseInt(session.metadata?.user_id || "0");
+        const creatorId = parseInt(session.metadata?.creator_id || "0");
+        const targetId = session.metadata?.target_id ? parseInt(session.metadata.target_id) : null;
+        const amount = parseFloat(session.metadata?.amount || "0");
+
+        if (!userId || !creatorId) {
+          console.warn("[Webhook] Missing metadata in one-time checkout.session.completed");
+          break;
+        }
+
+        // Insert purchase log
+        await db.insert(oneTimePurchases).values({
+          userId,
+          type,
+          targetId,
+          creatorId,
+          amount: amount.toString(),
+          stripeSessionId: session.id,
+        });
+
+        // Notify creator and user
+        const [patron] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+        const patronName = patron?.name || "Patron";
+
+        let notifTitle = "";
+        let notifMsg = "";
+
+        if (type === "tip") {
+          notifTitle = "Received a Tip!";
+          notifMsg = `${patronName} sent you a tip of $${amount.toFixed(2)}!`;
+        } else if (type === "post") {
+          notifTitle = "Post Unlocked";
+          notifMsg = `${patronName} unlocked your premium post #${targetId} for $${amount.toFixed(2)}.`;
+        } else if (type === "message") {
+          notifTitle = "PPV DM Unlocked";
+          notifMsg = `${patronName} unlocked your PPV attachment for $${amount.toFixed(2)}.`;
+        }
+
+        // Notify creator
+        await db.insert(notifications).values({
+          userId: creatorId,
+          type: "payment",
+          title: notifTitle,
+          message: notifMsg,
+          read: false,
+        });
+
+        console.log(`[Webhook] One-time payment (${type}) successfully processed for user ${userId} to creator ${creatorId}`);
+        break;
+      }
+
+      // SUBSCRIPTION PAYMENT (Existing logic)
       const userId = parseInt(session.metadata?.user_id || "0");
-      const tierId = parseInt(session.metadata?.tier_id || "0");
+      const tierId = parseInt(tierIdStr || "0");
       const stripeSubId = typeof session.subscription === "string"
         ? session.subscription
         : session.subscription?.id;
 
       if (!userId || !tierId) {
-        console.warn("[Webhook] Missing metadata in checkout.session.completed");
+        console.warn("[Webhook] Missing metadata in subscription checkout.session.completed");
         break;
       }
 

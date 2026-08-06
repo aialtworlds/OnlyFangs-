@@ -14,6 +14,7 @@ import {
   createAccountOnboardingLink,
   createLoginLink,
   checkConnectedAccountActive,
+  createOneTimeCheckoutSession,
 } from "./stripe";
 import {
   getPatronStats,
@@ -353,6 +354,29 @@ export const appRouter = router({
         const url = await createBillingPortalSession(ctx.user.id, input.origin);
         return { url };
       }),
+    createOneTimeCheckout: protectedProcedure
+      .input(
+        z.object({
+          creatorId: z.number(),
+          amount: z.number().positive(),
+          type: z.enum(["post", "message", "tip"]),
+          targetId: z.number().optional(),
+          origin: z.string(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        const url = await createOneTimeCheckoutSession({
+          userId: ctx.user.id,
+          userEmail: ctx.user.email || "",
+          userName: ctx.user.name || undefined,
+          creatorId: input.creatorId,
+          amount: input.amount,
+          type: input.type,
+          targetId: input.targetId,
+          origin: input.origin,
+        });
+        return { url };
+      }),
   }),
 
   follow: router({
@@ -688,6 +712,7 @@ export const appRouter = router({
         fileSize: z.number().optional(),
         duration: z.string().optional(),
         thumbnailUrl: z.string().url().optional(),
+        price: z.number().optional(), // One-time price parameter
       }))
       .mutation(async ({ ctx, input }) => {
         const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
@@ -704,7 +729,8 @@ export const appRouter = router({
           input.fileSize,
           input.duration,
           input.thumbnailUrl,
-          input.collectionId
+          input.collectionId,
+          input.price
         );
         return { success: true };
       }),
@@ -797,10 +823,52 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "You are not a participant in this conversation" });
         }
 
-        return getMessages(input.conversationId);
+        const list = await getMessages(input.conversationId);
+
+        // Security check for PPV messages:
+        // Filter out media fields if the message has a price, the user is not the sender, and the user hasn't purchased it yet.
+        const results = await Promise.all(
+          list.map(async (msg) => {
+            if (!msg.price || parseFloat(msg.price) === 0 || msg.senderId === ctx.user.id) {
+              return { ...msg, locked: false };
+            }
+
+            // Check if user has purchased this message
+            const purchase = await db
+              .select()
+              .from(oneTimePurchases)
+              .where(
+                and(
+                  eq(oneTimePurchases.userId, ctx.user.id),
+                  eq(oneTimePurchases.type, "message"),
+                  eq(oneTimePurchases.targetId, msg.id)
+                )
+              )
+              .limit(1);
+
+            if (purchase.length > 0) {
+              return { ...msg, locked: false };
+            }
+
+            // Hide media details for locked message
+            const { mediaUrl: _mediaUrl, mediaKey: _mediaKey, ...safeMsg } = msg;
+            return { ...safeMsg, locked: true };
+          })
+        );
+
+        return results;
       }),
     sendMessage: protectedProcedure
-      .input(z.object({ creatorId: z.number(), content: z.string().min(1).max(5000) }))
+      .input(
+        z.object({
+          creatorId: z.number(),
+          content: z.string().min(1).max(5000),
+          price: z.number().optional(), // Optional lock price for PPV
+          mediaUrl: z.string().url().optional(),
+          mediaKey: z.string().optional(),
+          mediaType: z.enum(["image", "photo", "music", "video", "book"]).optional(),
+        })
+      )
       .mutation(async ({ ctx, input }) => {
         const creator = await getCreatorByUserId(input.creatorId);
         if (!creator) {
@@ -811,7 +879,17 @@ export const appRouter = router({
         if (!conv) {
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create conversation" });
         }
-        const message = await sendMessage(conv.id, ctx.user.id, input.content);
+        
+        const ppvData = input.price
+          ? {
+              price: input.price.toString(),
+              mediaUrl: input.mediaUrl,
+              mediaKey: input.mediaKey,
+              mediaType: input.mediaType,
+            }
+          : undefined;
+
+        const message = await sendMessage(conv.id, ctx.user.id, input.content, ppvData);
         // Notify creator about new message
         const user = ctx.user;
         const preview = input.content.substring(0, 50);

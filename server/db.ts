@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, tiers, follows,
   releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
-  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments, covenBans, covenWarnings, covenReports, covenReactions, covenThreadFollows,
+  moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments, covenBans, covenWarnings, covenReports, covenReactions, covenThreadFollows, oneTimePurchases,
   type InsertUser
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
@@ -735,7 +735,8 @@ export async function uploadContent(
   fileSize?: number,
   duration?: string,
   thumbnailUrl?: string,
-  collectionId?: number
+  collectionId?: number,
+  price?: number
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -754,6 +755,7 @@ export async function uploadContent(
     fileSize: fileSize ?? null,
     duration: duration ?? null,
     thumbnailUrl: thumbnailUrl ?? null,
+    price: price ? price.toString() : null,
     moderationStatus: "pending",
   });
   
@@ -852,7 +854,7 @@ export async function canAccessContent(
     return true;
   }
 
-  // Check if patron has active subscription to the required tier
+  // Check if patron has an active subscription to the required tier
   const subscription = await db
     .select()
     .from(subscriptions)
@@ -865,7 +867,24 @@ export async function canAccessContent(
     )
     .limit(1);
 
-  return subscription.length > 0;
+  if (subscription.length > 0) {
+    return true;
+  }
+
+  // Check if patron has a one-time purchase of this post
+  const purchase = await db
+    .select()
+    .from(oneTimePurchases)
+    .where(
+      and(
+        eq(oneTimePurchases.userId, patronId),
+        eq(oneTimePurchases.type, "post"),
+        eq(oneTimePurchases.targetId, contentId)
+      )
+    )
+    .limit(1);
+
+  return purchase.length > 0;
 }
 
 
@@ -951,13 +970,31 @@ export async function getMessages(conversationId: number, limit = 50) {
     .limit(limit);
 }
 
-export async function sendMessage(conversationId: number, senderId: number, content: string) {
+export async function sendMessage(
+  conversationId: number,
+  senderId: number,
+  content: string,
+  ppvData?: {
+    price?: string;
+    mediaUrl?: string;
+    mediaKey?: string;
+    mediaType?: "image" | "photo" | "music" | "video" | "book";
+  }
+) {
   const db = await getDb();
   if (!db) return null;
 
   const result = await db
     .insert(messages)
-    .values({ conversationId, senderId, content });
+    .values({
+      conversationId,
+      senderId,
+      content,
+      price: ppvData?.price || null,
+      mediaUrl: ppvData?.mediaUrl || null,
+      mediaKey: ppvData?.mediaKey || null,
+      mediaType: ppvData?.mediaType || null,
+    });
 
   // Get the inserted message ID
   const [msg] = await db

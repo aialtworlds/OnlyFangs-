@@ -113,21 +113,28 @@ export default function Messages() {
     }
   };
 
-  const handleSendMessage = async (content: string) => {
-    if (!selectedConversationId || !user || !selectedConversation) return;
+  const handleSendMessage = async (
+    content: string,
+    price?: number,
+    mediaUrl?: string,
+    mediaType?: "image" | "photo" | "music" | "video" | "book"
+  ) => {
+    if (!selectedConversation || !user) return;
 
     try {
       // Get the creator's user ID from the conversation
-      // The creator profile has a userId field that we need
       const creatorUserId = selectedConversation.creator?.userId || user.id;
       
       await sendMessageMutation.mutateAsync({
         creatorId: creatorUserId,
         content,
+        price,
+        mediaUrl,
+        mediaType,
       });
 
       // Send via WebSocket for real-time delivery
-      if (isConnected) {
+      if (isConnected && selectedConversationId) {
         sendWSMessage(selectedConversationId, content);
       }
 
@@ -206,6 +213,7 @@ export default function Messages() {
             <MessageList
               messages={messages}
               isLoading={messagesLoading}
+              creatorId={selectedConversation?.creator?.id}
               onMarkAsRead={handleMarkAsRead}
               isTyping={isRemoteUserTyping}
               typingUserName={selectedConversation?.creator?.alias}
@@ -217,6 +225,7 @@ export default function Messages() {
               onTyping={handleTyping}
               disabled={!isConnected}
               isLoading={sendMessageMutation.isPending}
+              isCreator={user?.role === 'creator' || user?.role === 'admin'}
             />
           </div>
         ) : (

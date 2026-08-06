@@ -22,12 +22,14 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
     tierId: string;
     collectionId: string;
     type: "image" | "photo" | "music" | "book" | "video" | "post";
+    price: string;
   }>({
     title: "",
     description: "",
     tierId: "",
     collectionId: "",
     type: "image",
+    price: "",
   });
 
   // Fetch creator's tiers
@@ -51,7 +53,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
   const uploadMutation = trpc.content.upload.useMutation({
     onSuccess: () => {
       toast.success("Content uploaded successfully!");
-      setFormData({ title: "", description: "", tierId: "", collectionId: "", type: "image" });
+      setFormData({ title: "", description: "", tierId: "", collectionId: "", type: "image", price: "" });
       setSelectedFile(null);
       setFilePreview(null);
       onSuccess?.();
@@ -145,6 +147,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
         fileKey: key,
         mimeType: selectedFile.type,
         fileSize: selectedFile.size,
+        price: formData.price ? parseFloat(formData.price) : undefined,
       });
     } catch (error) {
       console.error("Upload error:", error);
@@ -260,6 +263,25 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
                 </SelectContent>
               </Select>
             )}
+          </div>
+
+          {/* Unlock Price (Optional) */}
+          <div className="space-y-2">
+            <label htmlFor="price" className="text-sm font-medium">
+              Unlock Price (USD - Optional)
+            </label>
+            <Input
+              id="price"
+              type="number"
+              step="0.01"
+              placeholder="e.g. 9.99 (Leave empty to restrict to subscription only)"
+              value={formData.price}
+              onChange={(e) => setFormData((prev) => ({ ...prev, price: e.target.value }))}
+              disabled={isLoading}
+            />
+            <p className="text-xs text-muted-foreground">
+              Allows patrons to purchase individual unlock access without a subscription.
+            </p>
           </div>
 
           {/* Collection Selection (Optional) */}

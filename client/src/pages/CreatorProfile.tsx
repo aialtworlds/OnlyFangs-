@@ -37,12 +37,35 @@ const tierLabels: Record<string, string> = {
   'night-royalty': 'Night Royalty',
 };
 
-function ContentCard({ item, onPlayMusic, creatorAlias }: { item: ContentItem; onPlayMusic: (item: ContentItem) => void; creatorAlias: string }) {
+function ContentCard({ item, onPlayMusic, creatorAlias, creatorId }: { item: any; onPlayMusic: (item: any) => void; creatorAlias: string; creatorId?: number }) {
   const [hovered, setHovered] = useState(false);
   const [liked, setLiked] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const { user } = useAuth();
   const isLocked = item.locked && user?.role !== 'admin';
+
+  const unlockPostMutation = trpc.stripe.createOneTimeCheckout.useMutation();
+
+  const handleUnlockPost = async () => {
+    if (!creatorId) {
+      toast.error("Creator ID not found");
+      return;
+    }
+    try {
+      const res = await unlockPostMutation.mutateAsync({
+        creatorId,
+        amount: parseFloat(item.price || "0"),
+        type: "post",
+        targetId: item.id,
+        origin: window.location.origin,
+      });
+      if (res.url) {
+        window.location.href = res.url;
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to initiate post unlock");
+    }
+  };
 
   return (
     <div
@@ -73,7 +96,8 @@ function ContentCard({ item, onPlayMusic, creatorAlias }: { item: ContentItem; o
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '10px',
+              gap: '8px',
+              padding: '12px',
             }}
           >
             <Lock size={28} style={{ color: 'oklch(0.72 0.09 75)' }} />
@@ -88,23 +112,46 @@ function ContentCard({ item, onPlayMusic, creatorAlias }: { item: ContentItem; o
             >
               Tier {tierLabels[item.tier]}
             </div>
-            <button
-              onClick={() => toast('Subscribe to unlock this content', { description: `Requires ${tierLabels[item.tier]} tier or higher.` })}
-              style={{
-                fontFamily: "'Cinzel', serif",
-                fontSize: '8px',
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                background: 'oklch(0.72 0.09 75)',
-                color: 'oklch(0.04 0.008 285)',
-                border: 'none',
-                padding: '8px 16px',
-                cursor: 'pointer',
-                marginTop: '4px',
-              }}
-            >
-              Unlock
-            </button>
+            
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button
+                onClick={() => toast('Subscribe to unlock this content', { description: `Requires ${tierLabels[item.tier]} tier or higher.` })}
+                style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '8px',
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  background: 'transparent',
+                  color: 'oklch(0.72 0.09 75)',
+                  border: '1px solid oklch(0.72 0.09 75 / 40%)',
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                }}
+              >
+                Subscribe
+              </button>
+              
+              {item.price && parseFloat(item.price) > 0 && (
+                <button
+                  onClick={handleUnlockPost}
+                  disabled={unlockPostMutation.isPending}
+                  style={{
+                    fontFamily: "'Cinzel', serif",
+                    fontSize: '8px',
+                    letterSpacing: '0.15em',
+                    textTransform: 'uppercase',
+                    background: 'oklch(0.72 0.09 75)',
+                    color: 'oklch(0.04 0.008 285)',
+                    border: 'none',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {unlockPostMutation.isPending ? "..." : `Unlock $${parseFloat(item.price).toFixed(2)}`}
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -501,6 +548,9 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'image' | 'photo' | 'music' | 'book'>('all');
   const [viewMode, setViewMode] = useState<'releases' | 'collections'>('releases');
   const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
+  const [showTipModal, setShowTipModal] = useState(false);
+  const [tipAmount, setTipAmount] = useState('');
+  const tipMutation = trpc.stripe.createOneTimeCheckout.useMutation();
 
   const { isAuthenticated, user } = useAuth();
 
@@ -751,6 +801,31 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
               </h1>
               <div style={{ marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <FollowButton handle={creatorId} />
+                {isAuthenticated && dbCreator && (
+                  <button
+                    onClick={() => setShowTipModal(true)}
+                    style={{
+                      fontFamily: "'Cinzel', serif",
+                      fontSize: '9px',
+                      letterSpacing: '0.2em',
+                      textTransform: 'uppercase',
+                      background: 'transparent',
+                      color: 'oklch(0.72 0.09 75)',
+                      border: '1px solid oklch(0.72 0.09 75 / 40%)',
+                      padding: '8px 16px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'oklch(0.72 0.09 75 / 10%)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    Send Tip
+                  </button>
+                )}
                 <button
                   onClick={async () => {
                     const profileUrl = `${window.location.origin}/creator/${creatorId}`;
@@ -1019,7 +1094,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                   }}
                 >
                   {filteredContent.map((item: any) => (
-                    <ContentCard key={item.id} item={item} onPlayMusic={handlePlayMusic} creatorAlias={creator.alias} />
+                    <ContentCard key={item.id} item={item} onPlayMusic={handlePlayMusic} creatorAlias={creator.alias} creatorId={creator.id} />
                   ))}
                   {filteredContent.length === 0 && (
                     <div
@@ -1104,6 +1179,155 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
           </div>
         </div>
       </div>
+
+      {/* Tip Modal */}
+      {showTipModal && dbCreator && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'oklch(0 0 0 / 70%)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+        >
+          <div
+            style={{
+              background: 'oklch(0.04 0.008 285)',
+              border: '1px solid oklch(0.72 0.09 75 / 30%)',
+              borderRadius: '8px',
+              padding: '24px',
+              maxWidth: '360px',
+              width: '100%',
+              margin: '0 16px',
+              boxShadow: '0 12px 40px oklch(0 0 0 / 80%)',
+            }}
+          >
+            <h3
+              style={{
+                fontFamily: "'Cinzel', serif",
+                fontSize: '16px',
+                color: 'oklch(0.93 0.02 80)',
+                margin: '0 0 8px 0',
+                letterSpacing: '0.08em',
+                textAlign: 'center',
+              }}
+            >
+              Send Tip to {dbCreator.alias}
+            </h3>
+            <p
+              style={{
+                fontFamily: "'IM Fell English', serif",
+                fontStyle: 'italic',
+                fontSize: '13px',
+                color: 'oklch(0.55 0.03 60)',
+                margin: '0 0 20px 0',
+                textAlign: 'center',
+              }}
+            >
+              Your support feeds the creative dark arts.
+            </p>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '10px',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: 'oklch(0.72 0.09 75)',
+                  marginBottom: '6px',
+                }}
+              >
+                Tip Amount (USD)
+              </label>
+              <input
+                type="number"
+                placeholder="e.g. 10.00"
+                min="1"
+                step="1"
+                value={tipAmount}
+                onChange={(e) => setTipAmount(e.target.value)}
+                style={{
+                  width: '100%',
+                  background: 'oklch(0.1 0.02 285)',
+                  border: '1px solid oklch(0.72 0.09 75 / 20%)',
+                  padding: '10px',
+                  borderRadius: '4px',
+                  color: 'oklch(0.93 0.02 80)',
+                  fontSize: '14px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  setShowTipModal(false);
+                  setTipAmount('');
+                }}
+                disabled={tipMutation.isPending}
+                style={{
+                  flex: 1,
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '9px',
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  background: 'transparent',
+                  color: 'oklch(0.55 0.03 60)',
+                  border: '1px solid oklch(1 0 0 / 10%)',
+                  padding: '10px',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  const amountVal = parseFloat(tipAmount);
+                  if (!amountVal || amountVal <= 0) {
+                    toast.error("Please enter a valid amount");
+                    return;
+                  }
+                  try {
+                    const res = await tipMutation.mutateAsync({
+                      creatorId: dbCreator.id,
+                      amount: amountVal,
+                      type: "tip",
+                      origin: window.location.origin,
+                    });
+                    if (res.url) {
+                      window.location.href = res.url;
+                    }
+                  } catch (err: any) {
+                    toast.error(err.message || "Failed to process tip");
+                  }
+                }}
+                disabled={tipMutation.isPending || !tipAmount}
+                style={{
+                  flex: 1,
+                  fontFamily: "'Cinzel', serif",
+                  fontSize: '9px',
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  background: 'oklch(0.72 0.09 75)',
+                  color: 'oklch(0.04 0.008 285)',
+                  border: 'none',
+                  padding: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                }}
+              >
+                {tipMutation.isPending ? "Connecting..." : "Confirm Tip"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
