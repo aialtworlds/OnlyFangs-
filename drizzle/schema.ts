@@ -59,6 +59,11 @@ export const creators = mysqlTable("creators", {
   totalReleases: int("totalReleases").default(0).notNull(),
   status: mysqlEnum("status", ["active", "pending", "suspended"]).default("pending").notNull(),
   stripeConnectAccountId: varchar("stripeConnectAccountId", { length: 255 }),
+  // Single subscription plan per creator (no multi-tier). Null price = not offering a paid subscription yet.
+  subscriptionPrice: decimal("subscriptionPrice", { precision: 10, scale: 2 }),
+  subscriptionCurrency: varchar("subscriptionCurrency", { length: 3 }).default("USD").notNull(),
+  subscriptionPerks: json("subscriptionPerks").$type<string[]>().default([]),
+  subscriptionStripePriceId: varchar("subscriptionStripePriceId", { length: 255 }), // Cached Stripe Price object id
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -66,30 +71,13 @@ export const creators = mysqlTable("creators", {
 export type Creator = typeof creators.$inferSelect;
 export type InsertCreator = typeof creators.$inferInsert;
 
-// ── Subscription Tiers ────────────────────────────────────────
-export const tiers = mysqlTable("tiers", {
-  id: int("id").autoincrement().primaryKey(),
-  creatorId: int("creatorId").notNull(),
-  name: varchar("name", { length: 100 }).notNull(),
-  slug: varchar("slug", { length: 50 }).notNull(),
-  description: text("description"),
-  price: decimal("price", { precision: 10, scale: 2 }).notNull().default("0.00"),
-  currency: varchar("currency", { length: 3 }).default("USD").notNull(),
-  perks: json("perks").$type<string[]>().default([]),
-  featured: boolean("featured").default(false).notNull(),
-  sortOrder: int("sortOrder").default(0).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
-export type Tier = typeof tiers.$inferSelect;
-export type InsertTier = typeof tiers.$inferInsert;
-
 // ── Subscriptions ─────────────────────────────────────────────
+// One plan per creator (price/perks live on `creators`), so a subscription
+// is scoped to (patron, creator) — no separate tierId to track.
 export const subscriptions = mysqlTable("subscriptions", {
   id: int("id").autoincrement().primaryKey(),
   patronId: int("patronId").notNull(),
   creatorId: int("creatorId").notNull(),
-  tierId: int("tierId").notNull(),
   status: mysqlEnum("status", ["active", "cancelled", "expired", "paused"]).default("active").notNull(),
   renewsAt: timestamp("renewsAt"),
   startedAt: timestamp("startedAt").defaultNow().notNull(),
@@ -122,7 +110,6 @@ export const releases = mysqlTable("releases", {
   mediaUrl: text("mediaUrl"),
   duration: varchar("duration", { length: 20 }),
   pages: int("pages"),
-  tierRequired: mysqlEnum("tierRequired", ["free", "fledgling", "dweller", "courtier", "night_royalty"]).default("free").notNull(),
   locked: boolean("locked").default(false).notNull(),
   likes: int("likes").default(0).notNull(),
   views: int("views").default(0).notNull(),
@@ -182,7 +169,7 @@ export const notifications = mysqlTable("notifications", {
 export const content = mysqlTable("content", {
   id: int("id").autoincrement().primaryKey(),
   creatorId: int("creatorId").notNull(),
-  tierId: int("tierId").notNull(), // Tier required to access this content
+  locked: boolean("locked").default(true).notNull(), // true = requires an active subscription to access
   collectionId: int("collectionId"), // Optional collection/album ID
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description"),
@@ -463,7 +450,7 @@ export type InsertComment = typeof comments.$inferInsert;
 export const covens = mysqlTable("covens", {
   id: int("id").autoincrement().primaryKey(),
   creatorId: int("creatorId"), // null if global/admin community
-  tierId: int("tierId"), // null if public, otherwise only active sub to this tier (or creator/admin) can access
+  locked: boolean("locked").default(false).notNull(), // true = only active subscribers (or creator/admin) can access
   name: varchar("name", { length: 100 }).notNull().unique(),
   slug: varchar("slug", { length: 100 }).notNull().unique(),
   description: varchar("description", { length: 1000 }),
