@@ -13,7 +13,7 @@ export default function Covens() {
     name: "",
     slug: "",
     description: "",
-    tierId: "",
+    locked: false,
   });
 
   const isCreatorOrAdmin = user?.role === "creator" || user?.role === "admin";
@@ -22,9 +22,6 @@ export default function Covens() {
 
   // Queries
   const { data: covensList = [], isLoading, refetch } = trpc.coven.list.useQuery();
-  const { data: myTiers = [] } = trpc.creator.myTiers.useQuery(undefined, {
-    enabled: isCreatorOrAdmin,
-  });
 
   const filteredCovens = covensList.filter((c) =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -36,7 +33,7 @@ export default function Covens() {
     onSuccess: (coven) => {
       toast.success("Coven created successfully!");
       setShowCreateModal(false);
-      setNewCoven({ name: "", slug: "", description: "", tierId: "" });
+      setNewCoven({ name: "", slug: "", description: "", locked: false });
       refetch();
       setLocation(`/coven/${coven.slug}`);
     },
@@ -55,7 +52,7 @@ export default function Covens() {
       name: newCoven.name,
       slug: newCoven.slug.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
       description: newCoven.description || undefined,
-      tierId: newCoven.tierId ? parseInt(newCoven.tierId) : undefined,
+      locked: newCoven.locked,
     });
   };
 
@@ -149,7 +146,7 @@ export default function Covens() {
                     <h3 style={{ fontFamily: "'Cinzel', serif", fontSize: "16px", color: "oklch(0.93 0.02 80)", margin: 0 }}>
                       {coven.name}
                     </h3>
-                    {coven.tierId ? (
+                    {coven.locked ? (
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "9px", fontFamily: "'Cinzel', serif", color: "oklch(0.75 0.14 20)", background: "oklch(0.75 0.14 20 / 10%)", padding: "2px 8px", borderRadius: "12px", border: "1px solid oklch(0.75 0.14 20 / 20%)" }}>
                         <Lock size={8} /> EXCLUSIVE
                       </span>
@@ -176,9 +173,9 @@ export default function Covens() {
                       <Users size={12} />
                       <span>Enter Coven</span>
                     </div>
-                    {coven.tierId && (
+                    {coven.locked && (
                       <span style={{ fontSize: "10px", color: "oklch(0.55 0.03 60)" }}>
-                        {coven.tierName} (${coven.tierPrice}/mo)
+                        Subscribers only
                       </span>
                     )}
                   </div>
@@ -197,7 +194,7 @@ export default function Covens() {
             <div style={{ padding: "24px 30px" }}>
               <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: "20px", color: "oklch(0.93 0.02 80)", margin: "0 0 8px 0" }}>Establish a New Coven</h2>
               <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "13px", color: "oklch(0.45 0.02 60)", margin: "0 0 24px 0" }}>
-                Create a dedicated discussion forum for your followers. Link it to a tier to reward premium subscribers.
+                Create a dedicated discussion forum for your followers. Restrict it to subscribers only, or keep it public.
               </p>
 
               <form onSubmit={handleCreateSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -252,20 +249,16 @@ export default function Covens() {
 
                 <div>
                   <label style={{ fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.2em", textTransform: "uppercase", color: "oklch(0.55 0.03 60)", display: "block", marginBottom: "6px" }}>
-                    Access Level (Tier Gated)
+                    Access Level
                   </label>
                   <select
                     className="input-dark"
-                    value={newCoven.tierId}
-                    onChange={(e) => setNewCoven({ ...newCoven, tierId: e.target.value })}
+                    value={newCoven.locked ? "locked" : "public"}
+                    onChange={(e) => setNewCoven({ ...newCoven, locked: e.target.value === "locked" })}
                     style={{ background: "oklch(0.085 0.015 330)" }}
                   >
-                    <option value="">Public (Free to join for all patrons)</option>
-                    {myTiers.map((tier) => (
-                      <option key={tier.id} value={tier.id.toString()}>
-                        {tier.name} - ${tier.price}/mo
-                      </option>
-                    ))}
+                    <option value="public">Public (Free to join for all patrons)</option>
+                    <option value="locked">Subscribers Only</option>
                   </select>
                 </div>
 
