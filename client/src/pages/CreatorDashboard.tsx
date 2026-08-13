@@ -15,6 +15,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
+import { SubscriptionPlanForm } from "@/components/SubscriptionPlanForm";
 
 // ── Nav Item ─────────────────────────────────────────────────
 function NavItem({ icon: Icon, label, active, badge, onClick }: {
@@ -113,7 +114,7 @@ export default function CreatorDashboard() {
 
   const { data: profile, isLoading: profileLoading } = trpc.creator.myProfile.useQuery();
   const { data: releases, isLoading: releasesLoading } = trpc.creator.releases.useQuery();
-  const { data: tiers } = trpc.creator.tiers.useQuery();
+  const { data: subscriptionPlan } = trpc.creator.subscriptionPlan.useQuery();
   const { data: unread } = trpc.patron.unreadCounts.useQuery();
 
   // Goals
@@ -667,7 +668,7 @@ export default function CreatorDashboard() {
 
                           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "oklch(0.72 0.09 75)", fontFamily: "'IM Fell English', serif", fontStyle: "italic", marginBottom: "8px" }}>
                             <span>Active monthly revenue:</span>
-                            <span style={{ fontWeight: "bold" }}>${parseFloat(activeGoal.currentAmount || "0").toFixed(2)} / ${parseFloat(activeGoal.targetAmount).toFixed(2)}</span>
+                            <span style={{ fontWeight: "bold" }}>${parseFloat(String(activeGoal.currentAmount ?? "0")).toFixed(2)} / ${parseFloat(activeGoal.targetAmount).toFixed(2)}</span>
                           </div>
 
                           {/* Progress Track */}
@@ -675,7 +676,7 @@ export default function CreatorDashboard() {
                             <div
                               style={{
                                 height: "100%",
-                                width: `${Math.min(100, (parseFloat(activeGoal.currentAmount || "0") / parseFloat(activeGoal.targetAmount)) * 100)}%`,
+                                width: `${Math.min(100, (parseFloat(String(activeGoal.currentAmount ?? "0")) / parseFloat(activeGoal.targetAmount)) * 100)}%`,
                                 background: "linear-gradient(90deg, oklch(0.35 0.09 20), oklch(0.72 0.09 75))",
                               }}
                             />
@@ -755,31 +756,10 @@ export default function CreatorDashboard() {
 
               {activeTab === "tiers" && (
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
-                    <span style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>Membership Tiers</span>
-                    <button style={{ padding: "8px 16px", background: "oklch(0.38 0.14 20)", border: "none", color: "white", fontFamily: "'Cinzel', serif", fontSize: "9px", letterSpacing: "0.15em", cursor: "pointer", borderRadius: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
-                      <Plus size={12} /> Add Tier
-                    </button>
+                  <div style={{ marginBottom: "20px" }}>
+                    <span style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em" }}>Subscription Plan</span>
                   </div>
-                  {!tiers || tiers.length === 0 ? (
-                    <div style={{ padding: "40px", textAlign: "center", background: "oklch(0.07 0.012 330)", border: "1px solid oklch(1 0 0 / 6%)", borderRadius: "8px" }}>
-                      <Crown size={32} style={{ color: "oklch(0.38 0.14 20 / 40%)", margin: "0 auto 12px" }} />
-                      <div style={{ fontFamily: "'Cinzel', serif", fontSize: "13px", color: "oklch(0.55 0.03 60)", marginBottom: "6px" }}>No tiers configured</div>
-                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.35 0.02 60)" }}>Create tiers to let patrons subscribe to your content</div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "12px" }}>
-                      {tiers.map((tier: any) => (
-                        <div key={tier.id} style={{ background: "oklch(0.07 0.012 330)", border: "1px solid oklch(0.38 0.14 20 / 20%)", borderRadius: "8px", padding: "20px" }}>
-                          <div style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.06em", marginBottom: "4px" }}>{tier.name}</div>
-                          <div style={{ fontFamily: "'Cinzel', serif", fontSize: "20px", fontWeight: 700, color: "oklch(0.75 0.14 20)", marginBottom: "8px" }}>
-                            {parseFloat(tier.price) === 0 ? "Free" : `$${tier.price}`}
-                          </div>
-                          {tier.description && <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.45 0.02 60)" }}>{tier.description}</div>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <SubscriptionPlanForm plan={subscriptionPlan} />
                 </div>
               )}
 
