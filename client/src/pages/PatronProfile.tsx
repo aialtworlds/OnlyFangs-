@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ContentUploadForm } from '@/components/ContentUploadForm';
-import { TierForm } from '@/components/TierForm';
+import { SubscriptionPlanForm } from '@/components/SubscriptionPlanForm';
 import { CollectionForm } from '@/components/CollectionForm';
 import { CommentsSection } from '@/components/CommentsSection';
 import { CreatorSettingsForm } from '@/components/CreatorSettingsForm';
@@ -320,7 +320,6 @@ export default function PatronProfile() {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
-  const [showTierForm, setShowTierForm] = useState(false);
   const [showCollectionForm, setShowCollectionForm] = useState(false);
   const [dashboardSubMode, setDashboardSubMode] = useState<'feed' | 'activity'>('feed');
 
@@ -349,7 +348,7 @@ export default function PatronProfile() {
     enabled: isAuthenticated && isCreatorOrAdmin
   });
   
-  const creatorTiersQuery = trpc.creator.tiers.useQuery(undefined, {
+  const subscriptionPlanQuery = trpc.creator.subscriptionPlan.useQuery(undefined, {
     enabled: isAuthenticated && isCreatorOrAdmin
   });
 
@@ -505,7 +504,7 @@ export default function PatronProfile() {
   const unread = unreadQuery.data;
   const creatorProfile = creatorProfileQuery.data;
   const releases = creatorReleasesQuery.data ?? [];
-  const tiers = creatorTiersQuery.data ?? [];
+  const subscriptionPlan = subscriptionPlanQuery.data ?? null;
   const myCollections = myCollectionsQuery.data ?? [];
   const homeFeed = homeFeedQuery.data ?? [];
 
@@ -524,7 +523,7 @@ export default function PatronProfile() {
     ...(isCreatorOrAdmin ? [
       { id: "releases", icon: Image, label: "My Releases" },
       { id: "collections", icon: Bookmark, label: "Collections" },
-      { id: "tiers", icon: Crown, label: "Tiers" },
+      { id: "tiers", icon: Crown, label: "Subscription Plan" },
       { id: "audience", icon: Users, label: "Audience" },
       { id: "payouts", icon: CreditCard, label: "Payouts" }
     ] : [])
@@ -1031,45 +1030,17 @@ export default function PatronProfile() {
         {/* Render Tiers Tab (Creator Only) */}
         {activeNav === 'tiers' && isCreatorOrAdmin && (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', margin: 0 }}>Membership Tiers</h2>
-              <button
-                onClick={() => setShowTierForm(!showTierForm)}
-                style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'oklch(0.38 0.14 20)', color: 'white', border: 'none', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Plus size={12} /> {showTierForm ? 'Close Form' : 'New Tier'}
-              </button>
+            <div style={{ marginBottom: '24px' }}>
+              <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', color: 'oklch(0.93 0.02 80)', margin: 0 }}>Subscription Plan</h2>
+              <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '13px', color: 'oklch(0.45 0.02 60)', margin: '4px 0 0' }}>
+                One plan, one price. Retainers subscribe here to unlock your locked content.
+              </p>
             </div>
 
-            {showTierForm && (
-              <div style={{ background: 'oklch(0.055 0.012 330)', border: '1px solid oklch(1 0 0 / 6%)', padding: '24px', borderRadius: '8px', marginBottom: '24px' }}>
-                <TierForm onSuccess={() => {
-                  toast.success('Tier created successfully!');
-                  setShowTierForm(false);
-                  utils.creator.tiers.invalidate();
-                }} onCancel={() => setShowTierForm(false)} />
-              </div>
-            )}
-
-            {tiers.length === 0 ? (
-              <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
-                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
-                  No tiers configured. Create tiers to start offering subscription access!
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
-                {tiers.map((tier) => (
-                  <div key={tier.id} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(0.38 0.14 20 / 20%)', borderRadius: '8px', padding: '20px' }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: '14px', color: 'oklch(0.93 0.02 80)', marginBottom: '4px' }}>{tier.name}</div>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: '20px', fontWeight: 700, color: 'oklch(0.75 0.14 20)', marginBottom: '8px' }}>
-                      {parseFloat(tier.price) === 0 ? 'Free' : `$${tier.price}/mo`}
-                    </div>
-                    {tier.description && <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.45 0.02 60)' }}>{tier.description}</div>}
-                  </div>
-                ))}
-              </div>
-            )}
+            <SubscriptionPlanForm
+              plan={subscriptionPlan}
+              onSaved={() => subscriptionPlanQuery.refetch()}
+            />
           </div>
         )}
 

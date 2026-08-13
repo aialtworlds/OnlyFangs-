@@ -13,8 +13,6 @@ import { format } from "date-fns";
 interface Subscription {
   id: number;
   patronId: number;
-  tierId: number;
-  tierName: string;
   status: "active" | "cancelled" | "expired" | "paused";
   startedAt: Date;
   renewsAt?: Date | null;
@@ -64,7 +62,7 @@ export function SubscriptionsTable({ subscriptions, isLoading = false }: Subscri
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Tier</TableHead>
+            <TableHead>Patron</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Started</TableHead>
             <TableHead>Renews At</TableHead>
@@ -75,7 +73,7 @@ export function SubscriptionsTable({ subscriptions, isLoading = false }: Subscri
           {subscriptions.map((sub) => (
             <TableRow key={sub.id}>
               <TableCell>
-                <p className="font-medium">{sub.tierName}</p>
+                <p className="font-medium">#{sub.patronId}</p>
               </TableCell>
               <TableCell>
                 <Badge className={getStatusColor(sub.status)}>
