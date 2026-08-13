@@ -321,7 +321,7 @@ function ContentCard({ item, onPlayMusic, creatorAlias, creatorId }: { item: any
 // ── Tier Sidebar with Stripe Checkout ────────────────────────
 function TierSidebar({ creatorId: mockCreatorId }: { creatorId: string }) {
   const { isAuthenticated } = useAuth();
-  const [selectedTierId, setSelectedTierId] = useState<number | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
 
   // Try to find the real creator by handle (mock creator id = handle)
   const { data: realCreator } = trpc.public.creatorByHandle.useQuery(
@@ -329,8 +329,8 @@ function TierSidebar({ creatorId: mockCreatorId }: { creatorId: string }) {
     { retry: false }
   );
 
-  // Fetch real tiers if we found the creator
-  const { data: realTiers } = trpc.public.creatorTiers.useQuery(
+  // Fetch the creator's single subscription plan, if any
+  const { data: plan } = trpc.public.creatorSubscriptionPlan.useQuery(
     { creatorId: realCreator?.id ?? 0 },
     { enabled: !!realCreator?.id, retry: false }
   );
@@ -345,7 +345,7 @@ function TierSidebar({ creatorId: mockCreatorId }: { creatorId: string }) {
     },
   });
 
-  const handleSelectTier = (tierId: number) => {
+  const handleSubscribe = () => {
     if (!isAuthenticated) {
       toast('Login required', { description: 'Please sign in to subscribe.' });
       window.location.href = getLoginUrl();
@@ -357,15 +357,14 @@ function TierSidebar({ creatorId: mockCreatorId }: { creatorId: string }) {
       });
       return;
     }
-    setSelectedTierId(tierId);
-    checkoutMutation.mutate({ tierId, origin: window.location.origin });
+    setIsSelecting(true);
+    checkoutMutation.mutate({ creatorId: realCreator.id, origin: window.location.origin });
   };
 
-  // Use real tiers if available, otherwise fall back to mock tiers
-  const mockCreator = getCreatorById(mockCreatorId);
-  const mockTiers = mockCreator?.tiers.filter(t => t.id !== 'fledgling') ?? [];
+  const isLoading = checkoutMutation.isPending && isSelecting;
+  const perks = (plan?.perks as string[] | null) ?? [];
 
-  if (realTiers && realTiers.length > 0) {
+  if (plan && plan.price) {
     return (
       <div>
         <div
@@ -380,92 +379,77 @@ function TierSidebar({ creatorId: mockCreatorId }: { creatorId: string }) {
             paddingBottom: '12px',
           }}
         >
-          Membership Tiers
+          Subscribe
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-          {realTiers.map(tier => {
-            const isLoading = checkoutMutation.isPending && selectedTierId === tier.id;
-            return (
-              <div
-                key={tier.id}
-                style={{
-                  background: 'oklch(0.085 0.015 330)',
-                  border: '1px solid oklch(1 0 0 / 8%)',
-                  padding: '20px',
-                  transition: 'all 0.3s',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                  <div>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.05em' }}>
-                      {tier.name}
-                    </div>
-                    {tier.description && (
-                      <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.55 0.03 60)', marginTop: '2px' }}>
-                        {tier.description}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: '16px', fontWeight: 700, color: 'oklch(0.72 0.09 75)' }}>
-                      ${parseFloat(tier.price).toFixed(2)}
-                    </div>
-                    <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', color: 'oklch(0.35 0.02 60)', letterSpacing: '0.1em' }}>
-                      / month
-                    </div>
-                  </div>
-                </div>
-                {tier.perks && tier.perks.length > 0 && (
-                  <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    {tier.perks.slice(0, 3).map((perk, i) => (
-                      <li key={i} style={{ fontSize: '12px', color: 'oklch(0.55 0.03 60)', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
-                        <span style={{ color: 'oklch(0.72 0.09 75)', fontSize: '7px', flexShrink: 0, marginTop: '4px' }}>✦</span>
-                        {perk}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <button
-                  disabled={isLoading}
-                  onClick={() => handleSelectTier(tier.id)}
-                  style={{
-                    width: '100%',
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: '9px',
-                    letterSpacing: '0.2em',
-                    textTransform: 'uppercase',
-                    padding: '10px',
-                    background: 'transparent',
-                    color: 'oklch(0.72 0.09 75)',
-                    border: '1px solid oklch(0.72 0.09 75 / 40%)',
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.3s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    opacity: isLoading ? 0.7 : 1,
-                  }}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                      Processing...
-                    </>
-                  ) : (
-                    'Subscribe Now'
-                  )}
-                </button>
+        <div
+          style={{
+            background: 'oklch(0.085 0.015 330)',
+            border: '1px solid oklch(1 0 0 / 8%)',
+            padding: '20px',
+            transition: 'all 0.3s',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+            <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.05em' }}>
+              Retainer
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontFamily: "'Cinzel', serif", fontSize: '16px', fontWeight: 700, color: 'oklch(0.72 0.09 75)' }}>
+                ${parseFloat(plan.price).toFixed(2)}
               </div>
-            );
-          })}
+              <div style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', color: 'oklch(0.35 0.02 60)', letterSpacing: '0.1em' }}>
+                / month
+              </div>
+            </div>
+          </div>
+          {perks.length > 0 && (
+            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {perks.slice(0, 5).map((perk: string, i: number) => (
+                <li key={i} style={{ fontSize: '12px', color: 'oklch(0.55 0.03 60)', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                  <span style={{ color: 'oklch(0.72 0.09 75)', fontSize: '7px', flexShrink: 0, marginTop: '4px' }}>✦</span>
+                  {perk}
+                </li>
+              ))}
+            </ul>
+          )}
+          <button
+            disabled={isLoading}
+            onClick={handleSubscribe}
+            style={{
+              width: '100%',
+              fontFamily: "'Cinzel', serif",
+              fontSize: '9px',
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              padding: '10px',
+              background: 'transparent',
+              color: 'oklch(0.72 0.09 75)',
+              border: '1px solid oklch(0.72 0.09 75 / 40%)',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              opacity: isLoading ? 0.7 : 1,
+            }}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                Processing...
+              </>
+            ) : (
+              'Subscribe Now'
+            )}
+          </button>
         </div>
       </div>
     );
   }
 
-  // Fallback: mock tiers (no real creator in DB yet)
+  // Fallback: creator hasn't set a subscription price yet (or isn't in the DB yet)
   return (
     <div>
       <div
@@ -480,63 +464,19 @@ function TierSidebar({ creatorId: mockCreatorId }: { creatorId: string }) {
           paddingBottom: '12px',
         }}
       >
-        Membership Tiers
+        Subscribe
       </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        {mockTiers.map(tier => (
-          <div
-            key={tier.id}
-            style={{
-              background: 'oklch(0.085 0.015 330)',
-              border: '1px solid oklch(1 0 0 / 8%)',
-              padding: '20px',
-              transition: 'all 0.3s',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-              <div>
-                <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.05em' }}>
-                  {tier.icon} {tier.name}
-                </div>
-                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.55 0.03 60)' }}>
-                  {tier.latinName}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.45 0.02 60)', letterSpacing: '0.04em' }}>
-                  Price set by creator
-                </div>
-              </div>
-            </div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 14px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              {tier.perks.slice(0, 3).map(perk => (
-                <li key={perk} style={{ fontSize: '12px', color: 'oklch(0.55 0.03 60)', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
-                  <span style={{ color: 'oklch(0.72 0.09 75)', fontSize: '7px', flexShrink: 0, marginTop: '4px' }}>✦</span>
-                  {perk}
-                </li>
-              ))}
-            </ul>
-            <button
-              onClick={() => toast('Creator not yet in database', { description: 'This creator has not set up their profile yet.' })}
-              style={{
-                width: '100%',
-                fontFamily: "'Cinzel', serif",
-                fontSize: '9px',
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                padding: '10px',
-                background: 'transparent',
-                color: 'oklch(0.72 0.09 75)',
-                border: '1px solid oklch(0.72 0.09 75 / 40%)',
-                cursor: 'pointer',
-                transition: 'all 0.3s',
-              }}
-            >
-              Select
-            </button>
-          </div>
-        ))}
+      <div
+        style={{
+          fontFamily: "'IM Fell English', serif",
+          fontStyle: 'italic',
+          fontSize: '12px',
+          color: 'oklch(0.55 0.03 60)',
+          padding: '20px',
+          border: '1px solid oklch(1 0 0 / 8%)',
+        }}
+      >
+        This creator hasn't set up a subscription plan yet.
       </div>
     </div>
   );
@@ -568,12 +508,6 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
 
   // Fetch real content if database creator exists
   const { data: dbContent, isLoading: dbContentLoading } = trpc.public.creatorContent.useQuery(
-    { creatorId: dbCreator?.id ?? 0 },
-    { enabled: !!dbCreator?.id, retry: false }
-  );
-
-  // Fetch real tiers if database creator exists
-  const { data: realTiers } = trpc.public.creatorTiers.useQuery(
     { creatorId: dbCreator?.id ?? 0 },
     { enabled: !!dbCreator?.id, retry: false }
   );
@@ -632,14 +566,8 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
   // Resolve content (either DB or mock fallback)
   const content: ContentItem[] = dbCreator
     ? (dbContent || []).map((item) => {
-        const associatedTier = realTiers?.find(t => t.id === item.tierId);
-        const tierSlug = associatedTier?.slug || 'free';
-        const isFree = !item.tierId || parseFloat(associatedTier?.price || '0') === 0;
-
-        const isSubscribedToThisTier = userSubscriptions?.some(
-          (sub) => sub.creatorId === dbCreator?.id && sub.tierId === item.tierId && sub.status === 'active'
-        );
-        const locked = !isFree && !isSubscribedToThisTier && user?.role !== 'admin';
+        const isFree = !item.locked;
+        const locked = !isFree && !hasActiveSub && user?.role !== 'admin';
 
         return {
           id: item.id.toString(),
@@ -649,7 +577,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
           description: item.description || '',
           thumbnail: item.thumbnailUrl || '/images/default-thumbnail.jpg',
           locked: locked,
-          tier: tierSlug as any,
+          tier: (isFree ? 'fledgling' : 'dweller') as any,
           likes: 0,
           comments: 0,
           publishedAt: new Date(item.createdAt).toISOString().split('T')[0],
@@ -984,7 +912,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                       color: 'oklch(0.72 0.09 75)',
                     }}
                   >
-                    ${parseFloat(activeGoal.currentAmount || "0").toFixed(2)} / ${parseFloat(activeGoal.targetAmount).toFixed(2)}
+                    ${parseFloat(String(activeGoal.currentAmount ?? "0")).toFixed(2)} / ${parseFloat(activeGoal.targetAmount).toFixed(2)}
                   </span>
                 </div>
 
@@ -1001,7 +929,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                   <div
                     style={{
                       height: '100%',
-                      width: `${Math.min(100, (parseFloat(activeGoal.currentAmount || "0") / parseFloat(activeGoal.targetAmount)) * 100)}%`,
+                      width: `${Math.min(100, (parseFloat(String(activeGoal.currentAmount ?? "0")) / parseFloat(activeGoal.targetAmount)) * 100)}%`,
                       background: 'linear-gradient(90deg, oklch(0.35 0.09 20), oklch(0.72 0.09 75))',
                       transition: 'width 1s ease-out',
                     }}
@@ -1204,7 +1132,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                   }}
                 >
                   {filteredContent.map((item: any) => (
-                    <ContentCard key={item.id} item={item} onPlayMusic={handlePlayMusic} creatorAlias={creator.alias} creatorId={creator.id} />
+                    <ContentCard key={item.id} item={item} onPlayMusic={handlePlayMusic} creatorAlias={creator.alias} creatorId={dbCreator?.id} />
                   ))}
                   {filteredContent.length === 0 && (
                     <div
