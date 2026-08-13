@@ -244,7 +244,7 @@ export default function CovenDetail() {
           </h2>
 
           <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "16px", color: "oklch(0.55 0.03 60)", lineHeight: 1.6, margin: "0 0 32px 0" }}>
-            The rituals of <strong style={{ color: "oklch(0.93 0.02 80)" }}>{coven.name}</strong> are restricted to the exclusive members of the <strong style={{ color: "oklch(0.75 0.14 20)" }}>{coven.tierName}</strong> tier hosted by <strong style={{ color: "oklch(0.72 0.09 75)" }}>{coven.creatorAlias}</strong>.
+            The rituals of <strong style={{ color: "oklch(0.93 0.02 80)" }}>{coven.name}</strong> are restricted to Retainers of <strong style={{ color: "oklch(0.72 0.09 75)" }}>{coven.creatorAlias}</strong>.
           </p>
 
           <div style={{ display: "flex", gap: "16px", justifyContent: "center" }}>
@@ -288,7 +288,7 @@ export default function CovenDetail() {
                 <h1 style={{ fontFamily: "'Cinzel', serif", fontSize: "clamp(24px, 3.5vw, 32px)", fontWeight: 900, margin: 0, color: "white", letterSpacing: "0.02em" }}>
                   {coven.name}
                 </h1>
-                {coven.tierId ? (
+                {coven.locked ? (
                   <span style={{ fontSize: "9px", fontFamily: "'Cinzel', serif", color: "oklch(0.75 0.14 20)", background: "oklch(0.75 0.14 20 / 10%)", padding: "2px 8px", borderRadius: "12px", border: "1px solid oklch(0.75 0.14 20 / 20%)" }}>
                     EXCLUSIVE
                   </span>
@@ -513,7 +513,7 @@ export default function CovenDetail() {
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "12px", color: "oklch(0.45 0.02 60)" }}>
               <div>Created: <strong style={{ color: "oklch(0.82 0.03 75)" }}>{format(new Date(coven.createdAt), "MMM d, yyyy")}</strong></div>
               <div>Members: <strong style={{ color: "oklch(0.82 0.03 75)" }}>{coven.memberCount}</strong></div>
-              <div>Access: <strong style={{ color: "oklch(0.82 0.03 75)" }}>{coven.tierId ? `Exclusive (${coven.tierName})` : "Public"}</strong></div>
+              <div>Access: <strong style={{ color: "oklch(0.82 0.03 75)" }}>{coven.locked ? "Subscribers only" : "Public"}</strong></div>
             </div>
             {isStaff && (
               <button
