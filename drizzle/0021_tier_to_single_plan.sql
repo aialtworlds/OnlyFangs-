@@ -3,8 +3,11 @@
 -- (confirmed with Sam before writing this).
 
 ALTER TABLE `creators` ADD `subscriptionPrice` decimal(10,2);
+--> statement-breakpoint
 ALTER TABLE `creators` ADD `subscriptionCurrency` varchar(3) NOT NULL DEFAULT 'USD';
+--> statement-breakpoint
 ALTER TABLE `creators` ADD `subscriptionPerks` json DEFAULT ('[]');
+--> statement-breakpoint
 ALTER TABLE `creators` ADD `subscriptionStripePriceId` varchar(255);
 --> statement-breakpoint
 ALTER TABLE `content` ADD `locked` boolean NOT NULL DEFAULT true;
