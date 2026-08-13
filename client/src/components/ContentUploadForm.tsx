@@ -19,41 +19,27 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
-    tierId: string;
+    locked: boolean;
     collectionId: string;
     type: "image" | "photo" | "music" | "book" | "video" | "post";
     price: string;
   }>({
     title: "",
     description: "",
-    tierId: "",
+    locked: true,
     collectionId: "",
     type: "image",
     price: "",
   });
 
-  // Fetch creator's tiers
-  const { data: tiers = [] } = trpc.creator.myTiers.useQuery();
-
   // Fetch creator's collections
   const { data: collections = [] } = trpc.creator.myCollections.useQuery();
-
-  useEffect(() => {
-    if (tiers.length > 0 && !formData.tierId) {
-      const freeTier = tiers.find((t: any) => parseFloat(t.price) === 0);
-      if (freeTier) {
-        setFormData((prev) => ({ ...prev, tierId: freeTier.id.toString() }));
-      } else {
-        setFormData((prev) => ({ ...prev, tierId: tiers[0].id.toString() }));
-      }
-    }
-  }, [tiers]);
 
   // Upload mutation
   const uploadMutation = trpc.content.upload.useMutation({
     onSuccess: () => {
       toast.success("Content uploaded successfully!");
-      setFormData({ title: "", description: "", tierId: "", collectionId: "", type: "image", price: "" });
+      setFormData({ title: "", description: "", locked: true, collectionId: "", type: "image", price: "" });
       setSelectedFile(null);
       setFilePreview(null);
       onSuccess?.();
@@ -113,11 +99,6 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
       return;
     }
 
-    if (!formData.tierId) {
-      toast.error("Select a tier");
-      return;
-    }
-
     setIsLoading(true);
 
     try {
@@ -138,7 +119,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
 
       // Create content record via tRPC
       await uploadMutation.mutateAsync({
-        tierId: parseInt(formData.tierId),
+        locked: formData.locked,
         collectionId: formData.collectionId && formData.collectionId !== "none_selected" ? parseInt(formData.collectionId) : undefined,
         title: formData.title,
         description: formData.description || undefined,
@@ -239,30 +220,20 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
             <p className="text-xs text-muted-foreground">{formData.description.length}/1000</p>
           </div>
 
-          {/* Tier Selection */}
+          {/* Access Level */}
           <div className="space-y-2">
-            <label htmlFor="tier" className="text-sm font-medium">
-              Access Tier *
+            <label htmlFor="locked" className="text-sm font-medium">
+              Access Level *
             </label>
-            {tiers.length === 0 ? (
-              <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded text-sm text-amber-800">
-                <AlertCircle className="w-4 h-4" />
-                <span>Create a tier before uploading content</span>
-              </div>
-            ) : (
-              <Select value={formData.tierId} onValueChange={(value) => setFormData((prev) => ({ ...prev, tierId: value }))}>
-                <SelectTrigger id="tier" disabled={isLoading}>
-                  <SelectValue placeholder="Select a tier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tiers.map((tier: any) => (
-                    <SelectItem key={tier.id} value={tier.id.toString()}>
-                      {tier.name} - ${tier.price}/mo
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            <Select value={formData.locked ? "locked" : "public"} onValueChange={(value) => setFormData((prev) => ({ ...prev, locked: value === "locked" }))}>
+              <SelectTrigger id="locked" disabled={isLoading}>
+                <SelectValue placeholder="Select access level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="public">Public (anyone can view)</SelectItem>
+                <SelectItem value="locked">Subscribers only</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Unlock Price (Optional) */}
@@ -309,7 +280,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
           {/* Submit Button */}
           <Button
             type="submit"
-            disabled={isLoading || !selectedFile || !formData.title || !formData.tierId}
+            disabled={isLoading || !selectedFile || !formData.title}
             className="w-full"
           >
             {isLoading ? (

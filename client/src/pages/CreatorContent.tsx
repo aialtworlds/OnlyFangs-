@@ -20,8 +20,8 @@ export default function CreatorContent() {
     handle: creatorHandle,
   });
 
-  // Fetch creator's tiers
-  const { data: tiers = [] } = trpc.public.creatorTiers.useQuery(
+  // Fetch creator's subscription plan
+  const { data: plan } = trpc.public.creatorSubscriptionPlan.useQuery(
     { creatorId: creator?.id || 0 },
     { enabled: !!creator }
   );
@@ -71,11 +71,6 @@ export default function CreatorContent() {
     }
   };
 
-  const getTierName = (tierId: number) => {
-    const tier = tiers.find((t: any) => t.id === tierId);
-    return tier?.name || `Tier ${tierId}`;
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -110,7 +105,6 @@ export default function CreatorContent() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {contentList.map((item: any) => {
-              const tierName = getTierName(item.tierId);
               const hasAccess = isAuthenticated && user?.id; // Simplified - should check actual subscription
 
               return (
@@ -144,11 +138,13 @@ export default function CreatorContent() {
                       </div>
                     )}
 
-                    {/* Tier Badge */}
-                    <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      {tierName}
-                    </div>
+                    {/* Locked Badge */}
+                    {item.locked && (
+                      <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        Subscribers only
+                      </div>
+                    )}
                   </div>
 
                   {/* Content Info */}
@@ -201,41 +197,36 @@ export default function CreatorContent() {
           </div>
         )}
 
-        {/* Tier Info */}
-        {tiers.length > 0 && (
+        {/* Subscription Plan */}
+        {plan && plan.price && (
           <div className="mt-12 pt-8 border-t border-border">
-            <h2 className="text-2xl font-bold mb-6">Available Tiers</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {tiers.map((tier: any) => (
-                <Card key={tier.id}>
-                  <CardHeader>
-                    <CardTitle>{tier.name}</CardTitle>
-                    <CardDescription>
-                      ${tier.price}/mo
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {tier.description && (
-                      <p className="text-sm text-muted-foreground">{tier.description}</p>
-                    )}
-                    {tier.perks && tier.perks.length > 0 && (
-                      <ul className="space-y-2">
-                        {tier.perks.map((perk: string, idx: number) => (
-                          <li key={idx} className="text-sm flex items-start gap-2">
-                            <span className="text-primary mt-1">✓</span>
-                            <span>{perk}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <Link href={`/creator/${creatorHandle}`}>
-                      <Button className="w-full">
-                        Subscribe
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
+            <h2 className="text-2xl font-bold mb-6">Subscribe</h2>
+            <div className="max-w-sm">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Retainer</CardTitle>
+                  <CardDescription>
+                    ${plan.price}/mo
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {plan.perks && (plan.perks as string[]).length > 0 && (
+                    <ul className="space-y-2">
+                      {(plan.perks as string[]).map((perk: string, idx: number) => (
+                        <li key={idx} className="text-sm flex items-start gap-2">
+                          <span className="text-primary mt-1">✓</span>
+                          <span>{perk}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <Link href={`/creator/${creatorHandle}`}>
+                    <Button className="w-full">
+                      Subscribe
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
             </div>
           </div>
         )}
