@@ -344,8 +344,18 @@ export default function PatronProfile() {
   
   const isCreatorOrAdmin = user?.role === 'creator' || user?.role === 'admin';
   
-  const creatorReleasesQuery = trpc.creator.releases.useQuery(undefined, {
+  const myContentQuery = trpc.content.list.useQuery(undefined, {
     enabled: isAuthenticated && isCreatorOrAdmin
+  });
+
+  const deleteContentMutation = trpc.content.delete.useMutation({
+    onSuccess: () => {
+      toast.success('Content deleted.');
+      utils.content.list.invalidate();
+    },
+    onError: (err) => {
+      toast.error(`Error deleting content: ${err.message}`);
+    },
   });
   
   const subscriptionPlanQuery = trpc.creator.subscriptionPlan.useQuery(undefined, {
@@ -503,7 +513,7 @@ export default function PatronProfile() {
   const activity = activityQuery.data ?? [];
   const unread = unreadQuery.data;
   const creatorProfile = creatorProfileQuery.data;
-  const releases = creatorReleasesQuery.data ?? [];
+  const myContent = myContentQuery.data ?? [];
   const subscriptionPlan = subscriptionPlanQuery.data ?? null;
   const myCollections = myCollectionsQuery.data ?? [];
   const homeFeed = homeFeedQuery.data ?? [];
@@ -994,12 +1004,12 @@ export default function PatronProfile() {
                 <ContentUploadForm onSuccess={() => {
                   toast.success('Content published and sent for review!');
                   setShowUploadForm(false);
-                  utils.creator.releases.invalidate();
+                  utils.content.list.invalidate();
                 }} />
               </div>
             )}
 
-            {releases.length === 0 ? (
+            {myContent.length === 0 ? (
               <div style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', padding: '40px', textAlign: 'center' }}>
                 <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
                   You have not uploaded any releases yet. Publish your first content!
@@ -1007,18 +1017,44 @@ export default function PatronProfile() {
               </div>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
-                {releases.map((release) => (
-                  <div key={release.id} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', borderRadius: '6px', overflow: 'hidden' }}>
-                    <div style={{ height: '140px', background: 'oklch(0.05 0.01 285)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {release.thumbnailUrl ? (
-                        <img src={release.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {myContent.map((item) => (
+                  <div key={item.id} style={{ background: 'oklch(0.085 0.015 330)', border: '1px solid oklch(1 0 0 / 8%)', borderRadius: '6px', overflow: 'hidden' }}>
+                    <div style={{ height: '140px', background: 'oklch(0.05 0.01 285)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                      {item.thumbnailUrl ? (
+                        <img src={item.thumbnailUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <div style={{ fontSize: '24px' }}>🦇</div>
                       )}
+                      {item.moderationStatus === 'pending' && (
+                        <div style={{ position: 'absolute', top: '8px', right: '8px', fontSize: '9px', fontFamily: "'Cinzel', serif", background: 'oklch(0.6 0.1 60 / 90%)', color: 'white', padding: '2px 8px', borderRadius: '10px' }}>
+                          IN REVIEW
+                        </div>
+                      )}
+                      {item.moderationStatus === 'rejected' && (
+                        <div style={{ position: 'absolute', top: '8px', right: '8px', fontSize: '9px', fontFamily: "'Cinzel', serif", background: 'oklch(0.5 0.15 25 / 90%)', color: 'white', padding: '2px 8px', borderRadius: '10px' }}>
+                          REJECTED
+                        </div>
+                      )}
                     </div>
                     <div style={{ padding: '14px' }}>
-                      <h4 style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', margin: '0 0 4px 0' }}>{release.title}</h4>
-                      <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.45 0.02 60)', margin: 0 }}>{release.type.toUpperCase()}</p>
+                      <h4 style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', margin: '0 0 4px 0' }}>{item.title}</h4>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.45 0.02 60)', margin: 0 }}>
+                          {item.type.toUpperCase()} · {item.locked ? 'Subscribers only' : 'Public'}
+                        </p>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete "${item.title}"? This cannot be undone.`)) {
+                              deleteContentMutation.mutate({ contentId: item.id });
+                            }
+                          }}
+                          disabled={deleteContentMutation.isPending}
+                          style={{ background: 'none', border: 'none', color: 'oklch(0.5 0.15 25)', cursor: 'pointer', padding: '2px', fontSize: '11px' }}
+                          title="Delete"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}

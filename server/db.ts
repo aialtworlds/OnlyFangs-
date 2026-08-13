@@ -665,7 +665,16 @@ export async function uploadContent(
       // Don't fail the upload if moderation submission fails
     }
   }
-  
+
+  // Keep the totalReleases counter in sync — historically only incremented
+  // by the legacy releases table, which left creators using the (now
+  // canonical) content system stuck showing 0 releases everywhere this
+  // counter feeds into (public badge, recommendation ranking).
+  await db
+    .update(creators)
+    .set({ totalReleases: sql`${creators.totalReleases} + 1` })
+    .where(eq(creators.id, creatorId));
+
   return result;
 }
 
@@ -698,6 +707,10 @@ export async function deleteContent(contentId: number, creatorId: number) {
     throw new Error("Content not found or unauthorized");
   }
   await db.delete(content).where(eq(content.id, contentId));
+  await db
+    .update(creators)
+    .set({ totalReleases: sql`GREATEST(${creators.totalReleases} - 1, 0)` })
+    .where(eq(creators.id, creatorId));
 }
 
 export async function canAccessContent(

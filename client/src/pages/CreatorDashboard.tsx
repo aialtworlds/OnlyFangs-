@@ -113,7 +113,9 @@ export default function CreatorDashboard() {
   }
 
   const { data: profile, isLoading: profileLoading } = trpc.creator.myProfile.useQuery();
-  const { data: releases, isLoading: releasesLoading } = trpc.creator.releases.useQuery();
+  const { data: releases, isLoading: releasesLoading } = trpc.content.list.useQuery(undefined, {
+    enabled: user?.role === "creator" || user?.role === "admin",
+  });
   const { data: subscriptionPlan } = trpc.creator.subscriptionPlan.useQuery();
   const { data: unread } = trpc.patron.unreadCounts.useQuery();
 
