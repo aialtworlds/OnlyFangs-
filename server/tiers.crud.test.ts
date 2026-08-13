@@ -31,51 +31,19 @@ function createCreatorContext(userId: number = 1): TrpcContext {
   return ctx;
 }
 
-function createNonCreatorContext(): TrpcContext {
-  const user: AuthenticatedUser = {
-    id: 999,
-    openId: "non-creator",
-    email: "noncreator@example.com",
-    name: "Non Creator",
-    loginMethod: "test",
-    role: "user",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    lastSignedIn: new Date(),
-  };
-
-  const ctx: TrpcContext = {
-    user,
-    req: {
-      protocol: "https",
-      headers: {},
-    } as TrpcContext["req"],
-    res: {
-      clearCookie: () => {},
-    } as TrpcContext["res"],
-  };
-
-  return ctx;
-}
-
-describe("Tier CRUD Operations via tRPC", () => {
-  describe("creator.createTier", () => {
-    it("should allow authenticated users to create a tier", async () => {
+describe("Subscription Plan Operations via tRPC", () => {
+  describe("creator.updateSubscriptionPlan", () => {
+    it("should allow authenticated users to set their plan", async () => {
       const ctx = createCreatorContext(1);
       const caller = appRouter.createCaller(ctx);
 
       // Note: This will fail if the user doesn't have a creator profile
       // but it tests that the procedure is accessible and validates input
       try {
-        await caller.creator.createTier({
-          name: "Test Tier",
-          slug: "test-tier",
-          description: "Test tier description",
+        await caller.creator.updateSubscriptionPlan({
           price: "9.99",
           currency: "USD",
           perks: ["Perk 1", "Perk 2"],
-          featured: false,
-          sortOrder: 1,
         });
       } catch (error: any) {
         // Expected to fail if no creator profile exists
@@ -89,10 +57,8 @@ describe("Tier CRUD Operations via tRPC", () => {
       const caller = appRouter.createCaller(ctx);
 
       try {
-        await caller.creator.createTier({
-          name: "", // Empty name should fail validation
-          slug: "test",
-          price: "9.99",
+        await caller.creator.updateSubscriptionPlan({
+          // price is required by the schema
         } as any);
         // If we get here, validation didn't work
         expect(true).toBe(false);
@@ -103,69 +69,27 @@ describe("Tier CRUD Operations via tRPC", () => {
     });
   });
 
-  describe("creator.updateTier", () => {
-    it("should validate tier ID is provided", async () => {
-      const ctx = createCreatorContext(3);
-      const caller = appRouter.createCaller(ctx);
-
-      try {
-        await caller.creator.updateTier({
-          tierId: 0, // Invalid tier ID
-          name: "Updated Tier",
-        } as any);
-        // If we get here, validation didn't work
-        expect(true).toBe(false);
-      } catch (error: any) {
-        // Should fail validation or DB query
-        expect(error).toBeDefined();
-      }
-    });
-
-    it("should allow partial updates", async () => {
-      const ctx = createCreatorContext(4);
-      const caller = appRouter.createCaller(ctx);
-
-      try {
-        await caller.creator.updateTier({
-          tierId: 999, // Non-existent tier
-          featured: true,
-        } as any);
-      } catch (error: any) {
-        // Expected to fail since tier doesn't exist
-        expect(error).toBeDefined();
-      }
-    });
-  });
-
-  describe("creator.deleteTier", () => {
-    it("should validate tier ID is provided", async () => {
+  describe("creator.disableSubscriptionPlan", () => {
+    it("should require a creator profile", async () => {
       const ctx = createCreatorContext(5);
       const caller = appRouter.createCaller(ctx);
 
       try {
-        await caller.creator.deleteTier({
-          tierId: 0, // Invalid tier ID
-        } as any);
-        // If we get here, validation didn't work
-        expect(true).toBe(false);
+        await caller.creator.disableSubscriptionPlan();
       } catch (error: any) {
-        // Should fail validation
+        // Expected to fail since there's no creator profile / plan yet
         expect(error).toBeDefined();
       }
     });
+  });
 
-    it("should fail to delete non-existent tier", async () => {
-      const ctx = createCreatorContext(6);
+  describe("creator.subscriptionPlan", () => {
+    it("should return null if user has no creator profile", async () => {
+      const ctx = createCreatorContext(7);
       const caller = appRouter.createCaller(ctx);
 
-      try {
-        await caller.creator.deleteTier({
-          tierId: 999999, // Non-existent tier
-        });
-      } catch (error: any) {
-        // Expected to fail
-        expect(error).toBeDefined();
-      }
+      const result = await caller.creator.subscriptionPlan();
+      expect(result).toBeNull();
     });
   });
 
@@ -191,7 +115,6 @@ describe("Tier CRUD Operations via tRPC", () => {
       expect(result.activeSubscriptions).toBe(0);
       expect(result.totalRevenue).toBe(0);
       expect(result.monthlyRevenue).toBe(0);
-      expect(Array.isArray(result.tierBreakdown)).toBe(true);
     });
 
     it("should return empty analytics for new creator", async () => {
@@ -239,15 +162,14 @@ describe("Tier CRUD Operations via tRPC", () => {
   });
 
   describe("Input Validation", () => {
-    it("should validate tier name length", async () => {
+    it("should validate currency length", async () => {
       const ctx = createCreatorContext(11);
       const caller = appRouter.createCaller(ctx);
 
       try {
-        await caller.creator.createTier({
-          name: "a".repeat(101), // Too long
-          slug: "test",
+        await caller.creator.updateSubscriptionPlan({
           price: "9.99",
+          currency: "US", // Too short, schema requires exactly 3 chars
         } as any);
         expect(true).toBe(false);
       } catch (error: any) {
@@ -255,50 +177,15 @@ describe("Tier CRUD Operations via tRPC", () => {
       }
     });
 
-    it("should validate tier slug length", async () => {
-      const ctx = createCreatorContext(12);
-      const caller = appRouter.createCaller(ctx);
-
-      try {
-        await caller.creator.createTier({
-          name: "Test",
-          slug: "a".repeat(51), // Too long
-          price: "9.99",
-        } as any);
-        expect(true).toBe(false);
-      } catch (error: any) {
-        expect(error).toBeDefined();
-      }
-    });
-
-    it("should validate description length", async () => {
-      const ctx = createCreatorContext(13);
-      const caller = appRouter.createCaller(ctx);
-
-      try {
-        await caller.creator.createTier({
-          name: "Test",
-          slug: "test",
-          description: "a".repeat(501), // Too long
-          price: "9.99",
-        } as any);
-        expect(true).toBe(false);
-      } catch (error: any) {
-        expect(error).toBeDefined();
-      }
-    });
-
-    it("should accept valid perks array", async () => {
+    it("should accept a valid perks array", async () => {
       const ctx = createCreatorContext(14);
       const caller = appRouter.createCaller(ctx);
 
       try {
-        await caller.creator.createTier({
-          name: "Test",
-          slug: "test",
+        await caller.creator.updateSubscriptionPlan({
           price: "9.99",
           perks: ["Perk 1", "Perk 2", "Perk 3"],
-        } as any);
+        });
       } catch (error: any) {
         // Expected to fail if no creator profile, but not due to perks validation
         expect(error.message).toContain("Creator profile not found");
