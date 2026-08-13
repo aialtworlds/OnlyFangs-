@@ -55,9 +55,13 @@ async function startServer() {
     }
   });
 
-  // Configure body parser with larger size limit for file uploads
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // Configure body parser with larger size limit for file uploads.
+  // uploadHandler.ts accepts files up to 50MB, but they arrive here as
+  // base64 JSON, which inflates size by ~33% — so the parser limit needs
+  // headroom above 50mb or large-but-still-valid uploads get rejected here
+  // before the handler's own size check ever runs.
+  app.use(express.json({ limit: "70mb" }));
+  app.use(express.urlencoded({ limit: "70mb", extended: true }));
   app.use("/manus-storage", express.static(path.resolve(process.cwd(), "uploads")));
   registerGoogleOAuthRoutes(app);
   registerUploadRoutes(app);

@@ -102,17 +102,31 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
     setIsLoading(true);
 
     try {
-      // Upload file to S3
-      const formDataForUpload = new FormData();
-      formDataForUpload.append("file", selectedFile);
+      // Convert file to base64 (uploadHandler.ts expects { file, fileName, contentType } as JSON)
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Strip the "data:<mime>;base64," prefix, server wants raw base64
+          resolve(result.split(",")[1] ?? "");
+        };
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsDataURL(selectedFile);
+      });
 
       const uploadResponse = await fetch("/api/upload", {
         method: "POST",
-        body: formDataForUpload,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          file: base64,
+          fileName: selectedFile.name,
+          contentType: selectedFile.type,
+        }),
       });
 
       if (!uploadResponse.ok) {
-        throw new Error("Error uploading file");
+        const errorBody = await uploadResponse.json().catch(() => null);
+        throw new Error(errorBody?.error || `Upload failed (${uploadResponse.status})`);
       }
 
       const { url, key } = await uploadResponse.json();
@@ -132,7 +146,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
       });
     } catch (error) {
       console.error("Upload error:", error);
-      toast.error("Error uploading file");
+      toast.error(error instanceof Error ? error.message : "Error uploading file");
     } finally {
       setIsLoading(false);
     }
