@@ -117,6 +117,7 @@ export default function PatronDashboard() {
   const { data: activity, isLoading: activityLoading } = trpc.patron.activity.useQuery();
   const { data: unread } = trpc.patron.unreadCounts.useQuery();
   const { data: discoverCreators } = trpc.patron.discoverCreators.useQuery({ limit: 3 });
+  const { data: myCustomRequests = [] } = trpc.customRequests.listPatron.useQuery();
 
   const displayName = user.name || "Nightwalker";
 
