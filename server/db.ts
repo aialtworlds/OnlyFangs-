@@ -1,7 +1,7 @@
 import { eq, desc, asc, and, count, sql, isNull, or, ne, isNotNull, gt, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
-  users, creators, subscriptions, tiers, follows,
+  users, creators, subscriptions, follows,
   releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
   moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments, covenBans, covenWarnings, covenReports, covenReactions, covenThreadFollows, oneTimePurchases, customRequests, creatorGoals,
   type InsertUser
@@ -169,7 +169,6 @@ export async function getPatronSubscriptions(userId: number) {
       creatorCategory: creators.category,
       creatorAvatarUrl: creators.avatarUrl,
       creatorVerified: creators.verified,
-      tierId: subscriptions.tierId,
     })
     .from(subscriptions)
     .innerJoin(creators, eq(subscriptions.creatorId, creators.id))
@@ -302,41 +301,6 @@ export async function getCreatorReleases(creatorId: number, limit = 20) {
     .limit(limit);
 }
 
-export async function getCreatorTiers(creatorId: number) {
-  const db = await getDb();
-  if (!db) return [];
-  
-  const creatorTiers = await db
-    .select()
-    .from(tiers)
-    .where(eq(tiers.creatorId, creatorId))
-    .orderBy(tiers.sortOrder);
-
-  // If there is no free tier (price = '0.00'), create one dynamically
-  const hasFree = creatorTiers.some((t) => parseFloat(t.price) === 0);
-  if (!hasFree) {
-    await db.insert(tiers).values({
-      creatorId,
-      name: "Free",
-      slug: "free",
-      description: "Access to free content and public updates",
-      price: "0.00",
-      currency: "USD",
-      perks: [],
-      featured: false,
-      sortOrder: 0
-    });
-    // Fetch again
-    return db
-      .select()
-      .from(tiers)
-      .where(eq(tiers.creatorId, creatorId))
-      .orderBy(tiers.sortOrder);
-  }
-
-  return creatorTiers;
-}
-
 export async function getCreatorByHandle(handle: string) {
   const db = await getDb();
   if (!db) return undefined;
@@ -346,10 +310,6 @@ export async function getCreatorByHandle(handle: string) {
     .where(eq(creators.handle, handle))
     .limit(1);
   return result.length > 0 ? result[0] : undefined;
-}
-
-export async function getPublicCreatorTiers(creatorId: number) {
-  return getCreatorTiers(creatorId);
 }
 
 export async function followCreator(followerId: number, creatorId: number) {
@@ -434,17 +394,6 @@ export async function createCreatorProfile(data: {
     .where(eq(creators.userId, data.userId))
     .limit(1);
   const creator = result[0];
-  if (creator) {
-    // Automatically create a default free tier so they immediately have one!
-    await db.insert(tiers).values({
-      creatorId: creator.id,
-      name: "Fledgling",
-      slug: "fledgling",
-      price: "0.00",
-      description: "Free tier for all shadow followers",
-      sortOrder: 1,
-    });
-  }
   return creator;
 }
 
@@ -479,7 +428,6 @@ export async function createRelease(data: {
   mediaUrl?: string;
   duration?: string;
   pages?: number;
-  tierRequired: "free" | "fledgling" | "dweller" | "courtier" | "night_royalty";
   locked: boolean;
 }) {
   const db = await getDb();
@@ -526,44 +474,37 @@ export async function getUserById(userId: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-export async function createTier(data: {
+export async function setCreatorSubscriptionPlan(data: {
   creatorId: number;
-  name: string;
-  slug: string;
-  description?: string;
   price: string;
   currency?: string;
   perks?: string[] | null;
-  featured?: boolean;
-  sortOrder?: number;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
-  await db.insert(tiers).values({
-    creatorId: data.creatorId,
-    name: data.name,
-    slug: data.slug,
-    description: data.description ?? null,
-    price: data.price,
-    currency: data.currency ?? "USD",
-    perks: data.perks ?? null,
-    featured: data.featured ?? false,
-    sortOrder: data.sortOrder ?? 0,
-  });
-  
-  // Query the newly created tier to get its ID
-  const createdTier = await db
-    .select({ id: tiers.id, name: tiers.name, slug: tiers.slug })
-    .from(tiers)
-    .where(eq(tiers.slug, data.slug))
+
+  await db
+    .update(creators)
+    .set({
+      subscriptionPrice: data.price,
+      subscriptionCurrency: data.currency ?? "USD",
+      subscriptionPerks: data.perks ?? [],
+      // Price changed — invalidate the cached Stripe Price so a fresh one gets created next checkout.
+      subscriptionStripePriceId: null,
+    })
+    .where(eq(creators.id, data.creatorId));
+
+  const [updated] = await db
+    .select()
+    .from(creators)
+    .where(eq(creators.id, data.creatorId))
     .limit(1);
-  
-  if (!createdTier.length) {
-    throw new Error("Failed to retrieve created tier");
+
+  if (!updated) {
+    throw new Error("Failed to update creator subscription plan");
   }
-  
-  return createdTier[0];
+
+  return updated;
 }
 
 
@@ -577,8 +518,6 @@ export async function getCreatorSubscriptions(creatorId: number) {
     .select({
       id: subscriptions.id,
       patronId: subscriptions.patronId,
-      tierId: subscriptions.tierId,
-      tierName: tiers.name,
       status: subscriptions.status,
       startedAt: subscriptions.startedAt,
       renewsAt: subscriptions.renewsAt,
@@ -586,7 +525,6 @@ export async function getCreatorSubscriptions(creatorId: number) {
       createdAt: subscriptions.createdAt,
     })
     .from(subscriptions)
-    .innerJoin(tiers, eq(subscriptions.tierId, tiers.id))
     .where(eq(subscriptions.creatorId, creatorId))
     .orderBy(subscriptions.createdAt);
 
@@ -601,9 +539,15 @@ export async function getCreatorAnalytics(creatorId: number) {
       activeSubscriptions: 0,
       totalRevenue: 0,
       monthlyRevenue: 0,
-      tierBreakdown: [],
     };
   }
+
+  const [creator] = await db
+    .select({ subscriptionPrice: creators.subscriptionPrice })
+    .from(creators)
+    .where(eq(creators.id, creatorId))
+    .limit(1);
+  const price = parseFloat(creator?.subscriptionPrice ?? "0") || 0;
 
   // Get total and active subscriptions
   const [subStats] = await db
@@ -612,120 +556,44 @@ export async function getCreatorAnalytics(creatorId: number) {
       active: sql`COUNT(CASE WHEN ${subscriptions.status} = 'active' THEN 1 END)`.as('active'),
     })
     .from(subscriptions)
-    .innerJoin(tiers, eq(subscriptions.tierId, tiers.id))
     .where(eq(subscriptions.creatorId, creatorId));
 
-  // Get tier breakdown
-  const tierBreakdown = await db
-    .select({
-      tierName: tiers.name,
-      tierId: tiers.id,
-      count: sql`COUNT(${subscriptions.id})`.as('count'),
-      price: tiers.price,
-    })
-    .from(subscriptions)
-    .innerJoin(tiers, eq(subscriptions.tierId, tiers.id))
-    .where(eq(subscriptions.creatorId, creatorId))
-    .groupBy(tiers.id, tiers.name, tiers.price) as any;
-
-  // Calculate revenue (simplified: price * count)
-  let totalRevenue = 0;
-  let monthlyRevenue = 0;
-  tierBreakdown.forEach((tier: any) => {
-    const count = Number(tier.count) || 0;
-    const price = parseFloat(tier.price) || 0;
-    totalRevenue += price * count;
-  });
-
-  // Estimate monthly (assuming all active subs renew)
-  monthlyRevenue = (Number(subStats?.active) || 0) * 25; // Average tier price
+  const activeCount = Number(subStats?.active) || 0;
+  const monthlyRevenue = activeCount * price;
 
   return {
     totalSubscribers: Number(subStats?.total) || 0,
-    activeSubscriptions: Number(subStats?.active) || 0,
-    totalRevenue,
+    activeSubscriptions: activeCount,
+    totalRevenue: monthlyRevenue, // simplified: assumes one billing cycle so far
     monthlyRevenue,
-    tierBreakdown: tierBreakdown.map((t: any) => ({
-      tierName: t.tierName,
-      tierId: t.tierId,
-      subscribers: Number(t.count) || 0,
-      price: t.price,
-    })),
   };
 }
 
-export async function updateTier(tierId: number, creatorId: number, data: {
-  name?: string;
-  slug?: string;
-  description?: string | null;
-  price?: string;
-  currency?: string;
-  perks?: string[] | null;
-  featured?: boolean;
-  sortOrder?: number;
-}) {
+export async function disableCreatorSubscriptionPlan(creatorId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Verify tier belongs to creator
-  const tier = await db
-    .select()
-    .from(tiers)
-    .where(eq(tiers.id, tierId))
-    .limit(1);
-
-  if (!tier.length || tier[0].creatorId !== creatorId) {
-    throw new Error("Tier not found or access denied");
-  }
-
-  await db
-    .update(tiers)
-    .set({
-      name: data.name,
-      slug: data.slug,
-      description: data.description,
-      price: data.price,
-      currency: data.currency,
-      perks: data.perks,
-      featured: data.featured,
-      sortOrder: data.sortOrder,
-    })
-    .where(eq(tiers.id, tierId));
-}
-
-export async function deleteTier(tierId: number, creatorId: number) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  // Verify tier belongs to creator
-  const tier = await db
-    .select()
-    .from(tiers)
-    .where(eq(tiers.id, tierId))
-    .limit(1);
-
-  if (!tier.length || tier[0].creatorId !== creatorId) {
-    throw new Error("Tier not found or access denied");
-  }
-
-  // Check if tier has active subscriptions
+  // Check if the creator has active subscriptions
   const activeSubs = await db
     .select({ count: sql`COUNT(*)`.as('count') })
     .from(subscriptions)
-    .where(eq(subscriptions.tierId, tierId));
+    .where(and(eq(subscriptions.creatorId, creatorId), eq(subscriptions.status, "active")));
 
   if (Number(activeSubs[0]?.count) > 0) {
-    throw new Error("Cannot delete tier with active subscriptions");
+    throw new Error("Cannot disable subscriptions while patrons are actively subscribed");
   }
 
-  await db.delete(tiers).where(eq(tiers.id, tierId));
+  await db
+    .update(creators)
+    .set({ subscriptionPrice: null, subscriptionStripePriceId: null })
+    .where(eq(creators.id, creatorId));
 }
 
 // ── Content Management ────────────────────────────────────────
 
 export async function uploadContent(
   creatorId: number,
-  tierId: number,
+  locked: boolean,
   title: string,
   description: string | undefined,
   type: string,
@@ -744,7 +612,7 @@ export async function uploadContent(
   // Insert content with pending moderation status
   const result = await db.insert(content).values({
     creatorId,
-    tierId,
+    locked,
     collectionId: collectionId ?? null,
     title,
     description: description ?? null,
@@ -848,20 +716,19 @@ export async function canAccessContent(
   const item = await getContentById(contentId);
   if (!item) return false;
 
-  // If the required tier is free (price = '0.00'), anyone can access it!
-  const [tier] = await db.select().from(tiers).where(eq(tiers.id, item.tierId)).limit(1);
-  if (tier && parseFloat(tier.price) === 0) {
+  // Unlocked content is available to everyone.
+  if (!item.locked) {
     return true;
   }
 
-  // Check if patron has an active subscription to the required tier
+  // Check if patron has an active subscription to this creator
   const subscription = await db
     .select()
     .from(subscriptions)
     .where(
       and(
         eq(subscriptions.patronId, patronId),
-        eq(subscriptions.tierId, item.tierId),
+        eq(subscriptions.creatorId, item.creatorId),
         eq(subscriptions.status, "active")
       )
     )
@@ -1347,12 +1214,12 @@ export async function notifyFollowersAboutNewRelease(creatorId: number, releaseI
 /**
  * Notify user about subscription confirmation
  */
-export async function notifySubscriptionConfirmed(userId: number, creatorName: string, tierName: string) {
+export async function notifySubscriptionConfirmed(userId: number, creatorName: string) {
   await createNotification(
     userId,
     'subscription_confirmed',
     `Subscription confirmed`,
-    `You are now subscribed to ${creatorName}'s ${tierName} tier`
+    `You are now subscribed to ${creatorName}`
   );
 }
 
@@ -1378,7 +1245,7 @@ export async function notifyNewMessage(userId: number, senderName: string, messa
  * 2. Find creators with similar content types
  * 3. Find popular creators in categories user follows
  * 4. Exclude creators already followed
- * 5. Prioritize creators with free tiers
+ * 5. Prioritize creators offering free (unlocked) content
  */
 export async function getRecommendedCreators(userId: number, limit: number = 6) {
   const db = await getDb();
@@ -1587,7 +1454,7 @@ export async function searchContent(query: string, limit: number = 20) {
         thumbnailUrl: content.thumbnailUrl,
         creatorId: content.creatorId,
         type: content.type,
-        tierId: content.tierId,
+        locked: content.locked,
         createdAt: content.createdAt,
       })
       .from(content);
@@ -2262,7 +2129,7 @@ export async function getPatronHomeFeed(userId: number) {
     .select({
       id: content.id,
       creatorId: content.creatorId,
-      tierId: content.tierId,
+      locked: content.locked,
       collectionId: content.collectionId,
       title: content.title,
       description: content.description,
@@ -2300,7 +2167,7 @@ export async function getRecentContent(limit: number = 12) {
     .select({
       id: content.id,
       creatorId: content.creatorId,
-      tierId: content.tierId,
+      locked: content.locked,
       collectionId: content.collectionId,
       title: content.title,
       description: content.description,
@@ -2315,11 +2182,9 @@ export async function getRecentContent(limit: number = 12) {
       creatorAlias: creators.alias,
       creatorAvatarUrl: creators.avatarUrl,
       creatorHandle: creators.handle,
-      tierPrice: tiers.price,
     })
     .from(content)
     .innerJoin(creators, eq(content.creatorId, creators.id))
-    .leftJoin(tiers, eq(content.tierId, tiers.id))
     .where(eq(content.moderationStatus, 'approved'))
     .orderBy(desc(content.createdAt))
     .limit(limit);
@@ -2330,7 +2195,7 @@ export async function getRecentContent(limit: number = 12) {
   // it must never go out for content the requester hasn't unlocked, no
   // matter what the current frontend does or doesn't do with it yet.
   return rows.map((row) => {
-    const isFree = row.tierPrice !== undefined && row.tierPrice !== null && parseFloat(row.tierPrice) === 0;
+    const isFree = !row.locked;
     if (isFree) return { ...row, isFree: true };
     const { fileUrl: _fileUrl, fileKey: _fileKey, ...safeRow } = row;
     return { ...safeRow, isFree: false };
@@ -2349,12 +2214,10 @@ export async function getRecentSubscriptions(limit: number = 5) {
       creatorHandle: creators.handle,
       userName: users.name,
       userDisplayName: users.displayName,
-      tierName: tiers.name,
     })
     .from(subscriptions)
     .innerJoin(creators, eq(subscriptions.creatorId, creators.id))
     .innerJoin(users, eq(subscriptions.patronId, users.id))
-    .leftJoin(tiers, eq(subscriptions.tierId, tiers.id))
     .where(eq(subscriptions.status, 'active'))
     .orderBy(desc(subscriptions.createdAt))
     .limit(limit);
@@ -2370,7 +2233,7 @@ export async function getCovens() {
     .select({
       id: covens.id,
       creatorId: covens.creatorId,
-      tierId: covens.tierId,
+      locked: covens.locked,
       name: covens.name,
       slug: covens.slug,
       description: covens.description,
@@ -2379,12 +2242,9 @@ export async function getCovens() {
       createdAt: covens.createdAt,
       creatorAlias: creators.alias,
       creatorHandle: creators.handle,
-      tierName: tiers.name,
-      tierPrice: tiers.price,
     })
     .from(covens)
-    .leftJoin(creators, eq(covens.creatorId, creators.id))
-    .leftJoin(tiers, eq(covens.tierId, tiers.id));
+    .leftJoin(creators, eq(covens.creatorId, creators.id));
 }
 
 export async function getCovenBySlug(slug: string) {
@@ -2395,7 +2255,7 @@ export async function getCovenBySlug(slug: string) {
     .select({
       id: covens.id,
       creatorId: covens.creatorId,
-      tierId: covens.tierId,
+      locked: covens.locked,
       name: covens.name,
       slug: covens.slug,
       description: covens.description,
@@ -2404,12 +2264,9 @@ export async function getCovenBySlug(slug: string) {
       createdAt: covens.createdAt,
       creatorAlias: creators.alias,
       creatorHandle: creators.handle,
-      tierName: tiers.name,
-      tierPrice: tiers.price,
     })
     .from(covens)
     .leftJoin(creators, eq(covens.creatorId, creators.id))
-    .leftJoin(tiers, eq(covens.tierId, tiers.id))
     .where(eq(covens.slug, slug))
     .limit(1);
 
@@ -2433,8 +2290,8 @@ export async function canAccessCoven(userId: number, covenId: number): Promise<b
   const banned = await isCovenBanned(userId, covenId);
   if (banned) return false;
 
-  // 1. If public (no tier), anyone can access
-  if (!coven.tierId) return true;
+  // 1. If public (not locked), anyone can access
+  if (!coven.locked) return true;
 
   // 3. Check if user is the hosting creator
   if (coven.creatorId) {
@@ -2442,14 +2299,14 @@ export async function canAccessCoven(userId: number, covenId: number): Promise<b
     if (creator && creator.id === coven.creatorId) return true;
   }
 
-  // 4. Check if user has active subscription to the required tier
+  // 4. Check if user has an active subscription to the hosting creator
   const activeSub = await db
     .select({ id: subscriptions.id })
     .from(subscriptions)
     .where(
       and(
         eq(subscriptions.patronId, userId),
-        eq(subscriptions.tierId, coven.tierId),
+        eq(subscriptions.creatorId, coven.creatorId!),
         eq(subscriptions.status, "active")
       )
     )
@@ -2907,7 +2764,7 @@ export async function updateCovenComment(userId: number, commentId: number, cont
 
 export async function createCoven(data: {
   creatorId?: number;
-  tierId?: number;
+  locked?: boolean;
   name: string;
   slug: string;
   description?: string;
@@ -2919,7 +2776,7 @@ export async function createCoven(data: {
 
   await db.insert(covens).values({
     creatorId: data.creatorId ?? null,
-    tierId: data.tierId ?? null,
+    locked: data.locked ?? false,
     name: data.name,
     slug: data.slug,
     description: data.description ?? null,
@@ -2951,12 +2808,9 @@ export async function getMyCovens(userId: number) {
       role: covenMembers.role,
       creatorAlias: creators.alias,
       creatorHandle: creators.handle,
-      tierName: tiers.name,
-      tierPrice: tiers.price,
     })
     .from(covenMembers)
     .innerJoin(covens, eq(covenMembers.covenId, covens.id))
-    .leftJoin(tiers, eq(covens.tierId, tiers.id))
     .where(eq(covenMembers.userId, userId));
 }
 
@@ -3476,22 +3330,19 @@ export async function calculateCreatorMonthlyRevenue(creatorId: number): Promise
   const db = await getDb();
   if (!db) return 0;
 
-  // Fetch all active subscriptions for this creator
-  const activeSubs = await db
-    .select({
-      price: tiers.price,
-    })
+  const [creator] = await db
+    .select({ subscriptionPrice: creators.subscriptionPrice })
+    .from(creators)
+    .where(eq(creators.id, creatorId))
+    .limit(1);
+  const price = parseFloat(creator?.subscriptionPrice ?? "0") || 0;
+
+  const [activeCount] = await db
+    .select({ count: sql`COUNT(*)`.as('count') })
     .from(subscriptions)
-    .innerJoin(tiers, eq(subscriptions.tierId, tiers.id))
     .where(and(eq(subscriptions.creatorId, creatorId), eq(subscriptions.status, "active")));
 
-  // Sum up prices
-  let sum = 0;
-  for (const sub of activeSubs) {
-    sum += parseFloat(sub.price || "0");
-  }
-
-  return sum;
+  return price * (Number(activeCount?.count) || 0);
 }
 
 export async function getActiveCreatorGoal(creatorId: number) {
