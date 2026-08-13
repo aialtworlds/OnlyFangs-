@@ -1,10 +1,9 @@
 import Stripe from "stripe";
 import { eq, and } from "drizzle-orm";
 import { getDb, createCustomRequest } from "./db";
-import { users, subscriptions, tiers, creators, oneTimePurchases, notifications } from "../drizzle/schema";
+import { users, subscriptions, creators, oneTimePurchases, notifications } from "../drizzle/schema";
 import {
   sendPaymentConfirmationEmail,
-  sendSubscriptionRenewalEmail,
   sendSubscriptionCancellationEmail,
   sendCreatorNotificationEmail,
 } from "./email";
@@ -17,7 +16,7 @@ export function getStripe(): Stripe {
   if (!stripeSecretKey) {
     throw new Error("STRIPE_SECRET_KEY is not configured");
   }
-  return new Stripe(stripeSecretKey, { apiVersion: "2026-05-27.dahlia" });
+  return new Stripe(stripeSecretKey, { apiVersion: "2026-06-24.dahlia" });
 }
 
 // ── Ensure Stripe customer exists for user ─────────────────────
@@ -43,45 +42,41 @@ export async function ensureStripeCustomer(userId: number, email: string, name?:
   return customer.id;
 }
 
-// ── Create Stripe Price for a tier (on-demand) ─────────────────
-export async function getOrCreateStripePrice(tierId: number): Promise<string> {
+// ── Create Stripe Price for a creator's subscription plan (on-demand) ──
+export async function getOrCreateStripePrice(creatorId: number): Promise<string> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const [tier] = await db.select().from(tiers).where(eq(tiers.id, tierId)).limit(1);
-  if (!tier) throw new Error("Tier not found");
-
-  const [creator] = await db.select().from(creators).where(eq(creators.id, tier.creatorId)).limit(1);
+  const [creator] = await db.select().from(creators).where(eq(creators.id, creatorId)).limit(1);
   if (!creator) throw new Error("Creator not found");
+  if (!creator.subscriptionPrice) throw new Error("Creator has not set a subscription price");
+
+  // Return the cached Price id if we already created one for the current price.
+  if (creator.subscriptionStripePriceId) {
+    return creator.subscriptionStripePriceId;
+  }
 
   const stripe = getStripe();
 
-  // Check if we already have a price ID stored in the tier
-  // For now we create a new price each time (idempotency via metadata lookup)
-  const existingPrices = await stripe.prices.list({
-    active: true,
-    lookup_keys: [`tier_${tierId}`],
-  });
-
-  if (existingPrices.data.length > 0) {
-    return existingPrices.data[0].id;
-  }
-
   // Create product + price
   const product = await stripe.products.create({
-    name: `${creator.alias} — ${tier.name}`,
-    description: tier.description || undefined,
-    metadata: { tierId: tierId.toString(), creatorId: tier.creatorId.toString() },
+    name: `${creator.alias} — Subscription`,
+    metadata: { creatorId: creatorId.toString() },
   });
 
-  const priceAmount = Math.round(parseFloat(tier.price) * 100); // cents
+  const priceAmount = Math.round(parseFloat(creator.subscriptionPrice) * 100); // cents
   const price = await stripe.prices.create({
     product: product.id,
     unit_amount: priceAmount,
-    currency: (tier.currency || "usd").toLowerCase(),
+    currency: (creator.subscriptionCurrency || "usd").toLowerCase(),
     recurring: { interval: "month" },
-    lookup_key: `tier_${tierId}`,
+    lookup_key: `creator_${creatorId}_sub`,
   });
+
+  await db
+    .update(creators)
+    .set({ subscriptionStripePriceId: price.id })
+    .where(eq(creators.id, creatorId));
 
   return price.id;
 }
@@ -129,21 +124,18 @@ export async function createCheckoutSession(params: {
   userId: number;
   userEmail: string;
   userName?: string;
-  tierId: number;
+  creatorId: number;
   origin: string;
 }): Promise<string> {
   const stripe = getStripe();
 
   const customerId = await ensureStripeCustomer(params.userId, params.userEmail, params.userName);
-  const priceId = await getOrCreateStripePrice(params.tierId);
+  const priceId = await getOrCreateStripePrice(params.creatorId);
 
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const [tier] = await db.select().from(tiers).where(eq(tiers.id, params.tierId)).limit(1);
-  if (!tier) throw new Error("Tier not found");
-
-  const [creator] = await db.select().from(creators).where(eq(creators.id, tier.creatorId)).limit(1);
+  const [creator] = await db.select().from(creators).where(eq(creators.id, params.creatorId)).limit(1);
   if (!creator) throw new Error("Creator not found");
 
   const sessionParams: Stripe.Checkout.SessionCreateParams = {
@@ -157,7 +149,7 @@ export async function createCheckoutSession(params: {
     client_reference_id: params.userId.toString(),
     metadata: {
       user_id: params.userId.toString(),
-      tier_id: params.tierId.toString(),
+      creator_id: params.creatorId.toString(),
       customer_email: params.userEmail,
       customer_name: params.userName || "",
     },
@@ -335,7 +327,6 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
       const session = event.data.object as Stripe.Checkout.Session;
       
       // Check if this is a subscription checkout or a one-time payment
-      const tierIdStr = session.metadata?.tier_id;
       const type = session.metadata?.type as "post" | "message" | "tip" | "custom_request" | undefined;
 
       if (type) {
@@ -412,20 +403,19 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
 
       // SUBSCRIPTION PAYMENT (Existing logic)
       const userId = parseInt(session.metadata?.user_id || "0");
-      const tierId = parseInt(tierIdStr || "0");
+      const subCreatorId = parseInt(session.metadata?.creator_id || "0");
       const stripeSubId = typeof session.subscription === "string"
         ? session.subscription
         : session.subscription?.id;
 
-      if (!userId || !tierId) {
+      if (!userId || !subCreatorId) {
         console.warn("[Webhook] Missing metadata in subscription checkout.session.completed");
         break;
       }
 
-      // Get tier to find creatorId
-      const [tier] = await db.select().from(tiers).where(eq(tiers.id, tierId)).limit(1);
-      if (!tier) {
-        console.warn("[Webhook] Tier not found:", tierId);
+      const [subCreator] = await db.select().from(creators).where(eq(creators.id, subCreatorId)).limit(1);
+      if (!subCreator) {
+        console.warn("[Webhook] Creator not found:", subCreatorId);
         break;
       }
 
@@ -433,7 +423,7 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
       const existing = await db
         .select()
         .from(subscriptions)
-        .where(and(eq(subscriptions.patronId, userId), eq(subscriptions.tierId, tierId)))
+        .where(and(eq(subscriptions.patronId, userId), eq(subscriptions.creatorId, subCreatorId)))
         .limit(1);
 
       if (existing.length > 0) {
@@ -448,65 +438,54 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
       } else {
         await db.insert(subscriptions).values({
           patronId: userId,
-          creatorId: tier.creatorId,
-          tierId,
+          creatorId: subCreatorId,
           status: "active",
           stripeSubscriptionId: stripeSubId || null,
           startedAt: new Date(),
         });
         // Increment creator subscriber count
-        const [creator] = await db
-          .select({ totalSubscribers: creators.totalSubscribers })
-          .from(creators)
-          .where(eq(creators.id, tier.creatorId))
-          .limit(1);
-        if (creator) {
-          await db
-            .update(creators)
-            .set({ totalSubscribers: creator.totalSubscribers + 1 })
-            .where(eq(creators.id, tier.creatorId));
-          // Notify creator about new subscription
-          const [patron] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
-          if (patron) {
-            await notifySubscriptionConfirmed(tier.creatorId, patron.name || 'Unknown', tier.name);
-          }
+        await db
+          .update(creators)
+          .set({ totalSubscribers: subCreator.totalSubscribers + 1 })
+          .where(eq(creators.id, subCreatorId));
+        // Notify creator about new subscription
+        const [patron] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+        if (patron) {
+          await notifySubscriptionConfirmed(subCreatorId, patron.name || 'Unknown');
         }
       }
 
       // Send confirmation emails
       const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-      const [creator] = await db.select().from(creators).where(eq(creators.id, tier.creatorId)).limit(1);
 
-      if (user && creator) {
-        const creatorName = creator.alias;
-        const amount = Math.round(parseFloat(tier.price) * 100);
-        const currency = tier.currency || "usd";
+      if (user && subCreator) {
+        const creatorName = subCreator.alias;
+        const amount = Math.round(parseFloat(subCreator.subscriptionPrice || "0") * 100);
+        const currency = subCreator.subscriptionCurrency || "usd";
 
         // Send to patron
         await sendPaymentConfirmationEmail(
           user.email || "",
           user.name || "Patron",
           creatorName,
-          tier.name,
           amount,
           currency
         );
 
         // Send to creator
-        const creatorEmail = creator.email || "";
+        const creatorEmail = subCreator.email || "";
         if (creatorEmail) {
           await sendCreatorNotificationEmail(
             creatorEmail,
             creatorName,
             user.name || "New Patron",
-            tier.name,
             amount,
             currency
           );
         }
       }
 
-      console.log("[Webhook] Subscription activated for user:", userId, "tier:", tierId);
+      console.log("[Webhook] Subscription activated for user:", userId, "creator:", subCreatorId);
       break;
     }
 
@@ -526,15 +505,13 @@ export async function handleStripeWebhook(rawBody: Buffer, signature: string): P
 
         // Send cancellation email
         const [patron] = await db.select().from(users).where(eq(users.id, sub.patronId)).limit(1);
-        const [tier] = await db.select().from(tiers).where(eq(tiers.id, sub.tierId)).limit(1);
         const [creator] = await db.select().from(creators).where(eq(creators.id, sub.creatorId)).limit(1);
 
-        if (patron && tier && creator) {
+        if (patron && creator) {
           await sendSubscriptionCancellationEmail(
             patron.email || "",
             patron.name || "Patron",
-            creator.alias,
-            tier.name
+            creator.alias
           );
         }
       }

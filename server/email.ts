@@ -53,7 +53,6 @@ export async function sendPaymentConfirmationEmail(
   patronEmail: string,
   patronName: string,
   creatorName: string,
-  tierName: string,
   amount: number,
   currency: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -83,7 +82,6 @@ export async function sendPaymentConfirmationEmail(
             <p>Your subscription to <strong>${creatorName}</strong> has been successfully activated!</p>
             
             <div class="tier-info">
-              <p><strong>Tier:</strong> ${tierName}</p>
               <p><strong>Amount:</strong> <span class="amount">${currency.toUpperCase()} ${(amount / 100).toFixed(2)}</span></p>
               <p><strong>Status:</strong> Active</p>
             </div>
@@ -104,7 +102,7 @@ export async function sendPaymentConfirmationEmail(
 
   return sendEmail({
     to: patronEmail,
-    subject: `Welcome to ${creatorName}'s ${tierName} tier - Only Fangs`,
+    subject: `Welcome to ${creatorName}'s page - Only Fangs`,
     html,
   });
 }
@@ -116,7 +114,6 @@ export async function sendSubscriptionRenewalEmail(
   patronEmail: string,
   patronName: string,
   creatorName: string,
-  tierName: string,
   amount: number,
   currency: string,
   nextRenewalDate: Date
@@ -147,7 +144,6 @@ export async function sendSubscriptionRenewalEmail(
             <p>Your subscription to <strong>${creatorName}</strong> has been successfully renewed!</p>
             
             <div class="renewal-info">
-              <p><strong>Tier:</strong> ${tierName}</p>
               <p><strong>Amount Charged:</strong> <span class="amount">${currency.toUpperCase()} ${(amount / 100).toFixed(2)}</span></p>
               <p><strong>Next Renewal:</strong> ${nextRenewalDate.toLocaleDateString()}</p>
             </div>
@@ -177,8 +173,7 @@ export async function sendSubscriptionRenewalEmail(
 export async function sendSubscriptionCancellationEmail(
   patronEmail: string,
   patronName: string,
-  creatorName: string,
-  tierName: string
+  creatorName: string
 ): Promise<{ success: boolean; error?: string }> {
   const html = `
     <!DOCTYPE html>
@@ -205,7 +200,6 @@ export async function sendSubscriptionCancellationEmail(
             <p>Your subscription to <strong>${creatorName}</strong> has been cancelled.</p>
             
             <div class="cancellation-info">
-              <p><strong>Tier:</strong> ${tierName}</p>
               <p><strong>Status:</strong> Cancelled</p>
               <p>You will no longer have access to exclusive content from this creator.</p>
             </div>
@@ -236,7 +230,6 @@ export async function sendCreatorNotificationEmail(
   creatorEmail: string,
   creatorName: string,
   patronName: string,
-  tierName: string,
   amount: number,
   currency: string
 ): Promise<{ success: boolean; error?: string }> {
@@ -267,7 +260,6 @@ export async function sendCreatorNotificationEmail(
             
             <div class="subscriber-info">
               <p><strong>Subscriber:</strong> ${patronName}</p>
-              <p><strong>Tier:</strong> ${tierName}</p>
               <p><strong>Amount:</strong> <span class="amount">${currency.toUpperCase()} ${(amount / 100).toFixed(2)}</span></p>
             </div>
 
@@ -283,7 +275,7 @@ export async function sendCreatorNotificationEmail(
 
   return sendEmail({
     to: creatorEmail,
-    subject: `New subscriber: ${patronName} joined your ${tierName} tier`,
+    subject: `New subscriber: ${patronName} joined your page`,
     html,
   });
 }
