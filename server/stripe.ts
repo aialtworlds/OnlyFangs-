@@ -16,7 +16,7 @@ export function getStripe(): Stripe {
   if (!stripeSecretKey) {
     throw new Error("STRIPE_SECRET_KEY is not configured");
   }
-  return new Stripe(stripeSecretKey, { apiVersion: "2026-06-24.dahlia" });
+  return new Stripe(stripeSecretKey, { apiVersion: "2026-07-29.dahlia" });
 }
 
 // ── Ensure Stripe customer exists for user ─────────────────────

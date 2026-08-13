@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { storagePut } from "./storage";
 import { getDb } from "./db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export function registerUploadRoutes(app: Router) {
   app.post("/api/upload", async (req: Request, res: Response) => {
@@ -13,7 +13,7 @@ export function registerUploadRoutes(app: Router) {
       }
 
       // Get file data from request
-      const { file, fileName, contentType, tierId, title, description } = req.body;
+      const { file, fileName, contentType, title, description } = req.body;
 
       // Validate required fields
       if (!file || !fileName || !contentType) {
@@ -26,23 +26,19 @@ export function registerUploadRoutes(app: Router) {
         return res.status(413).json({ error: "File too large (max 50MB)" });
       }
 
-      // Validate tier exists and belongs to user
-      if (tierId) {
-        const db = await getDb();
-        if (!db) {
-          return res.status(500).json({ error: "Database connection failed" });
-        }
+      // Only creators may upload content
+      const db = await getDb();
+      if (!db) {
+        return res.status(500).json({ error: "Database connection failed" });
+      }
 
-        const { tiers: tiersTable } = await import("../drizzle/schema");
-        const tier = await db.select().from(tiersTable).where(
-          and(eq(tiersTable.id, tierId), eq(tiersTable.creatorId, userId))
-        ).limit(1);
-        
-        if (!tier || tier.length === 0) {
-          return res.status(403).json({ error: "Invalid tier" });
-        }
+      const { creators: creatorsTable } = await import("../drizzle/schema");
+      const creator = await db.select().from(creatorsTable).where(
+        eq(creatorsTable.userId, userId)
+      ).limit(1);
 
-
+      if (!creator || creator.length === 0) {
+        return res.status(403).json({ error: "Creator profile not found" });
       }
 
       // Upload to S3
