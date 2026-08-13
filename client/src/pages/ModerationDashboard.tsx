@@ -28,7 +28,7 @@ export default function ModerationDashboard() {
   const covenReportsQuery = trpc.moderation.getEscalatedCovenReports.useQuery(undefined, {
     enabled: user?.role === "admin",
   });
-  const appealsQuery = trpc.appeals.listPendingAdmin.useQuery(undefined, {
+  const appealsQuery = trpc.appeals.getPending.useQuery(undefined, {
     enabled: user?.role === "admin",
   });
 
@@ -63,7 +63,14 @@ export default function ModerationDashboard() {
       covenReportsQuery.refetch();
     },
   });
-  const resolveAppealMutation = trpc.appeals.resolve.useMutation({
+  const approveAppealMutation = trpc.appeals.approve.useMutation({
+    onSuccess: () => {
+      appealsQuery.refetch();
+      setSelectedAppeal(null);
+      setAdminResponse("");
+    },
+  });
+  const denyAppealMutation = trpc.appeals.deny.useMutation({
     onSuccess: () => {
       appealsQuery.refetch();
       setSelectedAppeal(null);
@@ -460,15 +467,15 @@ export default function ModerationDashboard() {
                           />
                           <div className="flex gap-2">
                             <Button
-                              onClick={() => resolveAppealMutation.mutate({ appealId: appeal.id, action: "approve", adminResponse })}
-                              disabled={resolveAppealMutation.isPending}
+                              onClick={() => approveAppealMutation.mutate({ appealId: appeal.id, adminResponse })}
+                              disabled={approveAppealMutation.isPending || denyAppealMutation.isPending}
                               className="flex-1 bg-green-600 hover:bg-green-700"
                             >
                               Approve
                             </Button>
                             <Button
-                              onClick={() => resolveAppealMutation.mutate({ appealId: appeal.id, action: "deny", adminResponse })}
-                              disabled={resolveAppealMutation.isPending}
+                              onClick={() => denyAppealMutation.mutate({ appealId: appeal.id, adminResponse })}
+                              disabled={approveAppealMutation.isPending || denyAppealMutation.isPending}
                               className="flex-1 bg-red-600 hover:bg-red-700"
                             >
                               Deny
