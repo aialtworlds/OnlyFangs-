@@ -27,19 +27,16 @@ import {
   getCreatorByUserId,
   getOrCreateCreatorForAdmin,
   getCreatorByHandle,
-  getPublicCreatorTiers,
   getCreatorReleases,
-  getCreatorTiers,
   createCreatorProfile,
   updateCreatorProfile,
   createRelease,
-  createTier,
+  setCreatorSubscriptionPlan,
+  disableCreatorSubscriptionPlan,
   updateUserProfile,
   getUserById,
   getCreatorSubscriptions,
   getCreatorAnalytics,
-  updateTier,
-  deleteTier,
   followCreator,
   unfollowCreator,
   isFollowingCreator,
@@ -145,7 +142,7 @@ import {
   declineCustomRequest,
   deliverCustomRequest
 } from "./db";
-import { conversations, messages, creators, notifications, content, tiers, users, covens, covenMembers, covenPosts, covenComments } from "../drizzle/schema";
+import { conversations, messages, creators, notifications, content, users, covens, covenMembers, covenPosts, covenComments, oneTimePurchases } from "../drizzle/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { storagePut } from "./storage";
 
@@ -270,10 +267,21 @@ export const appRouter = router({
       .query(async ({ input }) => {
         return getCreatorByHandle(input.handle);
       }),
-    creatorTiers: publicProcedure
+    creatorSubscriptionPlan: publicProcedure
       .input(z.object({ creatorId: z.number() }))
       .query(async ({ input }) => {
-        return getPublicCreatorTiers(input.creatorId);
+        const db = await getDb();
+        if (!db) throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR' });
+        const [creator] = await db
+          .select({
+            price: creators.subscriptionPrice,
+            currency: creators.subscriptionCurrency,
+            perks: creators.subscriptionPerks,
+          })
+          .from(creators)
+          .where(eq(creators.id, input.creatorId))
+          .limit(1);
+        return creator ?? null;
       }),
     creatorCollections: publicProcedure
       .input(z.object({ creatorId: z.number() }))
@@ -305,15 +313,14 @@ export const appRouter = router({
         // straight out of the network response and bypass payment entirely.
         // So: only include those two fields when the requester can actually
         // access the item (reusing the same canAccessContent check used
-        // elsewhere, which already handles free tiers, active subscriptions,
-        // and the admin bypass) — otherwise strip them before sending.
+        // elsewhere, which already handles unlocked content, active
+        // subscriptions, and the admin bypass) — otherwise strip them
+        // before sending.
         const results = await Promise.all(
           items.map(async (item) => {
             const allowed = ctx.user
               ? await canAccessContent(ctx.user.id, item.id)
-              : parseFloat(
-                  (await db.select().from(tiers).where(eq(tiers.id, item.tierId)).limit(1))[0]?.price ?? '1'
-                ) === 0;
+              : !item.locked;
 
             if (allowed) return item;
 
@@ -338,13 +345,13 @@ export const appRouter = router({
 
   stripe: router({
     createCheckoutSession: protectedProcedure
-      .input(z.object({ tierId: z.number(), origin: z.string() }))
+      .input(z.object({ creatorId: z.number(), origin: z.string() }))
       .mutation(async ({ ctx, input }) => {
         const url = await createCheckoutSession({
           userId: ctx.user.id,
           userEmail: ctx.user.email || "",
           userName: ctx.user.name || undefined,
-          tierId: input.tierId,
+          creatorId: input.creatorId,
           origin: input.origin,
         });
         return { url };
@@ -420,10 +427,14 @@ export const appRouter = router({
       if (!creator) return [];
       return getCreatorReleases(creator.id);
     }),
-    tiers: protectedProcedure.query(async ({ ctx }) => {
+    subscriptionPlan: protectedProcedure.query(async ({ ctx }) => {
       const creator = await getCreatorByUserId(ctx.user.id);
-      if (!creator) return [];
-      return getCreatorTiers(creator.id);
+      if (!creator) return null;
+      return {
+        price: creator.subscriptionPrice,
+        currency: creator.subscriptionCurrency,
+        perks: creator.subscriptionPerks,
+      };
     }),
     createProfile: protectedProcedure
       .input(z.object({
@@ -496,7 +507,6 @@ export const appRouter = router({
         mediaUrl: z.string().optional(),
         duration: z.string().max(20).optional(),
         pages: z.number().int().positive().optional(),
-        tierRequired: z.enum(["free", "fledgling", "dweller", "courtier", "night_royalty"]),
         locked: z.boolean(),
       }))
       .mutation(async ({ ctx, input }) => {
@@ -507,11 +517,6 @@ export const appRouter = router({
         await notifyFollowersAboutNewRelease(creator.id, releaseId, input.title);
         return { success: true };
       }),
-    myTiers: creatorProcedure.query(async ({ ctx }) => {
-      const creator = await getCreatorByUserId(ctx.user.id);
-      if (!creator) return [];
-      return getCreatorTiers(creator.id);
-    }),
     myCollections: creatorProcedure.query(async ({ ctx }) => {
       const creator = await getCreatorByUserId(ctx.user.id);
       if (!creator) return [];
@@ -529,21 +534,23 @@ export const appRouter = router({
         if (!creator) throw new Error("Creator profile not found");
         return createCollection({ creatorId: creator.id, ...input });
       }),
-    createTier: creatorProcedure
+    updateSubscriptionPlan: creatorProcedure
       .input(z.object({
-        name: z.string().min(1).max(100),
-        slug: z.string().min(1).max(50),
-        description: z.string().max(500).optional(),
         price: z.string(),
         currency: z.string().length(3).optional(),
         perks: z.array(z.string()).optional(),
-        featured: z.boolean().optional(),
-        sortOrder: z.number().int().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
-        await createTier({ creatorId: creator.id, ...input });
+        await setCreatorSubscriptionPlan({ creatorId: creator.id, ...input });
+        return { success: true };
+      }),
+    disableSubscriptionPlan: creatorProcedure
+      .mutation(async ({ ctx }) => {
+        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
+        if (!creator) throw new Error("Creator profile not found");
+        await disableCreatorSubscriptionPlan(creator.id);
         return { success: true };
       }),
     subscriptions: creatorProcedure.query(async ({ ctx }) => {
@@ -559,75 +566,10 @@ export const appRouter = router({
           activeSubscriptions: 0,
           totalRevenue: 0,
           monthlyRevenue: 0,
-          tierBreakdown: [],
         };
       }
       return getCreatorAnalytics(creator.id);
     }),
-    updateTier: creatorProcedure
-      .input(z.object({
-        tierId: z.number(),
-        name: z.string().min(1).max(100).optional(),
-        slug: z.string().min(1).max(50).optional(),
-        description: z.string().max(500).optional().nullable(),
-        price: z.string().optional(),
-        currency: z.string().length(3).optional(),
-        perks: z.array(z.string()).optional().nullable(),
-        featured: z.boolean().optional(),
-        sortOrder: z.number().int().optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
-        if (!creator) throw new Error("Creator profile not found");
-        const { tierId, ...data } = input;
-        await updateTier(tierId, creator.id, data);
-        return { success: true };
-      }),
-    duplicateTier: creatorProcedure
-      .input(z.object({
-        tierId: z.number(),
-        newName: z.string().min(2).max(100).optional(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
-        if (!creator) throw new Error("Creator profile not found");
-
-        // Get the tier to duplicate
-        const tiers = await getCreatorTiers(creator.id);
-        const tierToDuplicate = tiers.find((t) => t.id === input.tierId);
-        if (!tierToDuplicate) throw new Error("Tier not found");
-
-        // Generate new slug
-        let newSlug = `${tierToDuplicate.slug}-copy`;
-        let counter = 2;
-        while (tiers.some((t) => t.slug === newSlug)) {
-          newSlug = `${tierToDuplicate.slug}-copy-${counter}`;
-          counter++;
-        }
-
-        // Create new tier with duplicated data
-        const newTier = await createTier({
-          creatorId: creator.id,
-          name: input.newName || `${tierToDuplicate.name} (Copy)`,
-          slug: newSlug,
-          description: tierToDuplicate.description || undefined,
-          price: tierToDuplicate.price,
-          currency: tierToDuplicate.currency,
-          perks: tierToDuplicate.perks,
-          featured: false,
-          sortOrder: tiers.length + 1,
-        });
-
-        return { success: true, tierId: newTier.id, tierName: newTier.name };
-      }),
-    deleteTier: creatorProcedure
-      .input(z.object({ tierId: z.number() }))
-      .mutation(async ({ ctx, input }) => {
-        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
-        if (!creator) throw new Error("Creator profile not found");
-        await deleteTier(input.tierId, creator.id);
-        return { success: true };
-      }),
     getRecommendations: protectedProcedure
       .input(z.object({ limit: z.number().int().min(1).max(20).default(6) }))
       .query(async ({ ctx, input }) => {
@@ -708,7 +650,7 @@ export const appRouter = router({
   content: router({
     upload: creatorProcedure
       .input(z.object({
-        tierId: z.number(),
+        locked: z.boolean(),
         collectionId: z.number().optional(),
         title: z.string().min(1).max(255),
         description: z.string().max(1000).optional(),
@@ -726,7 +668,7 @@ export const appRouter = router({
         if (!creator) throw new Error("Creator profile not found");
         const result = await uploadContent(
           creator.id,
-          input.tierId,
+          input.locked,
           input.title,
           input.description,
           input.type,
@@ -1230,7 +1172,7 @@ export const appRouter = router({
         name: z.string().min(3).max(100),
         slug: z.string().min(3).max(100).regex(/^[a-z0-9-]+$/),
         description: z.string().max(1000).optional(),
-        tierId: z.number().optional(),
+        locked: z.boolean().optional(),
         avatarUrl: z.string().optional(),
         coverUrl: z.string().optional(),
       }))
@@ -1240,7 +1182,7 @@ export const appRouter = router({
 
         const coven = await createCoven({
           creatorId: creator.id,
-          tierId: input.tierId,
+          locked: input.locked,
           name: input.name,
           slug: input.slug,
           description: input.description,
