@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { TypingIndicator } from './TypingIndicator';
 import { MessageReactions } from './MessageReactions';
+import { Button } from '@/components/ui/button';
 
 interface Reaction {
   emoji: string;
