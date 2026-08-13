@@ -100,27 +100,6 @@ export const follows = mysqlTable("follows", {
 });
 
 // ── Releases (content posts) ──────────────────────────────────
-export const releases = mysqlTable("releases", {
-  id: int("id").autoincrement().primaryKey(),
-  creatorId: int("creatorId").notNull(),
-  title: varchar("title", { length: 255 }).notNull(),
-  description: text("description"),
-  type: mysqlEnum("type", ["image", "photo", "music", "book", "video", "post"]).notNull(),
-  thumbnailUrl: text("thumbnailUrl"),
-  mediaUrl: text("mediaUrl"),
-  duration: varchar("duration", { length: 20 }),
-  pages: int("pages"),
-  locked: boolean("locked").default(false).notNull(),
-  likes: int("likes").default(0).notNull(),
-  views: int("views").default(0).notNull(),
-  publishedAt: timestamp("publishedAt").defaultNow().notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type Release = typeof releases.$inferSelect;
-export type InsertRelease = typeof releases.$inferInsert;
-
 // ── Saved Content ─────────────────────────────────────────────
 export const savedContent = mysqlTable("savedContent", {
   id: int("id").autoincrement().primaryKey(),

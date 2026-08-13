@@ -27,10 +27,8 @@ import {
   getCreatorByUserId,
   getOrCreateCreatorForAdmin,
   getCreatorByHandle,
-  getCreatorReleases,
   createCreatorProfile,
   updateCreatorProfile,
-  createRelease,
   setCreatorSubscriptionPlan,
   disableCreatorSubscriptionPlan,
   updateUserProfile,
@@ -69,7 +67,6 @@ import {
   markAllNotificationsAsRead,
   createNotification,
   deleteNotification,
-  notifyFollowersAboutNewRelease,
   notifySubscriptionConfirmed,
   notifyNewMessage,
   getRecommendedCreators,
@@ -422,11 +419,6 @@ export const appRouter = router({
     myProfile: protectedProcedure.query(async ({ ctx }) => {
       return getCreatorByUserId(ctx.user.id);
     }),
-    releases: protectedProcedure.query(async ({ ctx }) => {
-      const creator = await getCreatorByUserId(ctx.user.id);
-      if (!creator) return [];
-      return getCreatorReleases(creator.id);
-    }),
     subscriptionPlan: protectedProcedure.query(async ({ ctx }) => {
       const creator = await getCreatorByUserId(ctx.user.id);
       if (!creator) return null;
@@ -496,25 +488,6 @@ export const appRouter = router({
         const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
         await updateCreatorProfile(creator.id, input);
-        return { success: true };
-      }),
-    createRelease: protectedProcedure
-      .input(z.object({
-        title: z.string().min(1).max(255),
-        description: z.string().max(2000).optional(),
-        type: z.enum(["image", "photo", "music", "book", "video", "post"]),
-        thumbnailUrl: z.string().optional(),
-        mediaUrl: z.string().optional(),
-        duration: z.string().max(20).optional(),
-        pages: z.number().int().positive().optional(),
-        locked: z.boolean(),
-      }))
-      .mutation(async ({ ctx, input }) => {
-        const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
-        if (!creator) throw new Error("Creator profile not found");
-        const releaseId = await createRelease({ creatorId: creator.id, ...input });
-        // Notify followers about new release
-        await notifyFollowersAboutNewRelease(creator.id, releaseId, input.title);
         return { success: true };
       }),
     myCollections: creatorProcedure.query(async ({ ctx }) => {

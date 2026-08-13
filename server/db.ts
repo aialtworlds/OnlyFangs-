@@ -2,7 +2,7 @@ import { eq, desc, asc, and, count, sql, isNull, or, ne, isNotNull, gt, inArray 
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   users, creators, subscriptions, follows,
-  releases, savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
+  savedContent, activityFeed, notifications, messages, content, conversations, messageReactions, viewingHistory,
   moderationQueue, moderationLogs, contentFlags, appeals, collections, comments, covens, covenMembers, covenPosts, covenComments, covenBans, covenWarnings, covenReports, covenReactions, covenThreadFollows, oneTimePurchases, customRequests, creatorGoals,
   type InsertUser
 } from "../drizzle/schema";
@@ -290,16 +290,6 @@ export async function getOrCreateCreatorForAdmin(userId: number) {
   return getCreatorByUserId(userId);
 }
 
-export async function getCreatorReleases(creatorId: number, limit = 20) {
-  const db = await getDb();
-  if (!db) return [];
-  return db
-    .select()
-    .from(releases)
-    .where(eq(releases.creatorId, creatorId))
-    .orderBy(desc(releases.publishedAt))
-    .limit(limit);
-}
 
 export async function getCreatorByHandle(handle: string) {
   const db = await getDb();
@@ -417,37 +407,6 @@ export async function updateCreatorProfile(
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(creators).set(data).where(eq(creators.id, creatorId));
-}
-
-export async function createRelease(data: {
-  creatorId: number;
-  title: string;
-  description?: string;
-  type: "image" | "photo" | "music" | "book" | "video" | "post";
-  thumbnailUrl?: string;
-  mediaUrl?: string;
-  duration?: string;
-  pages?: number;
-  locked: boolean;
-}) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  const result = await db.insert(releases).values(data);
-  const releaseId = Array.isArray(result) ? (result[0] as any).id : (result as any).insertId;
-  
-  const [creator] = await db
-    .select({ totalReleases: creators.totalReleases })
-    .from(creators)
-    .where(eq(creators.id, data.creatorId))
-    .limit(1);
-  if (creator) {
-    await db
-      .update(creators)
-      .set({ totalReleases: creator.totalReleases + 1 })
-      .where(eq(creators.id, data.creatorId));
-  }
-  
-  return releaseId;
 }
 
 export async function updateUserProfile(
@@ -674,6 +633,10 @@ export async function uploadContent(
     .update(creators)
     .set({ totalReleases: sql`${creators.totalReleases} + 1` })
     .where(eq(creators.id, creatorId));
+
+  if (contentId) {
+    await notifyFollowersAboutNewContent(creatorId, contentId, title);
+  }
 
   return result;
 }
@@ -1191,7 +1154,7 @@ export async function deleteNotification(notificationId: number, userId: number)
 /**
  * Notify creator followers about new release
  */
-export async function notifyFollowersAboutNewRelease(creatorId: number, releaseId: number, releaseTitle: string) {
+export async function notifyFollowersAboutNewContent(creatorId: number, contentId: number, contentTitle: string) {
   const db = await getDb();
   if (!db) return;
 
@@ -1219,7 +1182,7 @@ export async function notifyFollowersAboutNewRelease(creatorId: number, releaseI
       follower.followerId,
       'new_release',
       `New release from ${creatorName}`,
-      `${creatorName} posted: ${releaseTitle}`
+      `${creatorName} posted: ${contentTitle}`
     );
   }
 }
