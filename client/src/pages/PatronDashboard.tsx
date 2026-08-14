@@ -281,7 +281,7 @@ export default function PatronDashboard() {
                             <span style={{ fontFamily: "'Cinzel', serif", fontSize: "12px", color: "oklch(0.93 0.02 80)" }}>{req.creatorAlias}</span>
                           </div>
                           <h4 style={{ fontFamily: "'Cinzel', serif", fontSize: "14px", color: "oklch(0.93 0.02 80)", margin: "6px 0 2px 0" }}>{req.title}</h4>
-                          <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "11px", color: "oklch(0.35 0.02 60)" }}>Placed {new Date(req.createdAt).toLocaleDateString()}</span>
+                          <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "11px", color: "oklch(0.35 0.02 60)" }}>Placed {new Date(req.createdAt).toLocaleDateString('en-US')}</span>
                         </div>
                         <div style={{ textAlign: "right" }}>
                           <div style={{ fontFamily: "'Cinzel', serif", fontSize: "15px", fontWeight: "bold", color: "oklch(0.75 0.14 20)" }}>${parseFloat(req.price).toFixed(2)}</div>

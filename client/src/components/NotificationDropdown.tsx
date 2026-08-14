@@ -93,7 +93,7 @@ export function NotificationDropdown({ onClose, onNotificationRead }: Notificati
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground mt-2">
-                      {new Date(notification.createdAt).toLocaleDateString()}
+                      {new Date(notification.createdAt).toLocaleDateString('en-US')}
                     </p>
                   </div>
 

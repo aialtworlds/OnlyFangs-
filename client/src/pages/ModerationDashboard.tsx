@@ -203,7 +203,7 @@ export default function ModerationDashboard() {
                         Type: <span className="font-semibold capitalize">{item.type}</span>
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Submitted: {new Date(item.submittedAt).toLocaleString()}
+                        Submitted: {new Date(item.submittedAt).toLocaleString('en-US')}
                       </p>
                     </div>
 
@@ -326,7 +326,7 @@ export default function ModerationDashboard() {
                         Reason: <span className="font-semibold capitalize">{flag.reason}</span>
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Flagged: {new Date(flag.flaggedAt).toLocaleString()}
+                        Flagged: {new Date(flag.flaggedAt).toLocaleString('en-US')}
                       </p>
                     </div>
 
@@ -383,7 +383,7 @@ export default function ModerationDashboard() {
                         Reason: <span className="font-semibold capitalize">{report.reason}</span>
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Reported: {new Date(report.createdAt).toLocaleString()}
+                        Reported: {new Date(report.createdAt).toLocaleString('en-US')}
                       </p>
                     </div>
 
@@ -443,7 +443,7 @@ export default function ModerationDashboard() {
                         Creator ID: <span className="font-semibold">#{appeal.creatorId}</span>
                       </p>
                       <p className="text-sm text-muted-foreground mb-2">
-                        Submitted: {new Date(appeal.submittedAt).toLocaleString()}
+                        Submitted: {new Date(appeal.submittedAt).toLocaleString('en-US')}
                       </p>
                     </div>
 

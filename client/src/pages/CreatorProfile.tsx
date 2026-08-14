@@ -551,7 +551,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
         verified: dbCreator.verified,
         subscribers: dbCreator.totalSubscribers || 0,
         totalPosts: dbCreator.totalReleases || 0,
-        joinedDate: new Date(dbCreator.createdAt).toLocaleDateString(),
+        joinedDate: new Date(dbCreator.createdAt).toLocaleDateString('en-US'),
         contentTypes: (dbCreator.contentTypes as string[]) || ['image', 'photo', 'music', 'book'],
         tags: (dbCreator.tags as string[]) || [],
         isDemo: false,

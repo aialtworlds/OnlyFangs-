@@ -124,7 +124,7 @@ export default function Notifications() {
                     )}
 
                     <p className="text-xs text-muted-foreground">
-                      {new Date(notification.createdAt).toLocaleString()}
+                      {new Date(notification.createdAt).toLocaleString('en-US')}
                     </p>
                   </div>
 
