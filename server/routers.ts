@@ -188,8 +188,8 @@ export const appRouter = router({
     updateProfile: protectedProcedure
       .input(z.object({
         displayName: z.string().min(1).max(100).optional(),
-        avatarUrl: z.string().url().optional(),
-        coverUrl: z.string().url().optional(),
+        avatarUrl: z.string().min(1).optional(),
+        coverUrl: z.string().min(1).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         await updateUserProfile(ctx.user.id, input);
@@ -499,7 +499,7 @@ export const appRouter = router({
       .input(z.object({
         title: z.string().min(1).max(255),
         description: z.string().max(1000).optional(),
-        coverUrl: z.string().url().optional(),
+        coverUrl: z.string().min(1).optional(),
         type: z.enum(["album", "gallery", "playlist", "anthology"])
       }))
       .mutation(async ({ ctx, input }) => {
@@ -628,12 +628,12 @@ export const appRouter = router({
         title: z.string().min(1).max(255),
         description: z.string().max(1000).optional(),
         type: z.enum(["image", "photo", "music", "book", "video", "post"]),
-        fileUrl: z.string().url(),
+        fileUrl: z.string().min(1),
         fileKey: z.string(),
         mimeType: z.string().optional(),
         fileSize: z.number().optional(),
         duration: z.string().optional(),
-        thumbnailUrl: z.string().url().optional(),
+        thumbnailUrl: z.string().min(1).optional(),
         price: z.number().optional(), // One-time price parameter
       }))
       .mutation(async ({ ctx, input }) => {
@@ -786,7 +786,7 @@ export const appRouter = router({
           creatorId: z.number(),
           content: z.string().min(1).max(5000),
           price: z.number().optional(), // Optional lock price for PPV
-          mediaUrl: z.string().url().optional(),
+          mediaUrl: z.string().min(1).optional(),
           mediaKey: z.string().optional(),
           mediaType: z.enum(["image", "photo", "music", "video", "book"]).optional(),
         })
@@ -1598,7 +1598,7 @@ export const appRouter = router({
       .input(
         z.object({
           requestId: z.number(),
-          deliveryUrl: z.string().url(),
+          deliveryUrl: z.string().min(1),
         })
       )
       .mutation(async ({ ctx, input }) => {
