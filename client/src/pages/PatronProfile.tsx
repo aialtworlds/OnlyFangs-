@@ -320,6 +320,7 @@ export default function PatronProfile() {
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
+  const [showQuickPost, setShowQuickPost] = useState(false);
   const [showCollectionForm, setShowCollectionForm] = useState(false);
   const [dashboardSubMode, setDashboardSubMode] = useState<'feed' | 'activity'>('feed');
 
@@ -626,6 +627,50 @@ export default function PatronProfile() {
               <StatBox value={stats?.savedContentCount ?? 0} label="Saved" />
               <StatBox value={stats?.loyaltyPoints ?? 0} label="Loyalty Pts" />
             </div>
+
+            {/* Quick Post Composer (Creator/Admin only) */}
+            {isCreatorOrAdmin && (
+              <div style={{ marginBottom: '28px' }}>
+                {!showQuickPost ? (
+                  <button
+                    onClick={() => setShowQuickPost(true)}
+                    style={{
+                      width: '100%',
+                      textAlign: 'left',
+                      background: 'oklch(0.07 0.012 330)',
+                      border: '1px solid oklch(1 0 0 / 8%)',
+                      borderRadius: '8px',
+                      padding: '16px 20px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      transition: 'border-color 0.2s',
+                    }}
+                  >
+                    <Plus size={16} style={{ color: 'oklch(0.72 0.09 75)', flexShrink: 0 }} />
+                    <span style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.45 0.02 60)' }}>
+                      Share a photo, track, or update with your patrons...
+                    </span>
+                  </button>
+                ) : (
+                  <div style={{ background: 'oklch(0.055 0.012 330)', border: '1px solid oklch(1 0 0 / 6%)', padding: '24px', borderRadius: '8px' }}>
+                    <ContentUploadForm onSuccess={() => {
+                      toast.success('Posted! It will appear once approved.');
+                      setShowQuickPost(false);
+                      utils.content.list.invalidate();
+                      utils.patron.activity.invalidate();
+                    }} />
+                    <button
+                      onClick={() => setShowQuickPost(false)}
+                      style={{ marginTop: '12px', fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'none', border: 'none', color: 'oklch(0.45 0.02 60)', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Dashboard Sub-mode Selector */}
             <div style={{ display: 'flex', gap: '24px', marginBottom: '28px', borderBottom: '1px solid oklch(1 0 0 / 6%)', paddingBottom: '12px' }}>
