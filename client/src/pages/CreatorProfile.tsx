@@ -4,11 +4,10 @@
 
 import { useState } from 'react';
 import { useLocation, useParams } from 'wouter';
-import { Lock, Play, BookOpen, Image, Music, Camera, Heart, MessageCircle, Share2, ChevronLeft, Loader2, Link2 } from 'lucide-react';
+import { Lock, Music, Heart, MessageCircle, Share2, ChevronLeft, Loader2, Link2 } from 'lucide-react';
 import { CREATORS, CONTENT_ITEMS, getCreatorById, getContentByCreatorId } from '@/lib/data';
 import type { ContentItem } from '@/lib/data';
 import { toast } from 'sonner';
-import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { trpc } from '@/lib/trpc';
 import { useAuth } from '@/_core/hooks/useAuth';
 import { getLoginUrl } from '@/const';
@@ -18,16 +17,6 @@ import { CommentsSection } from '@/components/CommentsSection';
 
 interface CreatorProfileProps {
   creatorId: string;
-}
-
-function ContentIcon({ type }: { type: string }) {
-  const icons: Record<string, React.ReactNode> = {
-    image: <Image size={14} />,
-    photo: <Camera size={14} />,
-    music: <Music size={14} />,
-    book: <BookOpen size={14} />,
-  };
-  return <>{icons[type] || <Image size={14} />}</>;
 }
 
 const tierLabels: Record<string, string> = {
@@ -68,7 +57,7 @@ function LinkPreviewCard({ url }: { url: string }) {
   );
 }
 
-function PostCard({ item, onPlayMusic, creatorAlias, creatorAvatar, creatorHandle, creatorId }: { item: any; onPlayMusic: (item: any) => void; creatorAlias: string; creatorAvatar?: string; creatorHandle?: string; creatorId?: number }) {
+function PostCard({ item, creatorAlias, creatorAvatar, creatorHandle, creatorId }: { item: any; creatorAlias: string; creatorAvatar?: string; creatorHandle?: string; creatorId?: number }) {
   const [liked, setLiked] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const { user } = useAuth();
@@ -111,7 +100,13 @@ function PostCard({ item, onPlayMusic, creatorAlias, creatorAvatar, creatorHandl
     return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const hasMedia = !!item.thumbnail && item.thumbnail !== '/images/default-thumbnail.jpg';
+  // `thumbnail` is a cover image only (rarely set today) — the actual
+  // playable/viewable file lives in `fileUrl`. Gating on thumbnail alone
+  // meant every image/video/music post uploaded via the composer (which
+  // never sets a separate cover) silently showed as if it had no media.
+  const hasRealFile = !!item.fileUrl;
+  const hasCoverOnly = !hasRealFile && !!item.thumbnail && item.thumbnail !== '/images/default-thumbnail.jpg';
+  const hasMedia = hasRealFile || hasCoverOnly;
 
   return (
     <div className="card-dark" style={{ padding: '18px 20px', marginBottom: '2px' }}>
@@ -148,46 +143,47 @@ function PostCard({ item, onPlayMusic, creatorAlias, creatorAvatar, creatorHandl
         </div>
       )}
 
-      {/* Media — full width, text-first */}
+      {/* Media — full width, text-first, playable in-post (no separate player) */}
       {hasMedia && (
         <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', marginBottom: '12px', background: 'oklch(0.05 0.01 285)' }}>
-          {item.type === 'video' && !isLocked ? (
-            <video src={item.thumbnail} controls style={{ width: '100%', maxHeight: '520px', display: 'block' }} />
-          ) : (
+          {isLocked ? (
+            // Locked: show whatever cover we have (or a neutral placeholder), blurred — never the real file src
+            <img
+              src={item.thumbnail && item.thumbnail !== '/images/default-thumbnail.jpg' ? item.thumbnail : '/images/default-thumbnail.jpg'}
+              alt=""
+              style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block', filter: 'brightness(0.3) blur(2px)' }}
+            />
+          ) : item.type === 'video' && hasRealFile ? (
+            <video
+              src={item.fileUrl}
+              controls
+              poster={item.thumbnail !== '/images/default-thumbnail.jpg' ? item.thumbnail : undefined}
+              style={{ width: '100%', maxHeight: '520px', display: 'block', background: 'black' }}
+            />
+          ) : item.type === 'music' && hasRealFile ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '16px' }}>
+              {item.thumbnail && item.thumbnail !== '/images/default-thumbnail.jpg' ? (
+                <img src={item.thumbnail} alt="" style={{ width: '56px', height: '56px', borderRadius: '6px', objectFit: 'cover', flexShrink: 0 }} />
+              ) : (
+                <div style={{ width: '56px', height: '56px', borderRadius: '6px', background: 'oklch(0.1 0.02 285)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Music size={22} style={{ color: 'oklch(0.72 0.09 75)' }} />
+                </div>
+              )}
+              <audio src={item.fileUrl} controls style={{ flex: 1, minWidth: 0, height: '40px' }} />
+            </div>
+          ) : (item.type === 'image' || item.type === 'photo' || item.type === 'post') && hasRealFile ? (
+            <img
+              src={item.fileUrl}
+              alt={item.title || ''}
+              style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block' }}
+            />
+          ) : hasCoverOnly ? (
             <img
               src={item.thumbnail}
               alt={item.title || ''}
-              style={{
-                width: '100%',
-                maxHeight: '520px',
-                objectFit: 'cover',
-                display: 'block',
-                filter: isLocked ? 'brightness(0.3) blur(2px)' : 'none',
-              }}
+              style={{ width: '100%', maxHeight: '520px', objectFit: 'cover', display: 'block' }}
             />
-          )}
-
-          {item.type === 'music' && !isLocked && (
-            <button
-              onClick={() => onPlayMusic(item)}
-              style={{
-                position: 'absolute', bottom: '12px', right: '12px',
-                width: '40px', height: '40px', borderRadius: '50%',
-                background: 'oklch(0.72 0.09 75)', border: 'none', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}
-            >
-              <Play size={18} fill="oklch(0.04 0.008 285)" style={{ color: 'oklch(0.04 0.008 285)', marginLeft: '2px' }} />
-            </button>
-          )}
-
-          {(item.type === 'music' || item.type === 'book') && (
-            <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'oklch(0.04 0.008 285 / 80%)', backdropFilter: 'blur(4px)', border: '1px solid oklch(1 0 0 / 10%)', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '6px', color: 'oklch(0.82 0.03 75)', fontSize: '11px', fontFamily: "'Cinzel', serif", letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-              <ContentIcon type={item.type} />
-              {item.type === 'music' && item.duration && <span>{item.duration}</span>}
-              {item.type === 'book' && item.pages && <span>{item.pages}p</span>}
-            </div>
-          )}
+          ) : null}
 
           {isLocked && (
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}>
@@ -452,7 +448,6 @@ function TierSidebar({ creatorId: mockCreatorId }: { creatorId: string }) {
 
 export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
   const [, setLocation] = useLocation();
-  const { playTrack } = useMusicPlayer();
   const [activeTab, setActiveTab] = useState<'all' | 'image' | 'photo' | 'music' | 'book'>('all');
   const [viewMode, setViewMode] = useState<'releases' | 'collections'>('releases');
   const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
@@ -557,18 +552,6 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
         };
       })
     : getContentByCreatorId(creator.id);
-
-  const handlePlayMusic = (item: ContentItem) => {
-    playTrack({
-      id: item.id,
-      title: item.title,
-      artist: creator.alias,
-      duration: item.duration || '0:00',
-      audioUrl: item.fileUrl,
-      thumbnail: item.thumbnail,
-      tier: item.tier,
-    });
-  };
 
   const contentFilteredByCollection = selectedCollectionId
     ? content.filter(item => (item as any).collectionId === selectedCollectionId)
@@ -1105,7 +1088,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                   }}
                 >
                   {filteredContent.map((item: any) => (
-                    <PostCard key={item.id} item={item} onPlayMusic={handlePlayMusic} creatorAlias={creator.alias} creatorAvatar={creator.avatar} creatorHandle={dbCreator?.handle} creatorId={dbCreator?.id} />
+                    <PostCard key={item.id} item={item} creatorAlias={creator.alias} creatorAvatar={creator.avatar} creatorHandle={dbCreator?.handle} creatorId={dbCreator?.id} />
                   ))}
                   {filteredContent.length === 0 && (
                     <div
