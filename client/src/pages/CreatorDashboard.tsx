@@ -738,7 +738,7 @@ export default function CreatorDashboard() {
                             </div>
                           </div>
                           <div style={{ padding: "12px 14px" }}>
-                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: "12px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.04em", marginBottom: "4px" }}>{release.title}</div>
+                            <div style={{ fontFamily: "'Cinzel', serif", fontSize: "12px", color: "oklch(0.93 0.02 80)", letterSpacing: "0.04em", marginBottom: "4px" }}>{release.title || (release.description ? release.description.slice(0, 60) : "Untitled post")}</div>
                             {release.description && (
                               <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: "italic", fontSize: "12px", color: "oklch(0.45 0.02 60)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{release.description}</div>
                             )}

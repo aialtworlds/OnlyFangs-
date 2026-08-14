@@ -2,7 +2,7 @@
 // ONLY FANGS — Mock Data
 // ═══════════════════════════════════════════════════════════
 
-export type ContentType = 'image' | 'photo' | 'music' | 'book';
+export type ContentType = 'image' | 'photo' | 'music' | 'book' | 'video' | 'post' | 'text';
 export type TierLevel = 'fledgling' | 'dweller' | 'courtier' | 'night-royalty';
 
 export interface Tier {
@@ -55,6 +55,8 @@ export interface ContentItem {
   previewPages?: number;
   // Image/Photo specific
   resolution?: string;
+  // Link-share posts (Twitter/Facebook-style)
+  linkUrl?: string;
 }
 
 export const TIERS: Tier[] = [

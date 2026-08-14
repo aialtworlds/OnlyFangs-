@@ -150,15 +150,16 @@ export const content = mysqlTable("content", {
   creatorId: int("creatorId").notNull(),
   locked: boolean("locked").default(true).notNull(), // true = requires an active subscription to access
   collectionId: int("collectionId"), // Optional collection/album ID
-  title: varchar("title", { length: 255 }).notNull(),
+  title: varchar("title", { length: 255 }), // Optional — text posts use `description` as the body
   description: text("description"),
-  type: mysqlEnum("type", ["image", "photo", "music", "book", "video", "post"]).notNull(),
-  fileUrl: text("fileUrl").notNull(), // S3 URL from storagePut
-  fileKey: varchar("fileKey", { length: 255 }).notNull(), // S3 key for reference
+  type: mysqlEnum("type", ["image", "photo", "music", "book", "video", "post", "text"]).notNull(),
+  fileUrl: text("fileUrl"), // S3 URL from storagePut — null for text/link-only posts
+  fileKey: varchar("fileKey", { length: 255 }), // S3 key for reference — null for text/link-only posts
   mimeType: varchar("mimeType", { length: 100 }),
   fileSize: int("fileSize"), // Size in bytes
   duration: varchar("duration", { length: 20 }), // For audio/video: "HH:MM:SS"
   thumbnailUrl: text("thumbnailUrl"), // Optional preview image
+  linkUrl: text("linkUrl"), // Optional shared link (Twitter/Facebook-style link post)
   price: decimal("price", { precision: 10, scale: 2 }), // One-time unlock price (optional)
   moderationStatus: mysqlEnum("moderationStatus", ["pending", "approved", "rejected"]).default("pending").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

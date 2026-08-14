@@ -625,35 +625,42 @@ export const appRouter = router({
       .input(z.object({
         locked: z.boolean(),
         collectionId: z.number().optional(),
-        title: z.string().min(1).max(255),
+        title: z.string().max(255).optional(),
         description: z.string().max(1000).optional(),
-        type: z.enum(["image", "photo", "music", "book", "video", "post"]),
-        fileUrl: z.string().min(1),
-        fileKey: z.string(),
+        type: z.enum(["image", "photo", "music", "book", "video", "post", "text"]),
+        fileUrl: z.string().min(1).optional(),
+        fileKey: z.string().optional(),
         mimeType: z.string().optional(),
         fileSize: z.number().optional(),
         duration: z.string().optional(),
         thumbnailUrl: z.string().min(1).optional(),
+        linkUrl: z.string().url().optional(),
         price: z.number().optional(), // One-time price parameter
       }))
       .mutation(async ({ ctx, input }) => {
+        // A post needs to actually say or share something: a file, a link,
+        // or text. Otherwise there's nothing for patrons to see.
+        if (!input.fileUrl && !input.linkUrl && !input.description?.trim()) {
+          throw new Error("Add some text, a link, or attach a file before posting.");
+        }
         const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new Error("Creator profile not found");
-        const result = await uploadContent(
-          creator.id,
-          input.locked,
-          input.title,
-          input.description,
-          input.type,
-          input.fileUrl,
-          input.fileKey,
-          input.mimeType,
-          input.fileSize,
-          input.duration,
-          input.thumbnailUrl,
-          input.collectionId,
-          input.price
-        );
+        await uploadContent({
+          creatorId: creator.id,
+          locked: input.locked,
+          title: input.title,
+          description: input.description,
+          type: input.type,
+          fileUrl: input.fileUrl,
+          fileKey: input.fileKey,
+          mimeType: input.mimeType,
+          fileSize: input.fileSize,
+          duration: input.duration,
+          thumbnailUrl: input.thumbnailUrl,
+          linkUrl: input.linkUrl,
+          collectionId: input.collectionId,
+          price: input.price,
+        });
         return { success: true };
       }),
     list: creatorProcedure.query(async ({ ctx }) => {

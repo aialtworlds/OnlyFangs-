@@ -573,7 +573,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
           id: item.id.toString(),
           creatorId: creatorId,
           type: (item.type === 'post' ? 'image' : item.type) as any,
-          title: item.title,
+          title: item.title || (item.description ? item.description.slice(0, 60) : ''),
           description: item.description || '',
           thumbnail: item.thumbnailUrl || '/images/default-thumbnail.jpg',
           locked: locked,
@@ -584,6 +584,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
           duration: item.duration || undefined,
           pages: undefined,
           collectionId: item.collectionId ?? undefined,
+          linkUrl: item.linkUrl || undefined,
         };
       })
     : getContentByCreatorId(creator.id);

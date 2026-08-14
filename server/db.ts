@@ -550,42 +550,46 @@ export async function disableCreatorSubscriptionPlan(creatorId: number) {
 
 // ── Content Management ────────────────────────────────────────
 
-export async function uploadContent(
-  creatorId: number,
-  locked: boolean,
-  title: string,
-  description: string | undefined,
-  type: string,
-  fileUrl: string,
-  fileKey: string,
-  mimeType?: string,
-  fileSize?: number,
-  duration?: string,
-  thumbnailUrl?: string,
-  collectionId?: number,
-  price?: number
-) {
+export async function uploadContent(data: {
+  creatorId: number;
+  locked: boolean;
+  title?: string;
+  description?: string;
+  type: string;
+  fileUrl?: string;
+  fileKey?: string;
+  mimeType?: string;
+  fileSize?: number;
+  duration?: string;
+  thumbnailUrl?: string;
+  linkUrl?: string;
+  collectionId?: number;
+  price?: number;
+}) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  
+
   // Insert content with pending moderation status
   const result = await db.insert(content).values({
-    creatorId,
-    locked,
-    collectionId: collectionId ?? null,
-    title,
-    description: description ?? null,
-    type: type as any,
-    fileUrl,
-    fileKey,
-    mimeType: mimeType ?? null,
-    fileSize: fileSize ?? null,
-    duration: duration ?? null,
-    thumbnailUrl: thumbnailUrl ?? null,
-    price: price ? price.toString() : null,
+    creatorId: data.creatorId,
+    locked: data.locked,
+    collectionId: data.collectionId ?? null,
+    title: data.title ?? null,
+    description: data.description ?? null,
+    type: data.type as any,
+    fileUrl: data.fileUrl ?? null,
+    fileKey: data.fileKey ?? null,
+    mimeType: data.mimeType ?? null,
+    fileSize: data.fileSize ?? null,
+    duration: data.duration ?? null,
+    thumbnailUrl: data.thumbnailUrl ?? null,
+    linkUrl: data.linkUrl ?? null,
+    price: data.price ? data.price.toString() : null,
     moderationStatus: "pending",
   });
-  
+
+  const creatorId = data.creatorId;
+
   // Automatically submit to moderation queue
   const contentId = (result as any).insertId;
   if (contentId) {
@@ -615,7 +619,7 @@ export async function uploadContent(
           userId: admin.id,
           type: "moderation",
           title: "New Content Awaiting Review",
-          message: `New content "${title}" from creator needs moderation review`,
+          message: `New content "${data.title || "(text post)"}" from creator needs moderation review`,
           read: false,
         });
       }
@@ -635,7 +639,7 @@ export async function uploadContent(
     .where(eq(creators.id, creatorId));
 
   if (contentId) {
-    await notifyFollowersAboutNewContent(creatorId, contentId, title);
+    await notifyFollowersAboutNewContent(creatorId, contentId, data.title || data.description?.slice(0, 60) || "New post");
   }
 
   return result;

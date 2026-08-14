@@ -162,6 +162,13 @@
       "when": 1786663723105,
       "tag": "0022_retire_releases_table",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1786677038585,
+      "tag": "0023_text_and_link_posts",
+      "breakpoints": true
     }
   ]
 }

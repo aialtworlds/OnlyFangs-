@@ -1082,14 +1082,16 @@ export default function PatronProfile() {
                       )}
                     </div>
                     <div style={{ padding: '14px' }}>
-                      <h4 style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', margin: '0 0 4px 0' }}>{item.title}</h4>
+                      <h4 style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', margin: '0 0 4px 0' }}>
+                        {item.title || (item.description ? item.description.slice(0, 60) : 'Untitled post')}
+                      </h4>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <p style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '12px', color: 'oklch(0.45 0.02 60)', margin: 0 }}>
                           {item.type.toUpperCase()} · {item.locked ? 'Subscribers only' : 'Public'}
                         </p>
                         <button
                           onClick={() => {
-                            if (confirm(`Delete "${item.title}"? This cannot be undone.`)) {
+                            if (confirm(`Delete this post? This cannot be undone.`)) {
                               deleteContentMutation.mutate({ contentId: item.id });
                             }
                           }}

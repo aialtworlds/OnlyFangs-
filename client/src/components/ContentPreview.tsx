@@ -75,7 +75,7 @@ export function ContentPreview({ contentId, onUnlock }: ContentPreviewProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{content.title}</CardTitle>
+        {content.title && <CardTitle>{content.title}</CardTitle>}
         {content.description && (
           <CardDescription>{content.description}</CardDescription>
         )}
@@ -86,11 +86,22 @@ export function ContentPreview({ contentId, onUnlock }: ContentPreviewProps) {
           {hasAccess ? (
             <>
               {/* Unlocked Content */}
-              {content.type === "image" || content.type === "photo" ? (
+              {!content.fileUrl ? (
+                content.linkUrl ? (
+                  <a
+                    href={content.linkUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-lg bg-muted p-4 text-sm text-primary underline break-all"
+                  >
+                    {content.linkUrl}
+                  </a>
+                ) : null
+              ) : content.type === "image" || content.type === "photo" ? (
                 <div className="rounded-lg overflow-hidden bg-muted">
                   <img
                     src={content.fileUrl}
-                    alt={content.title}
+                    alt={content.title ?? ""}
                     className="w-full h-auto max-h-96 object-cover"
                   />
                 </div>
@@ -119,14 +130,16 @@ export function ContentPreview({ contentId, onUnlock }: ContentPreviewProps) {
               )}
 
               {/* Download Button */}
-              <div className="mt-4">
-                <a href={content.fileUrl} download target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" className="w-full">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download File
-                  </Button>
-                </a>
-              </div>
+              {content.fileUrl && (
+                <div className="mt-4">
+                  <a href={content.fileUrl} download target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" className="w-full">
+                      <Download className="w-4 h-4 mr-2" />
+                      Download File
+                    </Button>
+                  </a>
+                </div>
+              )}
             </>
           ) : (
             <>
