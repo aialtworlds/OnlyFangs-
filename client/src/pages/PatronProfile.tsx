@@ -11,7 +11,7 @@ import { getLoginUrl } from '@/const';
 import {
   Edit2, Check, X, BookOpen, Image, Music, Camera, Star, Loader2, ExternalLink,
   User, LayoutDashboard, Crown, Bookmark, MessageCircle, Bell, Settings, Users,
-  Plus, Share2, MapPin, Heart, Compass, History, Play, CreditCard
+  Plus, Share2, MapPin, Heart, Compass, History, Play, CreditCard, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ContentUploadForm } from '@/components/ContentUploadForm';
@@ -519,17 +519,24 @@ export default function PatronProfile() {
   const myCollections = myCollectionsQuery.data ?? [];
   const homeFeed = homeFeedQuery.data ?? [];
 
+  const [covensExpanded, setCovensExpanded] = useState(false);
+
   // Sidebar Menu Configuration
-  const navItems = [
+  const navItemsBeforeCovens = [
     { id: "dashboard", icon: LayoutDashboard, label: "Feed / Dashboard" },
     { id: "profile", icon: User, label: "My Profile" },
     { id: "subscriptions", icon: Crown, label: "Subscriptions" },
     { id: "messages", icon: MessageCircle, label: "Messages", badge: unread?.messages },
     { id: "notifications", icon: Bell, label: "Notifications", badge: unread?.notifications },
-    { id: "covens", icon: BookOpen, label: "Covens" },
+  ];
+
+  const covenNavItems = [
+    { id: "covens", icon: BookOpen, label: "Browse Covens" },
     { id: "my_covens", icon: Crown, label: "My Covens" },
-    { id: "joined_covens", icon: Users, label: "Covens I'm member" },
-    
+    { id: "joined_covens", icon: Users, label: "Covens I'm Member" },
+  ];
+
+  const navItemsAfterCovens = [
     // Creator Section
     ...(isCreatorOrAdmin ? [
       { id: "releases", icon: Image, label: "My Releases" },
@@ -539,6 +546,10 @@ export default function PatronProfile() {
       { id: "payouts", icon: CreditCard, label: "Payouts" }
     ] : [])
   ];
+
+  const navItems = [...navItemsBeforeCovens, ...covenNavItems, ...navItemsAfterCovens];
+
+  const isCovenSectionActive = covenNavItems.some((item) => item.id === activeNav) || covensExpanded;
 
   const handleNav = (id: string) => {
     if (id === "messages") {
@@ -561,9 +572,42 @@ export default function PatronProfile() {
         </div>
       </div>
       <nav style={{ padding: "16px 12px", flex: 1, display: "flex", flexDirection: "column", gap: "2px" }}>
-        {navItems.map((item) => (
+        {navItemsBeforeCovens.map((item) => (
           <NavItem key={item.id} icon={item.icon} label={item.label}
             active={activeNav === item.id} badge={item.badge} onClick={() => handleNav(item.id)} />
+        ))}
+
+        {/* Covens group — collapsible */}
+        <button
+          onClick={() => setCovensExpanded((v) => !v)}
+          style={{
+            display: "flex", alignItems: "center", gap: "12px", width: "100%",
+            padding: "10px 16px", borderRadius: "6px",
+            background: isCovenSectionActive ? "oklch(0.38 0.14 20 / 8%)" : "transparent",
+            border: "none", cursor: "pointer",
+            color: isCovenSectionActive ? "oklch(0.75 0.14 20)" : "oklch(0.65 0.02 60)",
+            fontFamily: "'Cinzel', serif", fontSize: "12px", letterSpacing: "0.06em",
+            textAlign: "left", transition: "all 0.2s",
+          }}
+        >
+          <BookOpen size={16} />
+          <span>Covens</span>
+          <span style={{ marginLeft: "auto", display: "flex" }}>
+            {covensExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+          </span>
+        </button>
+        {(covensExpanded || covenNavItems.some((item) => item.id === activeNav)) && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "2px", paddingLeft: "16px" }}>
+            {covenNavItems.map((item) => (
+              <NavItem key={item.id} icon={item.icon} label={item.label}
+                active={activeNav === item.id} onClick={() => handleNav(item.id)} />
+            ))}
+          </div>
+        )}
+
+        {navItemsAfterCovens.map((item) => (
+          <NavItem key={item.id} icon={item.icon} label={item.label}
+            active={activeNav === item.id} onClick={() => handleNav(item.id)} />
         ))}
       </nav>
       {user?.role === 'admin' && (
