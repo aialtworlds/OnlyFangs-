@@ -57,6 +57,8 @@ export interface ContentItem {
   resolution?: string;
   // Link-share posts (Twitter/Facebook-style)
   linkUrl?: string;
+  // Real file location (audio/video/image source, when unlocked)
+  fileUrl?: string;
 }
 
 export const TIERS: Tier[] = [

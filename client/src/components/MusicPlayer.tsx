@@ -167,35 +167,64 @@ export default function MusicPlayer({ track, onClose }: MusicPlayerProps) {
   const [volume, setVolume] = useState(0.8);
   const [muted, setMuted] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Simulate playback progress
+  // Keep the <audio> element's volume/muted in sync with our controls
   useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 1) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return prev + 0.001;
-        });
-      }, 100);
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+      audioRef.current.muted = muted;
     }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isPlaying]);
+  }, [volume, muted]);
 
-  // Reset when track changes
+  // Real playback progress, driven by the actual <audio> element
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const handleTimeUpdate = () => {
+      if (audio.duration > 0) {
+        setProgress(audio.currentTime / audio.duration);
+      }
+    };
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setProgress(0);
+    };
+
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("ended", handleEnded);
+    return () => {
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("ended", handleEnded);
+    };
+  }, [track?.audioUrl]);
+
+  // Load and autoplay when the track changes
   useEffect(() => {
     setProgress(0);
-    setIsPlaying(true);
-  }, [track?.id]);
+    const audio = audioRef.current;
+    if (!audio || !track?.audioUrl) return;
+    audio.load();
+    audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+  }, [track?.id, track?.audioUrl]);
+
+  const togglePlay = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (isPlaying) {
+      audio.pause();
+      setIsPlaying(false);
+    } else {
+      audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    }
+  };
 
   const handleProgressChange = useCallback((value: number) => {
+    const audio = audioRef.current;
+    if (audio && audio.duration > 0) {
+      audio.currentTime = value * audio.duration;
+    }
     setProgress(value);
   }, []);
 
@@ -203,6 +232,9 @@ export default function MusicPlayer({ track, onClose }: MusicPlayerProps) {
 
   return (
     <>
+      {/* Real audio element — everything above is just the visual shell */}
+      <audio ref={audioRef} src={track.audioUrl} preload="metadata" />
+
       {/* Waveform animation keyframes */}
       <style>{`
         @keyframes waveBar {
@@ -335,7 +367,10 @@ export default function MusicPlayer({ track, onClose }: MusicPlayerProps) {
             {/* Control Buttons */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <button
-                onClick={() => setProgress(0)}
+                onClick={() => {
+                  const audio = audioRef.current;
+                  if (audio) audio.currentTime = Math.max(0, audio.currentTime - 10);
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
@@ -353,7 +388,7 @@ export default function MusicPlayer({ track, onClose }: MusicPlayerProps) {
               </button>
 
               <button
-                onClick={() => setIsPlaying(!isPlaying)}
+                onClick={togglePlay}
                 style={{
                   width: '40px',
                   height: '40px',
@@ -377,7 +412,10 @@ export default function MusicPlayer({ track, onClose }: MusicPlayerProps) {
               </button>
 
               <button
-                onClick={() => setProgress(0)}
+                onClick={() => {
+                  const audio = audioRef.current;
+                  if (audio && audio.duration) audio.currentTime = Math.min(audio.duration, audio.currentTime + 10);
+                }}
                 style={{
                   background: 'none',
                   border: 'none',

@@ -2,7 +2,7 @@
 // Uploads files directly to a local directory "uploads" inside the project.
 // Downloads return /uploads/{key} paths served via express.static.
 
-import fs from "node:fs";
+import { promises as fsp } from "node:fs";
 import path from "node:path";
 
 const UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
@@ -23,23 +23,22 @@ export async function storagePut(
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream",
 ): Promise<{ key: string; url: string }> {
-  if (!fs.existsSync(UPLOADS_DIR)) {
-    fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-  }
+  await fsp.mkdir(UPLOADS_DIR, { recursive: true });
 
   const key = appendHashSuffix(normalizeKey(relKey));
   const filePath = path.join(UPLOADS_DIR, key);
 
   // Ensure parent directory inside uploads exists
-  const parentDir = path.dirname(filePath);
-  if (!fs.existsSync(parentDir)) {
-    fs.mkdirSync(parentDir, { recursive: true });
-  }
+  await fsp.mkdir(path.dirname(filePath), { recursive: true });
 
+  // Async write — writeFileSync blocks Node's single event loop for the
+  // full duration of the write, freezing every other in-flight request on
+  // the server (a real, measured contributor to unrelated requests timing
+  // out/erroring while a large file was uploading).
   if (typeof data === "string") {
-    fs.writeFileSync(filePath, data, "utf8");
+    await fsp.writeFile(filePath, data, "utf8");
   } else {
-    fs.writeFileSync(filePath, Buffer.from(data));
+    await fsp.writeFile(filePath, Buffer.from(data));
   }
 
   return { key, url: `/uploads/${key}` };

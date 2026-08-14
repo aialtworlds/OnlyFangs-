@@ -6,6 +6,7 @@
 import { useState, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { useMusicPlayer } from '@/contexts/MusicPlayerContext';
 import { trpc } from '@/lib/trpc';
 import { getLoginUrl } from '@/const';
 import {
@@ -315,6 +316,7 @@ export default function PatronProfile() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const { user, isAuthenticated, loading } = useAuth();
+  const { playTrack } = useMusicPlayer();
   const [activeNav, setActiveNav] = useState('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -1123,6 +1125,27 @@ export default function PatronProfile() {
                         <div style={{ position: 'absolute', top: '8px', right: '8px', fontSize: '9px', fontFamily: "'Cinzel', serif", background: 'oklch(0.5 0.15 25 / 90%)', color: 'white', padding: '2px 8px', borderRadius: '10px' }}>
                           REJECTED
                         </div>
+                      )}
+                      {item.type === 'music' && item.fileUrl && (
+                        <button
+                          onClick={() => playTrack({
+                            id: item.id.toString(),
+                            title: item.title || 'Untitled track',
+                            artist: user?.name || 'You',
+                            duration: item.duration || '0:00',
+                            audioUrl: item.fileUrl!,
+                            thumbnail: item.thumbnailUrl || undefined,
+                          })}
+                          style={{
+                            position: 'absolute', bottom: '10px', right: '10px',
+                            width: '32px', height: '32px', borderRadius: '50%',
+                            background: 'oklch(0.72 0.09 75)', border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}
+                          title="Play"
+                        >
+                          <Play size={14} fill="oklch(0.04 0.008 285)" style={{ color: 'oklch(0.04 0.008 285)', marginLeft: '1px' }} />
+                        </button>
                       )}
                     </div>
                     <div style={{ padding: '14px' }}>

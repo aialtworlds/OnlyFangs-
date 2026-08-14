@@ -83,16 +83,15 @@ export function CollectionForm({ onSuccess }: CollectionFormProps) {
 
       // Upload cover image if selected
       if (selectedFile) {
-        const formDataForUpload = new FormData();
-        formDataForUpload.append("file", selectedFile);
-
-        const uploadResponse = await fetch("/api/upload", {
+        const uploadResponse = await fetch(`/api/upload?fileName=${encodeURIComponent(selectedFile.name)}`, {
           method: "POST",
-          body: formDataForUpload,
+          headers: { "Content-Type": selectedFile.type || "application/octet-stream" },
+          body: selectedFile,
         });
 
         if (!uploadResponse.ok) {
-          throw new Error("Failed to upload cover image");
+          const errorBody = await uploadResponse.json().catch(() => null);
+          throw new Error(errorBody?.error || "Failed to upload cover image");
         }
 
         const { url } = await uploadResponse.json();

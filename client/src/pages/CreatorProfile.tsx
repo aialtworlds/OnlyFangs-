@@ -585,6 +585,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
           pages: undefined,
           collectionId: item.collectionId ?? undefined,
           linkUrl: item.linkUrl || undefined,
+          fileUrl: locked ? undefined : ((item as any).fileUrl || undefined),
         };
       })
     : getContentByCreatorId(creator.id);
@@ -595,6 +596,7 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
       title: item.title,
       artist: creator.alias,
       duration: item.duration || '0:00',
+      audioUrl: item.fileUrl,
       thumbnail: item.thumbnail,
       tier: item.tier,
     });

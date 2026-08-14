@@ -104,26 +104,10 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
       let fileKey: string | undefined;
 
       if (selectedFile) {
-        // Convert file to base64 (uploadHandler.ts expects { file, fileName, contentType } as JSON)
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            // Strip the "data:<mime>;base64," prefix, server wants raw base64
-            resolve(result.split(",")[1] ?? "");
-          };
-          reader.onerror = () => reject(new Error("Failed to read file"));
-          reader.readAsDataURL(selectedFile);
-        });
-
-        const uploadResponse = await fetch("/api/upload", {
+        const uploadResponse = await fetch(`/api/upload?fileName=${encodeURIComponent(selectedFile.name)}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            file: base64,
-            fileName: selectedFile.name,
-            contentType: selectedFile.type,
-          }),
+          headers: { "Content-Type": selectedFile.type || "application/octet-stream" },
+          body: selectedFile,
         });
 
         if (!uploadResponse.ok) {
