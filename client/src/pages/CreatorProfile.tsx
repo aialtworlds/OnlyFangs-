@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useLocation, useParams } from 'wouter';
-import { Lock, Play, BookOpen, Image, Music, Camera, Heart, MessageCircle, Share2, ChevronLeft, Loader2 } from 'lucide-react';
+import { Lock, Play, BookOpen, Image, Music, Camera, Heart, MessageCircle, Share2, ChevronLeft, Loader2, Link2 } from 'lucide-react';
 import { CREATORS, CONTENT_ITEMS, getCreatorById, getContentByCreatorId } from '@/lib/data';
 import type { ContentItem } from '@/lib/data';
 import { toast } from 'sonner';
@@ -37,11 +37,42 @@ const tierLabels: Record<string, string> = {
   'night-royalty': 'Night Royalty',
 };
 
-function ContentCard({ item, onPlayMusic, creatorAlias, creatorId }: { item: any; onPlayMusic: (item: any) => void; creatorAlias: string; creatorId?: number }) {
-  const [hovered, setHovered] = useState(false);
+function LinkPreviewCard({ url }: { url: string }) {
+  let domain = url;
+  try {
+    domain = new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    // leave domain as the raw url if it doesn't parse
+  }
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{
+        display: 'block',
+        border: '1px solid oklch(1 0 0 / 10%)',
+        borderRadius: '8px',
+        padding: '14px 16px',
+        textDecoration: 'none',
+        background: 'oklch(0.07 0.012 285)',
+        transition: 'border-color 0.2s',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'oklch(0.72 0.09 75)', fontSize: '10px', fontFamily: "'Cinzel', serif", letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>
+        <Link2 size={12} />
+        {domain}
+      </div>
+      <div style={{ color: 'oklch(0.72 0.85 260)', fontSize: '13px', wordBreak: 'break-all' }}>{url}</div>
+    </a>
+  );
+}
+
+function PostCard({ item, onPlayMusic, creatorAlias, creatorAvatar, creatorHandle, creatorId }: { item: any; onPlayMusic: (item: any) => void; creatorAlias: string; creatorAvatar?: string; creatorHandle?: string; creatorId?: number }) {
   const [liked, setLiked] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const isLocked = item.locked && user?.role !== 'admin';
 
   const unlockPostMutation = trpc.stripe.createOneTimeCheckout.useMutation();
@@ -67,253 +98,190 @@ function ContentCard({ item, onPlayMusic, creatorAlias, creatorId }: { item: any
     }
   };
 
+  const relativeTime = (dateStr: string) => {
+    const then = new Date(dateStr).getTime();
+    const diffSec = Math.max(0, Math.floor((Date.now() - then) / 1000));
+    if (diffSec < 60) return "just now";
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h`;
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay < 7) return `${diffDay}d`;
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const hasMedia = !!item.thumbnail && item.thumbnail !== '/images/default-thumbnail.jpg';
+
   return (
-    <div
-      className="card-dark"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div style={{ position: 'relative', height: '220px', overflow: 'hidden' }}>
-        <img
-          src={item.thumbnail}
-          alt={item.title}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transition: 'transform 0.6s ease',
-            transform: hovered ? 'scale(1.05)' : 'scale(1)',
-            filter: isLocked ? 'brightness(0.3) blur(2px)' : 'brightness(0.85)',
-          }}
-        />
-
-        {isLocked && (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              padding: '12px',
-            }}
-          >
-            <Lock size={28} style={{ color: 'oklch(0.72 0.09 75)' }} />
-            <div
-              style={{
-                fontFamily: "'Cinzel', serif",
-                fontSize: '9px',
-                letterSpacing: '0.3em',
-                textTransform: 'uppercase',
-                color: 'oklch(0.72 0.09 75)',
-              }}
-            >
-              Tier {tierLabels[item.tier]}
-            </div>
-            
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button
-                onClick={() => toast('Subscribe to unlock this content', { description: `Requires ${tierLabels[item.tier]} tier or higher.` })}
-                style={{
-                  fontFamily: "'Cinzel', serif",
-                  fontSize: '8px',
-                  letterSpacing: '0.15em',
-                  textTransform: 'uppercase',
-                  background: 'transparent',
-                  color: 'oklch(0.72 0.09 75)',
-                  border: '1px solid oklch(0.72 0.09 75 / 40%)',
-                  padding: '6px 12px',
-                  cursor: 'pointer',
-                }}
-              >
-                Subscribe
-              </button>
-              
-              {item.price && parseFloat(item.price) > 0 && (
-                <button
-                  onClick={handleUnlockPost}
-                  disabled={unlockPostMutation.isPending}
-                  style={{
-                    fontFamily: "'Cinzel', serif",
-                    fontSize: '8px',
-                    letterSpacing: '0.15em',
-                    textTransform: 'uppercase',
-                    background: 'oklch(0.72 0.09 75)',
-                    color: 'oklch(0.04 0.008 285)',
-                    border: 'none',
-                    padding: '6px 12px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  {unlockPostMutation.isPending ? "..." : `Unlock $${parseFloat(item.price).toFixed(2)}`}
-                </button>
-              )}
-            </div>
+    <div className="card-dark" style={{ padding: '18px 20px', marginBottom: '2px' }}>
+      {/* Author header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', cursor: creatorHandle ? 'pointer' : 'default' }}
+        onClick={() => creatorHandle && setLocation(`/creator/${creatorHandle}`)}
+      >
+        {creatorAvatar ? (
+          <img src={creatorAvatar} alt={creatorAlias} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+        ) : (
+          <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'oklch(0.15 0.02 285)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Cinzel', serif", color: 'oklch(0.72 0.09 75)' }}>
+            {creatorAlias?.[0]?.toUpperCase() || '?'}
           </div>
         )}
-
-        {item.type === 'music' && !isLocked && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: '12px',
-              right: '12px',
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              background: 'oklch(0.72 0.09 75)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              opacity: hovered ? 1 : 0,
-              transition: 'opacity 0.3s',
-            }}
-            onClick={() => onPlayMusic(item)}
-          >
-            <Play size={16} fill="oklch(0.04 0.008 285)" style={{ color: 'oklch(0.04 0.008 285)', marginLeft: '2px' }} />
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: "'Cinzel', serif", fontSize: '13px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.03em' }}>
+            {creatorAlias}
           </div>
-        )}
-
-        <div
-          style={{
-            position: 'absolute',
-            bottom: '10px',
-            left: '10px',
-            background: 'oklch(0.04 0.008 285 / 80%)',
-            backdropFilter: 'blur(4px)',
-            border: '1px solid oklch(1 0 0 / 10%)',
-            padding: '4px 10px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            color: 'oklch(0.82 0.03 75)',
-            fontSize: '11px',
-            fontFamily: "'Cinzel', serif",
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-          }}
-        >
-          <ContentIcon type={item.type} />
-          {item.type === 'music' && item.duration && <span>{item.duration}</span>}
-          {item.type === 'book' && item.pages && <span>{item.pages}p</span>}
+          <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '11px', color: 'oklch(0.45 0.02 60)' }}>
+            {item.publishedAt ? relativeTime(item.publishedAt) : ''}
+          </div>
         </div>
       </div>
 
-      <div style={{ padding: '16px 18px 18px' }}>
-        <div
-          style={{
-            fontFamily: "'Cinzel', serif",
-            fontSize: '14px',
-            color: 'oklch(0.93 0.02 80)',
-            letterSpacing: '0.04em',
-            marginBottom: '6px',
-          }}
-        >
+      {/* Body text */}
+      {item.title && (
+        <div style={{ fontFamily: "'Cinzel', serif", fontSize: '14px', color: 'oklch(0.93 0.02 80)', letterSpacing: '0.02em', marginBottom: '6px' }}>
           {item.title}
         </div>
-        <div
-          style={{
-            fontFamily: "'IM Fell English', serif",
-            fontStyle: 'italic',
-            fontSize: '13px',
-            color: 'oklch(0.55 0.03 60)',
-            marginBottom: '14px',
-            lineHeight: 1.6,
-          }}
-        >
+      )}
+      {item.description && (
+        <div style={{ fontFamily: "'IM Fell English', serif", fontStyle: 'italic', fontSize: '14px', color: 'oklch(0.75 0.03 60)', lineHeight: 1.6, marginBottom: hasMedia || item.linkUrl ? '14px' : '10px', whiteSpace: 'pre-wrap' }}>
           {item.description}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', gap: '14px' }}>
-            <button
-              onClick={() => { setLiked(!liked); }}
+      )}
+
+      {/* Media — full width, text-first */}
+      {hasMedia && (
+        <div style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', marginBottom: '12px', background: 'oklch(0.05 0.01 285)' }}>
+          {item.type === 'video' && !isLocked ? (
+            <video src={item.thumbnail} controls style={{ width: '100%', maxHeight: '520px', display: 'block' }} />
+          ) : (
+            <img
+              src={item.thumbnail}
+              alt={item.title || ''}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                background: 'none',
-                border: 'none',
-                color: liked ? 'oklch(0.42 0.16 20)' : 'oklch(0.35 0.02 60)',
-                cursor: 'pointer',
-                fontFamily: "'Cinzel', serif",
-                fontSize: '11px',
-                transition: 'color 0.3s',
+                width: '100%',
+                maxHeight: '520px',
+                objectFit: 'cover',
+                display: 'block',
+                filter: isLocked ? 'brightness(0.3) blur(2px)' : 'none',
+              }}
+            />
+          )}
+
+          {item.type === 'music' && !isLocked && (
+            <button
+              onClick={() => onPlayMusic(item)}
+              style={{
+                position: 'absolute', bottom: '12px', right: '12px',
+                width: '40px', height: '40px', borderRadius: '50%',
+                background: 'oklch(0.72 0.09 75)', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
-              <Heart size={13} fill={liked ? 'oklch(0.42 0.16 20)' : 'none'} />
-              {item.likes + (liked ? 1 : 0)}
+              <Play size={18} fill="oklch(0.04 0.008 285)" style={{ color: 'oklch(0.04 0.008 285)', marginLeft: '2px' }} />
             </button>
-            <button
-              onClick={() => {
-                if (isLocked) {
-                  toast('Subscribe to unlock comments', { description: `Requires ${tierLabels[item.tier]} tier or higher.` });
-                } else {
-                  setShowComments(!showComments);
-                }
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                background: 'none',
-                border: 'none',
-                color: showComments ? 'oklch(0.72 0.09 75)' : 'oklch(0.35 0.02 60)',
-                cursor: 'pointer',
-                fontFamily: "'Cinzel', serif",
-                fontSize: '11px',
-                transition: 'color 0.3s',
-              }}
-            >
-              <MessageCircle size={13} fill={showComments ? 'oklch(0.72 0.09 75 / 20%)' : 'none'} />
-              {item.comments}
-            </button>
-          </div>
+          )}
+
+          {(item.type === 'music' || item.type === 'book') && (
+            <div style={{ position: 'absolute', bottom: '10px', left: '10px', background: 'oklch(0.04 0.008 285 / 80%)', backdropFilter: 'blur(4px)', border: '1px solid oklch(1 0 0 / 10%)', padding: '4px 10px', display: 'flex', alignItems: 'center', gap: '6px', color: 'oklch(0.82 0.03 75)', fontSize: '11px', fontFamily: "'Cinzel', serif", letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              <ContentIcon type={item.type} />
+              {item.type === 'music' && item.duration && <span>{item.duration}</span>}
+              {item.type === 'book' && item.pages && <span>{item.pages}p</span>}
+            </div>
+          )}
+
+          {isLocked && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}>
+              <Lock size={26} style={{ color: 'oklch(0.72 0.09 75)' }} />
+              <div style={{ fontFamily: "'Cinzel', serif", fontSize: '9px', letterSpacing: '0.3em', textTransform: 'uppercase', color: 'oklch(0.72 0.09 75)' }}>
+                Subscribers Only
+              </div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <button
+                  onClick={() => toast('Subscribe to unlock this content')}
+                  style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'transparent', color: 'oklch(0.72 0.09 75)', border: '1px solid oklch(0.72 0.09 75 / 40%)', padding: '6px 12px', cursor: 'pointer' }}
+                >
+                  Subscribe
+                </button>
+                {item.price && parseFloat(item.price) > 0 && (
+                  <button
+                    onClick={handleUnlockPost}
+                    disabled={unlockPostMutation.isPending}
+                    style={{ fontFamily: "'Cinzel', serif", fontSize: '8px', letterSpacing: '0.15em', textTransform: 'uppercase', background: 'oklch(0.72 0.09 75)', color: 'oklch(0.04 0.008 285)', border: 'none', padding: '6px 12px', cursor: 'pointer', fontWeight: 'bold' }}
+                  >
+                    {unlockPostMutation.isPending ? "..." : `Unlock $${parseFloat(item.price).toFixed(2)}`}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Link-share preview */}
+      {!hasMedia && item.linkUrl && (
+        <div style={{ marginBottom: '12px' }}>
+          <LinkPreviewCard url={item.linkUrl} />
+        </div>
+      )}
+
+      {/* Engagement row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid oklch(1 0 0 / 6%)' }}>
+        <div style={{ display: 'flex', gap: '18px' }}>
           <button
-            onClick={async () => {
-              const postUrl = `${window.location.origin}/creator/${item.creatorId}#post-${item.id}`;
-              if (navigator.share) {
-                try {
-                  await navigator.share({
-                    title: item.title,
-                    text: item.description || `Check out this post by ${creatorAlias} on OnlyFangs`,
-                    url: postUrl,
-                  });
-                } catch (err) {
-                  if ((err as Error).name !== 'AbortError') {
-                    toast.error('Error sharing post');
-                  }
-                }
+            onClick={() => setLiked(!liked)}
+            style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', color: liked ? 'oklch(0.42 0.16 20)' : 'oklch(0.45 0.02 60)', cursor: 'pointer', fontFamily: "'Cinzel', serif", fontSize: '11px', transition: 'color 0.3s' }}
+          >
+            <Heart size={14} fill={liked ? 'oklch(0.42 0.16 20)' : 'none'} />
+            {(item.likes || 0) + (liked ? 1 : 0)}
+          </button>
+          <button
+            onClick={() => {
+              if (isLocked) {
+                toast('Subscribe to unlock comments');
               } else {
-                try {
-                  await navigator.clipboard.writeText(postUrl);
-                  toast.success('Post link copied!');
-                } catch {
-                  toast.error('Error copying link');
-                }
+                setShowComments(!showComments);
               }
             }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              background: 'none',
-              border: 'none',
-              color: 'oklch(0.35 0.02 60)',
-              cursor: 'pointer',
-              fontSize: '11px',
-            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', color: showComments ? 'oklch(0.72 0.09 75)' : 'oklch(0.45 0.02 60)', cursor: 'pointer', fontFamily: "'Cinzel', serif", fontSize: '11px', transition: 'color 0.3s' }}
           >
-            <Share2 size={13} />
+            <MessageCircle size={14} fill={showComments ? 'oklch(0.72 0.09 75 / 20%)' : 'none'} />
+            {item.comments || 0}
           </button>
         </div>
-        {showComments && !isLocked && (
-          <CommentsSection contentId={parseInt(item.id)} />
-        )}
+        <button
+          onClick={async () => {
+            const postUrl = `${window.location.origin}/creator/${creatorHandle || item.creatorId}#post-${item.id}`;
+            if (navigator.share) {
+              try {
+                await navigator.share({
+                  title: item.title || `${creatorAlias}'s post`,
+                  text: item.description || `Check out this post by ${creatorAlias} on OnlyFangs`,
+                  url: postUrl,
+                });
+              } catch (err) {
+                if ((err as Error).name !== 'AbortError') {
+                  toast.error('Error sharing post');
+                }
+              }
+            } else {
+              try {
+                await navigator.clipboard.writeText(postUrl);
+                toast.success('Post link copied!');
+              } catch {
+                toast.error('Error copying link');
+              }
+            }
+          }}
+          style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'none', border: 'none', color: 'oklch(0.45 0.02 60)', cursor: 'pointer', fontSize: '11px' }}
+        >
+          <Share2 size={14} />
+        </button>
       </div>
+      {showComments && !isLocked && (
+        <div style={{ marginTop: '12px' }}>
+          <CommentsSection contentId={parseInt(item.id)} />
+        </div>
+      )}
     </div>
   );
 }
@@ -1126,16 +1094,18 @@ export default function CreatorProfile({ creatorId }: CreatorProfileProps) {
                   ))}
                 </div>
 
-                {/* Grid */}
+                {/* Feed */}
                 <div
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                    display: 'flex',
+                    flexDirection: 'column',
                     gap: '2px',
+                    maxWidth: '600px',
+                    margin: '0 auto',
                   }}
                 >
                   {filteredContent.map((item: any) => (
-                    <ContentCard key={item.id} item={item} onPlayMusic={handlePlayMusic} creatorAlias={creator.alias} creatorId={dbCreator?.id} />
+                    <PostCard key={item.id} item={item} onPlayMusic={handlePlayMusic} creatorAlias={creator.alias} creatorAvatar={creator.avatar} creatorHandle={dbCreator?.handle} creatorId={dbCreator?.id} />
                   ))}
                   {filteredContent.length === 0 && (
                     <div
