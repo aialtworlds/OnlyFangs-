@@ -2,13 +2,21 @@ import { Router, Request, Response } from "express";
 import { storagePut } from "./storage";
 import { getDb } from "./db";
 import { eq } from "drizzle-orm";
+import { sdk } from "./_core/sdk";
 
 export function registerUploadRoutes(app: Router) {
   app.post("/api/upload", async (req: Request, res: Response) => {
     try {
-      // Get user ID from session cookie
-      const userId = (req as any).user?.id;
-      if (!userId) {
+      // Authenticate via the session cookie — this is a plain Express route,
+      // not a tRPC procedure, so it doesn't get `ctx.user` for free the way
+      // tRPC procedures do. (req as any).user was never actually populated
+      // anywhere in this codebase, so every upload was silently rejected
+      // as unauthorized before this fix.
+      let userId: number;
+      try {
+        const user = await sdk.authenticateRequest(req);
+        userId = user.id;
+      } catch {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
