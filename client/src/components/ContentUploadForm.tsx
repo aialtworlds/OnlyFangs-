@@ -35,7 +35,7 @@ export function ContentUploadForm({ onSuccess }: ContentUploadFormProps) {
 
   const uploadMutation = trpc.content.upload.useMutation({
     onSuccess: () => {
-      toast.success("Posted! It'll appear once approved.");
+      toast.success("Posted!");
       setText("");
       setSelectedFile(null);
       setFilePreviewUrl(null);

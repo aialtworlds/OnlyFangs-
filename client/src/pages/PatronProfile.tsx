@@ -700,7 +700,7 @@ export default function PatronProfile() {
                 ) : (
                   <div style={{ background: 'oklch(0.055 0.012 330)', border: '1px solid oklch(1 0 0 / 6%)', padding: '24px', borderRadius: '8px' }}>
                     <ContentUploadForm onSuccess={() => {
-                      toast.success('Posted! It will appear once approved.');
+                      toast.success('Posted!');
                       setShowQuickPost(false);
                       utils.content.list.invalidate();
                       utils.patron.activity.invalidate();

@@ -569,7 +569,9 @@ export async function uploadContent(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  // Insert content with pending moderation status
+  // Content goes live immediately — no pre-publish approval queue. Patrons
+  // can still report content after it's up (contentFlags / ReportContentButton),
+  // which is a separate, unaffected moderation path handled by admins.
   const result = await db.insert(content).values({
     creatorId: data.creatorId,
     locked: data.locked,
@@ -585,49 +587,11 @@ export async function uploadContent(data: {
     thumbnailUrl: data.thumbnailUrl ?? null,
     linkUrl: data.linkUrl ?? null,
     price: data.price ? data.price.toString() : null,
-    moderationStatus: "pending",
+    moderationStatus: "approved",
   });
 
   const creatorId = data.creatorId;
-
-  // Automatically submit to moderation queue
   const contentId = (result as any).insertId;
-  if (contentId) {
-    try {
-      await db.insert(moderationQueue).values({
-        contentId,
-        creatorId,
-        status: "pending",
-      });
-      
-      // Log the submission
-      await db.insert(moderationLogs).values({
-        contentId,
-        action: "submitted",
-        performedBy: creatorId,
-        reason: "Content automatically submitted for moderation upon upload",
-      });
-      
-      // Notify all admins about new content in moderation queue
-      const admins = await db
-        .select()
-        .from(users)
-        .where(eq(users.role, "admin"));
-      
-      for (const admin of admins) {
-        await db.insert(notifications).values({
-          userId: admin.id,
-          type: "moderation",
-          title: "New Content Awaiting Review",
-          message: `New content "${data.title || "(text post)"}" from creator needs moderation review`,
-          read: false,
-        });
-      }
-    } catch (error) {
-      console.error("[Content] Error submitting to moderation queue:", error);
-      // Don't fail the upload if moderation submission fails
-    }
-  }
 
   // Keep the totalReleases counter in sync — historically only incremented
   // by the legacy releases table, which left creators using the (now
