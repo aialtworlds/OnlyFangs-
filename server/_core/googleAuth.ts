@@ -10,11 +10,10 @@ const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
 
-// Constant local app identifier stored in our own session JWTs. Decoupled
-// on purpose from Manus's VITE_APP_ID (which is intentionally left unset in
-// this deployment) — the session JWT's own verifySession() check requires a
-// non-empty appId field, so this just needs to be *some* stable string, not
-// a value shared with any external system.
+// Constant local app identifier stored in our own session JWTs. This just
+// needs to be *some* stable string, not a value shared with any external
+// system — the session JWT's own verifySession() check requires a
+// non-empty appId field.
 const LOCAL_APP_ID = "onlyfangs";
 
 function getQueryParam(req: Request, key: string): string | undefined {
@@ -104,8 +103,8 @@ export function registerGoogleOAuthRoutes(app: Express) {
         throw new Error("Google user info is missing 'sub' (user id)");
       }
 
-      // Namespaced so it can never collide with an openId issued by the old
-      // Manus OAuth flow, should any legacy rows still exist in the DB.
+      // Namespaced so it can never collide with an openId issued by any
+      // legacy auth system, should any old rows still exist in the DB.
       const openId = `google:${googleUser.sub}`;
 
       await db.upsertUser({

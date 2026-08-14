@@ -1,6 +1,6 @@
 // Local storage helpers for OnlyFangs
 // Uploads files directly to a local directory "uploads" inside the project.
-// Downloads return /manus-storage/{key} paths served via express.static.
+// Downloads return /uploads/{key} paths served via express.static.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -42,15 +42,15 @@ export async function storagePut(
     fs.writeFileSync(filePath, Buffer.from(data));
   }
 
-  return { key, url: `/manus-storage/${key}` };
+  return { key, url: `/uploads/${key}` };
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
-  return { key, url: `/manus-storage/${key}` };
+  return { key, url: `/uploads/${key}` };
 }
 
 export async function storageGetSignedUrl(relKey: string): Promise<string> {
   const key = normalizeKey(relKey);
-  return `/manus-storage/${key}`;
+  return `/uploads/${key}`;
 }

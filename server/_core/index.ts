@@ -62,7 +62,7 @@ async function startServer() {
   // before the handler's own size check ever runs.
   app.use(express.json({ limit: "70mb" }));
   app.use(express.urlencoded({ limit: "70mb", extended: true }));
-  app.use("/manus-storage", express.static(path.resolve(process.cwd(), "uploads")));
+  app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
   registerGoogleOAuthRoutes(app);
   registerUploadRoutes(app);
   // tRPC API
