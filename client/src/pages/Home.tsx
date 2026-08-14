@@ -11,7 +11,6 @@ import type { ContentItem, Creator } from '@/lib/data';
 import { RecommendedCreators } from '@/components/RecommendedCreators';
 import { getLoginUrl } from '@/const';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAuth } from '@/_core/hooks/useAuth';
 
 interface HomeProps {}
 
@@ -592,13 +591,6 @@ function TierCard({ tier }: { tier: typeof TIERS[0] }) {
 // ── Main Home Component ───────────────────────────────────────
 export default function Home() {
   const [, setLocation] = useLocation();
-  const { isAuthenticated } = useAuth();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      setLocation('/profile');
-    }
-  }, [isAuthenticated, setLocation]);
 
   const featuredCreators = getFeaturedCreators();
   const [activeCategory, setActiveCategory] = useState('all');
