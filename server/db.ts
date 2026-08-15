@@ -3383,27 +3383,42 @@ export async function getPatronCustomRequests(patronId: number) {
 
 export async function acceptCustomRequest(requestId: number, creatorId: number) {
   const db = await getDb();
-  if (!db) return;
+  if (!db) throw new Error("Database not available");
+
+  const [request] = await db.select().from(customRequests).where(eq(customRequests.id, requestId)).limit(1);
+  if (!request || request.creatorId !== creatorId) {
+    throw new Error("Request not found or access denied");
+  }
 
   await db
     .update(customRequests)
     .set({ status: "accepted" })
-    .where(and(eq(customRequests.id, requestId), eq(customRequests.creatorId, creatorId)));
+    .where(eq(customRequests.id, requestId));
 }
 
 export async function declineCustomRequest(requestId: number, creatorId: number) {
   const db = await getDb();
-  if (!db) return;
+  if (!db) throw new Error("Database not available");
+
+  const [request] = await db.select().from(customRequests).where(eq(customRequests.id, requestId)).limit(1);
+  if (!request || request.creatorId !== creatorId) {
+    throw new Error("Request not found or access denied");
+  }
 
   await db
     .update(customRequests)
     .set({ status: "declined" })
-    .where(and(eq(customRequests.id, requestId), eq(customRequests.creatorId, creatorId)));
+    .where(eq(customRequests.id, requestId));
 }
 
 export async function deliverCustomRequest(requestId: number, creatorId: number, deliveryUrl: string) {
   const db = await getDb();
-  if (!db) return;
+  if (!db) throw new Error("Database not available");
+
+  const [request] = await db.select().from(customRequests).where(eq(customRequests.id, requestId)).limit(1);
+  if (!request || request.creatorId !== creatorId) {
+    throw new Error("Request not found or access denied");
+  }
 
   await db
     .update(customRequests)
@@ -3412,6 +3427,6 @@ export async function deliverCustomRequest(requestId: number, creatorId: number,
       deliveryUrl,
       completedAt: new Date(),
     })
-    .where(and(eq(customRequests.id, requestId), eq(customRequests.creatorId, creatorId)));
+    .where(eq(customRequests.id, requestId));
 }
 

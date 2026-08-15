@@ -1590,7 +1590,11 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
-        await acceptCustomRequest(input.requestId, creator.id);
+        try {
+          await acceptCustomRequest(input.requestId, creator.id);
+        } catch (err: any) {
+          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        }
         return { success: true };
       }),
     decline: creatorProcedure
@@ -1598,7 +1602,11 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
-        await declineCustomRequest(input.requestId, creator.id);
+        try {
+          await declineCustomRequest(input.requestId, creator.id);
+        } catch (err: any) {
+          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        }
         return { success: true };
       }),
     deliver: creatorProcedure
@@ -1611,7 +1619,11 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const creator = await getOrCreateCreatorForAdmin(ctx.user.id);
         if (!creator) throw new TRPCError({ code: "FORBIDDEN", message: "Creator profile not found" });
-        await deliverCustomRequest(input.requestId, creator.id, input.deliveryUrl);
+        try {
+          await deliverCustomRequest(input.requestId, creator.id, input.deliveryUrl);
+        } catch (err: any) {
+          throw new TRPCError({ code: "NOT_FOUND", message: err.message });
+        }
         return { success: true };
       }),
   }),

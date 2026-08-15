@@ -149,12 +149,18 @@ export default function CreatorDashboard() {
       toast.success("Commission accepted!");
       refetchRequests();
     },
+    onError: (err) => {
+      toast.error(`Error accepting: ${err.message}`);
+    },
   });
 
   const declineRequestMutation = trpc.customRequests.decline.useMutation({
     onSuccess: () => {
       toast.success("Commission declined");
       refetchRequests();
+    },
+    onError: (err) => {
+      toast.error(`Error declining: ${err.message}`);
     },
   });
 
